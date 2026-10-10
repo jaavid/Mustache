@@ -4,7 +4,7 @@ A **real playable pixel-art arcade prototype**, made with Phaser 3, Vite and Typ
 
 ### Play online
 
-After the GitHub Pages Action succeeds and Pages is enabled: **https://jaavid.github.io/Mustache/**
+Custom-domain GitHub Pages URL: **https://mustache.alexa.ir/**
 
 ### Local dev
 
@@ -38,7 +38,7 @@ npm run build
 
 ### Deployment
 
-Every push to `main` runs the GitHub Pages workflow. Vite config adds `/Mustache/` **only in `--mode pages` builds**, keeping local dev at `/`. If GitHub Pages is not enabled, select **Settings → Pages → Build and deployment → Source: GitHub Actions** and rerun the action. The workflow attempts to enable Pages automatically if permitted.
+Every push to `main` runs the GitHub Pages workflow. Vite uses relative assets (`base: './'`) so the game works at the custom-domain root and under a project subpath. The existing workflow uses `--mode pages` but no longer hardcodes `/Mustache/`. If GitHub Pages is not enabled, select **Settings → Pages → Build and deployment → Source: GitHub Actions** and rerun the action. The workflow attempts to enable Pages automatically if permitted.
 
 ### Prototype boundaries
 
