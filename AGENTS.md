@@ -5,5 +5,5 @@
 - Prefer pixel-art generated sprites and crisp nearest-neighbor rendering. Avoid remote runtime assets that could break on GitHub Pages.
 - Keep game logic for scoring pure and tested in `src/logic/`.
 - All changes must pass `npm run typecheck`, `npm test` and `npm run build` when dependencies can be installed.
-- GitHub Pages public URL is `https://jaavid.github.io/Mustache/`; only production build sets Vite base `/Mustache/`.
+- GitHub Pages canonical URL is `https://mustache.alexa.ir/`. Use Vite `base: './'` so custom-domain root and repo subpath both resolve assets.
 - Do not imply local high scores qualify for real NFIVE tokens.

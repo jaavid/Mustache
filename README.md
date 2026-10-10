@@ -38,11 +38,18 @@ npm run build
 
 ### Deployment
 
-Every push to `main` runs the GitHub Pages workflow. Vite uses relative assets (`base: './'`) so the game works at the custom-domain root and under a project subpath. The existing workflow uses `--mode pages` but no longer hardcodes `/Mustache/`. If GitHub Pages is not enabled, select **Settings → Pages → Build and deployment → Source: GitHub Actions** and rerun the action. The workflow attempts to enable Pages automatically if permitted.
+Every push to `main` runs the GitHub Pages workflow. Vite uses relative assets (`base: './'`) so the custom domain root and project subpaths work. The GitHub Pages workflow retains its `--mode pages` build. If GitHub Pages is not enabled, select **Settings → Pages → Build and deployment → Source: GitHub Actions** and rerun the action. The workflow attempts to enable Pages automatically if permitted.
 
 ### Prototype boundaries
 
 No accounts, on-chain interactions, payout eligibility, server, multiplayer, global leaderboard, NFTs, or token rewards. This is an offline-friendly practice game (the first visit and package install still require network access). Scores can be modified by players and **must never** be trusted for token rewards.
+
+### Pixel forest v0.2
+
+- Three aligned character expressions (normal, blink, surprised) share the same upper-lip aim point.
+- Animated rolling mist, fluttering butterflies, twinkling fireflies and foreground foliage.
+- Leaves burst when Ramin emerges and sparkles burst after accurate shots.
+- No remote media requests or backend; visuals are procedurally generated in Phaser.
 
 ### Next iterations
 

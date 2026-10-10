@@ -131,7 +131,7 @@ function trunk(c: Ctx) {
   rect(c,20,180,30,3,'#64a059');
   for(let i=0;i<20;i++)rect(c,r()*80,172+r()*30,3+r()*5,2,'#39664a');
 }
-function hero(c: Ctx) {
+function hero(c: Ctx, expression: 'normal' | 'blink' | 'surprised' = 'normal') {
   // 64×88 heroic portrait sprite; original pixel character inspired by Ramin's short dark hair and black hoodie.
   // feet/body and hood
   rect(c,16,76,12,12,'#101b24');rect(c,38,76,12,12,'#101b24');
@@ -176,6 +176,16 @@ function hero(c: Ctx) {
   rect(c,25,64,2,13,'#747783');rect(c,41,64,2,13,'#747783');
   rect(c,29,72,8,2,'#9678db');rect(c,29,76,3,3,'#d8bc6f');rect(c,34,76,3,3,'#d8bc6f');
   rect(c,18,81,30,5,'#111521');
+  // The expression frames have identical geometry and mouth anchors.
+  if (expression === 'blink') {
+    rect(c,22,32,8,4,'#f6c8a1');rect(c,36,32,8,4,'#f6c8a1');
+    rect(c,23,34,6,1,'#62423a');rect(c,37,34,6,1,'#62423a');
+  } else if (expression === 'surprised') {
+    rect(c,21,28,10,2,'#49323a');rect(c,35,28,10,2,'#49323a');
+    rect(c,23,32,5,5,'#24202b');rect(c,38,32,5,5,'#24202b');
+    rect(c,25,32,1,2,'#ffffff');rect(c,40,32,1,2,'#ffffff');
+    rect(c,28,47,10,4,'#a76061');rect(c,30,48,6,2,'#4e2d39');
+  }
 }
 function mustache(c: Ctx, style: number) {
   // Each style uses a very readable silhouette against the face, pixel-indexed canvas 38x18.
@@ -193,10 +203,66 @@ function icon(c:Ctx){
   c.strokeStyle='#ffefad';c.lineWidth=2;c.strokeRect(10,11,20,15);
   rect(c,12,14,4,10,'#fff0b3');rect(c,16,14,4,3,'#fff0b3');rect(c,19,18,3,3,'#fff0b3');rect(c,24,13,4,10,'#fff0b3');
 }
+/** Transparent textures add convincing depth without increasing sprite sheet downloads. */
+function mist(c: Ctx) {
+  const r = rand(178);
+  for (let i=0;i<44;i++) {
+    const x=r()*480, y=18+r()*66;
+    ellipse(c,x,y,32+r()*77,4+r()*13, i%2===0?'#9ac3c720':'#d7cce01a');
+    rect(c,x-18,y,28+r()*60,2,'#a8cbd311');
+  }
+}
+function forestFront(c: Ctx) {
+  const r=rand(202610);
+  // Empty transparent pixels above the fern line keep the target's upper lip visible.
+  for(let i=0;i<92;i++) {
+    const x=r()*480, y=34+r()*40;
+    const h=9+r()*27;
+    rect(c,x,y-h,2, h, i%2?'#163d37':'#1d5644');
+    for(let j=0;j<5;j++){
+      const yy=y-5-j*5;
+      rect(c,x-4-j%2*2,yy,6,2,'#27664a');
+      rect(c,x+2,yy-2,5+j%2*2,2,'#35815b');
+    }
+  }
+  for(let i=0;i<110;i++) {
+    const x=r()*480,y=42+r()*34;
+    ellipse(c,x,y,6+r()*12,3+r()*5,i%3===0?'#164a3a':i%3===1?'#255e45':'#1b453b');
+  }
+  for(let i=0;i<22;i++){
+    const x=r()*480, y=46+r()*25;
+    rect(c,x,y-4,2,7,'#b4b399');ellipse(c,x+1,y-5,5,3,i%2?'#9d6cd6':'#ffba71');
+    rect(c,x,y-7,2,1,'#fff1c7');
+  }
+}
+function leaf(c: Ctx, style: number) {
+  rect(c,3,0,2,2,style===0?'#acd671':style===1?'#d7a85e':'#77b79e');
+  rect(c,1,2,6,3,style===0?'#4f9c68':style===1?'#c17b4f':'#65a3bd');
+  rect(c,2,5,4,2,style===0?'#27694e':style===1?'#976345':'#3e719b');
+  rect(c,4,3,1,6,'#31533f');
+}
+function spark(c:Ctx) {
+  rect(c,3,0,2,8,'#ffffff');rect(c,0,3,8,2,'#ffffff');
+  rect(c,2,2,4,4,'#ffedab');
+}
+function butterfly(c: Ctx) {
+  rect(c,6,6,2,8,'#271e46');
+  rect(c,1,3,6,6,'#be91ee');rect(c,9,3,6,6,'#be91ee');
+  rect(c,3,9,4,5,'#7ca9d7');rect(c,9,9,4,5,'#7ca9d7');
+  rect(c,4,5,2,2,'#ffecb4');rect(c,10,5,2,2,'#ffecb4');
+}
+
 export function createArt(scene: Phaser.Scene) {
   makeCanvas(scene,'forest',SW,SH,forestBackground);
   makeCanvas(scene,'tree',92,206,trunk);
-  makeCanvas(scene,'ramin',64,88,hero);
+  makeCanvas(scene,'ramin',64,88,ctx=>hero(ctx));
+  makeCanvas(scene,'ramin-blink',64,88,ctx=>hero(ctx,'blink'));
+  makeCanvas(scene,'ramin-surprised',64,88,ctx=>hero(ctx,'surprised'));
+  makeCanvas(scene,'mist',480,90,mist);
+  makeCanvas(scene,'forest-front',480,80,forestFront);
+  makeCanvas(scene,'spark',8,8,spark);
+  makeCanvas(scene,'butterfly',16,16,butterfly);
+  for(let i=0;i<3;i++)makeCanvas(scene,`leaf-${i}`,8,10,ctx=>leaf(ctx,i));
   makeCanvas(scene,'coin',40,40,icon);
   for(let style=0;style<3;style++)makeCanvas(scene,`stache-${style}`,38,18,ctx=>mustache(ctx,style));
 }

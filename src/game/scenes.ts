@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { createArt } from './art';
+import { addForestLife, burstLeaves, burstStars } from './ambience';
 import { evaluateShot, readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
 
 const WIDTH = 960;
@@ -22,6 +23,7 @@ function button(scene: Phaser.Scene, x:number,y:number,w:number,h:number, messag
 }
 function backdrop(scene:Phaser.Scene, withFireflies=true) {
   scene.add.image(480,270,'forest').setDisplaySize(WIDTH,HEIGHT).setDepth(-40);
+  addForestLife(scene);
   if (withFireflies) {
     for(let i=0;i<26;i++){
       const x=(i*173+101)%WIDTH;
@@ -33,7 +35,8 @@ function backdrop(scene:Phaser.Scene, withFireflies=true) {
 }
 function addTrees(scene:Phaser.Scene) {
   for (const x of SPAWN_POINTS) {
-    scene.add.image(x-62,300,'tree').setDisplaySize(184,412).setDepth(28);
+    const tree=scene.add.image(x-62,300,'tree').setDisplaySize(184,412).setDepth(28);
+    scene.tweens.add({ targets: tree, angle: 0.8, duration: 2600 + x, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
   }
 }
 
@@ -59,6 +62,10 @@ export class MenuScene extends Phaser.Scene {
     label(this,305,454,'45 SECONDS  •  3 STYLES  •  BIG COMBOS',15,'#e3d5e6');
     const hero=this.add.image(775,320,'ramin').setScale(3.35).setDepth(41);
     hero.setAngle(-5);
+    this.time.addEvent({delay:3200,loop:true,callback:()=>{
+      hero.setTexture('ramin-blink');
+      this.time.delayedCall(160,()=>{if(hero.active)hero.setTexture('ramin');});
+    }});
     this.tweens.add({targets:hero,y:312,duration:1400,ease:'Sine.inOut',yoyo:true,repeat:-1});
     this.add.image(756,304,'stache-0').setScale(3.5).setDepth(46).setAngle(-8);
     this.add.image(862,106,'coin').setScale(1.6).setDepth(46);
@@ -168,10 +175,11 @@ export class PlayScene extends Phaser.Scene {
     this.previousSlot=slot;
     const serial=++this.spawnSerial;
     this.active=true;
-    this.hero.setPosition(SPAWN_POINTS[slot],370).setAlpha(0).setVisible(true).setAngle(Phaser.Math.Between(-5,5));
+    this.hero.setTexture('ramin').setPosition(SPAWN_POINTS[slot],370).setAlpha(0).setVisible(true).setAngle(Phaser.Math.Between(-5,5));
+    burstLeaves(this,SPAWN_POINTS[slot]-53,385,7);
     this.sticker.setVisible(false);
     this.tweens.add({targets:this.hero,y:315,alpha:1,duration:240,ease:'Back.easeOut'});
-    this.time.delayedCall(1650,()=>{
+    this.time.delayedCall(Phaser.Math.Between(1450,1900),()=>{
       if(serial!==this.spawnSerial||!this.active||this.roundOver)return;
       this.active=false;
       this.hideTarget(()=>this.time.delayedCall(220,()=>this.popTarget()));
@@ -211,8 +219,12 @@ export class PlayScene extends Phaser.Scene {
       if(this.roundOver)return;
       if(result.grade==='miss'){
         this.popFeedback(pointer.x,pointer.y,'MISS!', '#ff848f');
+        burstLeaves(this,pointer.x,pointer.y,3);
       }else{
+        this.hero.setTexture('ramin-surprised');
         this.sticker.setTexture(`stache-${this.selectedStyle}`).setPosition(this.hero.x,this.hero.y-4).setVisible(true);
+        burstStars(this,this.hero.x,this.hero.y-4,result.grade==='perfect');
+        if(result.grade==='perfect')this.cameras.main.shake(100,0.0025);
         this.popFeedback(this.hero.x,this.hero.y-88,result.grade==='perfect'?`+${result.points} PERFECT!`:`+${result.points} GOOD!`,result.grade==='perfect'?'#ffd16c':'#a7efc0');
         this.tweens.add({targets:this.hero,scaleX:2.53,scaleY:2.53,duration:90,yoyo:true});
         this.time.delayedCall(510,()=>this.hideTarget(()=>this.time.delayedCall(180,()=>this.popTarget())));
@@ -245,7 +257,11 @@ export class ResultsScene extends Phaser.Scene {
     this.add.rectangle(500,271,885,445,0x142036,.94).setStrokeStyle(7,0x806048).setDepth(40);
     this.add.rectangle(501,59,860,10,0xc49c65).setDepth(41);
     label(this,466,118,'ROUND COMPLETE!',43,'#ffcb6e');
-    this.add.image(220,299,'ramin').setScale(3.3).setDepth(53);
+    const resultsHero=this.add.image(220,299,'ramin').setScale(3.3).setDepth(53);
+    this.time.addEvent({delay:2900,loop:true,callback:()=>{
+      resultsHero.setTexture('ramin-blink');
+      this.time.delayedCall(140,()=>{if(resultsHero.active)resultsHero.setTexture('ramin');});
+    }});
     this.add.image(220,284,'stache-0').setScale(3.25).setDepth(54);
     this.add.image(317,221,'coin').setScale(1.2).setDepth(55);
     label(this,640,204,'YOUR SCORE',22,'#d7bee8');
