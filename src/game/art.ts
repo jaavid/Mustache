@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import {decodeMustache,MUSTACHE_WIDTH,MUSTACHE_HEIGHT} from '../logic/mustachePixels';
+import { RAMIN_VARIANTS, type RaminVariant } from '../logic/variety';
 
 type Ctx = CanvasRenderingContext2D;
 const SW = 480;
@@ -183,6 +184,54 @@ function treeFront(c: Ctx, variant: number) {
   }
 }
 
+/** Pixel overlays share the Ramin sheet's 210×362 frame and do not touch his lip at y=136. */
+function raminAccessory(c: Ctx, variant: RaminVariant) {
+  if (variant === 'normal') return;
+  if (variant === 'sunglasses') {
+    // Strongly recognizable dark frames with lavender/blue reflections.
+    rect(c,63,101,41,7,'#171322');rect(c,107,101,40,7,'#171322');
+    rect(c,65,104,40,18,'#1b1826');rect(c,107,104,38,18,'#1b1826');
+    rect(c,69,108,32,11,'#3b3156');rect(c,111,108,30,11,'#323e63');
+    rect(c,72,108,12,3,'#8972a3');rect(c,114,108,12,3,'#6b8eb8');
+    rect(c,101,107,9,4,'#18121c');
+    rect(c,59,106,9,6,'#18121c');rect(c,143,106,8,6,'#18121c');
+    rect(c,74,120,22,3,'#18121c');rect(c,117,120,21,3,'#18121c');
+    return;
+  }
+  if (variant === 'round') {
+    // Retro round spectacles with translucent lenses.
+    for (const center of [85,125]) {
+      const x=center-17;
+      rect(c,x+7,94,20,3,'#171a28');rect(c,x+3,97,28,3,'#272637');
+      rect(c,x,101,5,17,'#282638');rect(c,x+29,101,5,17,'#282638');
+      rect(c,x+4,118,27,4,'#282638');
+      rect(c,x+7,121,20,3,'#171a28');
+      rect(c,x+5,102,24,15,'#8bc1bd26');
+      rect(c,x+7,103,4,8,'#d6f3df');
+    }
+    rect(c,102,104,6,3,'#252330');
+    rect(c,58,106,13,3,'#24212f');rect(c,141,106,11,3,'#24212f');
+    return;
+  }
+  if (variant === 'headband') {
+    // Pink headband stays on the hairline, well above eyes and mouth.
+    rect(c,60,75,91,9,'#a6497a');rect(c,63,78,84,5,'#e9a3c5');
+    rect(c,98,75,13,9,'#ffe0a5');
+    rect(c,64,83,6,5,'#692e52');rect(c,143,83,7,5,'#692e52');
+    rect(c,151,79,10,6,'#a6497a');
+    return;
+  }
+  // Rare golden crown with glints outside the facial aiming area.
+  rect(c,73,38,66,12,'#9b612b');
+  rect(c,74,25,12,21,'#f5be62');
+  rect(c,101,17,12,29,'#ffe297');
+  rect(c,128,24,12,22,'#f5be62');
+  rect(c,77,40,60,8,'#fff0ae');
+  rect(c,90,42,8,5,'#c77bea');rect(c,116,42,8,5,'#8ee3df');
+  rect(c,54,62,5,12,'#f0bd6b');rect(c,50,66,13,4,'#f0bd6b');
+  rect(c,150,58,4,10,'#f7d58c');rect(c,146,62,12,4,'#f7d58c');
+}
+
 function hero(c: Ctx, expression: 'normal' | 'blink' | 'surprised' = 'normal') {
   // 64×88 heroic portrait sprite; original pixel character inspired by Ramin's short dark hair and black hoodie.
   // feet/body and hood
@@ -308,6 +357,7 @@ export function createArt(scene: Phaser.Scene) {
     makeCanvas(scene,`tree-back-${i}`,96,220,ctx=>treeBack(ctx,i));
     makeCanvas(scene,`tree-front-${i}`,96,220,ctx=>treeFront(ctx,i));
   }
+  for (const variant of RAMIN_VARIANTS) makeCanvas(scene,`ramin-acc-${variant}`,210,362,ctx=>raminAccessory(ctx,variant));
   makeCanvas(scene,'ramin',64,88,ctx=>hero(ctx));
   makeCanvas(scene,'ramin-blink',64,88,ctx=>hero(ctx,'blink'));
   makeCanvas(scene,'ramin-surprised',64,88,ctx=>hero(ctx,'surprised'));
