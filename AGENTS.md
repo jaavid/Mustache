@@ -9,3 +9,5 @@
 - Do not imply local high scores qualify for real NFIVE tokens.
 
 - v0.6: Scoring must happen at projectile impact; never before the mustache visually arrives. Appearance serials invalidate old timeouts; preserve one-shot-per-pop and mobile portrait-safe X positioning.
+
+- v0.7: Keep cosmetic accessories aligned to the 210×362 sprite and do not cover the mouth. Fake-outs cannot reduce combo. Double-pop follow-up must use a different tree and remain scorable. Only grant bonus on confirmed projectile impact.

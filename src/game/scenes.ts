@@ -7,6 +7,8 @@ import { evaluateShot, readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from
 import { nextSlot, popPlan, type PopPlan } from '../logic/gameplay';
 import { DESKTOP_TREE_CENTERS, DESKTOP_PEEK_DISTANCE, chooseSpawnSide, peekPosition } from '../logic/treeGeometry';
 import { enterFromTree, exitBehindTree, hitReaction, launchMustache } from './gameFeel';
+import { chooseRaminVariant, chooseSpawnEvent, variantReward, type RaminVariant, type SpawnEvent } from '../logic/variety';
+import { makeAccessory, selectAccessory, syncAccessory } from './accessories';
 
 const WIDTH = 960;
 const HEIGHT = 540;
@@ -124,13 +126,19 @@ export class PlayScene extends Phaser.Scene {
   private previousSlot=-1;
   private cursor!:Phaser.GameObjects.Graphics;
   private currentPlan!:PopPlan;
+  private accessory!:Phaser.GameObjects.Image;
+  private currentVariant:RaminVariant='normal';
+  private pendingDouble=false;
+  private previousEvent:SpawnEvent='normal';
 
   constructor(){super('Play');}
   create(){
     this.score=0;this.combo=0;this.remaining=ROUND_LENGTH_SECONDS;this.selectedStyle=0;
     this.active=false;this.roundOver=false;this.shooting=false;this.spawnSerial=0;this.previousSlot=-1;
+    this.pendingDouble=false;this.previousEvent='normal';this.currentVariant='normal';
     backdrop(this);addTrees(this);
     this.hero=makeRamin(this,-200,324,RAMIN_DESKTOP_SCALE,'idle').setVisible(false);
+    this.accessory=makeAccessory(this);
     this.sticker=this.add.image(-200,320,'stache-0').setDisplaySize(66,37).setDepth(31).setVisible(false);
     this.createHud();
     addSoundToggle(this,895,36);
@@ -205,9 +213,17 @@ export class PlayScene extends Phaser.Scene {
     const slot=nextSlot(this.previousSlot,DESKTOP_TREE_CENTERS.length,Math.random());
     this.previousSlot=slot;
     const serial=++this.spawnSerial;
+    const fromDouble=this.pendingDouble;
+    this.pendingDouble=false;
+    const event:SpawnEvent=fromDouble?'normal':chooseSpawnEvent(
+      ROUND_LENGTH_SECONDS-this.remaining,this.remaining,Math.random(),this.previousEvent);
+    if(!fromDouble)this.previousEvent=event;
+    if(event==='double')this.pendingDouble=true;
+    this.currentVariant=event==='fake-out'?'normal':chooseRaminVariant(Math.random());
     const plan=popPlan(ROUND_LENGTH_SECONDS-this.remaining,Math.random());
     plan.side=chooseSpawnSide(slot,DESKTOP_TREE_CENTERS.length,plan.side);
-    plan.shift=DESKTOP_PEEK_DISTANCE; // begin directly behind the tree's occluding trunk
+    plan.shift=DESKTOP_PEEK_DISTANCE;
+    if(event==='fake-out')plan.visibleMs=320;
     this.currentPlan=plan;
     this.active=false;
     this.shooting=false;
@@ -216,24 +232,44 @@ export class PlayScene extends Phaser.Scene {
     const y=315;
     applyRaminMood(this.hero,'idle');
     this.sticker.setVisible(false);
+    selectAccessory(this.accessory,this.currentVariant);
     burstLeaves(this,treeX,y+95,7);
+    if(event==='fake-out')this.varietyNotice('FAKE-OUT!','#ffc3ab');
+    else if(fromDouble)this.varietyNotice('AGAIN!','#ffdd82');
+    else if(event==='double')this.varietyNotice('DOUBLE POP!','#ffdd82');
+    else if(this.currentVariant==='gold')this.varietyNotice('GOLD RAMIN · +50','#ffd774');
+    else if(this.currentVariant==='sunglasses')this.varietyNotice('COOL RAMIN','#b6d5ff');
     enterFromTree(this,this.hero,{x,y},RAMIN_DESKTOP_SCALE,plan,()=>{
       if(this.roundOver||serial!==this.spawnSerial)return;
+      if(event==='fake-out'){
+        applyRaminMood(this.hero,'surprised');
+        this.time.delayedCall(plan.visibleMs,()=>{
+          if(this.roundOver||serial!==this.spawnSerial)return;
+          this.hideTarget(()=>this.time.delayedCall(160,()=>this.popTarget()));
+        });
+        return;
+      }
       this.active=true;
-      // Hold still enough for fair aiming, but give every appearance a distinct pose.
       this.tweens.add({targets:this.hero,y:y-5,duration:470,ease:'Sine.inOut',yoyo:true,repeat:1});
       this.time.delayedCall(plan.visibleMs,()=>{
         if(this.roundOver||serial!==this.spawnSerial||!this.active)return;
         this.active=false;
         this.combo=0;
         this.comboText.setText('× 0');
-        this.hideTarget(()=>this.time.delayedCall(plan.pauseMs,()=>this.popTarget()));
+        this.hideTarget(()=>this.time.delayedCall(this.pendingDouble?105:plan.pauseMs,()=>this.popTarget()));
       });
     });
+  }
+  private varietyNotice(message:string,color:string){
+    const banner=label(this,480,150,message,21,color).setDepth(60)
+      .setBackgroundColor('#18263d').setPadding(9,3);
+    this.tweens.add({targets:banner,y:138,alpha:0,duration:860,delay:380,
+      onComplete:()=>banner.destroy()});
   }
   private hideTarget(onEnd:()=>void){
     exitBehindTree(this,this.hero,this.currentPlan,()=>{
       this.sticker.setVisible(false);
+      this.accessory.setVisible(false);
       if(!this.roundOver)onEnd();
     });
   }
@@ -242,9 +278,10 @@ export class PlayScene extends Phaser.Scene {
     const aim={x:pointer.x,y:pointer.y};
     this.shooting=true;
     this.active=false;
-    this.spawnSerial++; // Lock this appearance until the projectile lands.
+    this.spawnSerial++;
     this.tweens.killTweensOf(this.hero);
     const chosenStyle=this.selectedStyle;
+    const variant=this.currentVariant;
     playSfx('shot');
     launchMustache(this,'stache-'+chosenStyle,{x:480,y:459},aim,{width:75,height:38},()=>{
       if(this.roundOver)return;
@@ -259,7 +296,9 @@ export class PlayScene extends Phaser.Scene {
         this.popFeedback(aim.x,aim.y,'MISS!','#ff848f');
         burstLeaves(this,aim.x,aim.y,3);
       }else{
-        this.score+=result.points;
+        const reward=variantReward(variant,result.grade);
+        const gained=result.points+reward.bonus;
+        this.score+=gained;
         this.combo=result.combo;
         this.scoreText.setText(String(this.score).padStart(5,'0'));
         this.comboText.setText('× '+this.combo);
@@ -270,16 +309,18 @@ export class PlayScene extends Phaser.Scene {
           .setPosition(mouth.x,mouth.y).setRotation(this.hero.rotation).setVisible(true);
         burstStars(this,mouth.x,mouth.y,result.grade==='perfect');
         hitReaction(this,this.hero,RAMIN_DESKTOP_SCALE,result.grade==='perfect');
-        this.popFeedback(mouth.x,this.hero.y-165,'+'+result.points+' '+result.grade.toUpperCase()+'!',
+        this.popFeedback(mouth.x,this.hero.y-165,'+'+gained+' '+result.grade.toUpperCase()+'!',
           result.grade==='perfect'?'#ffd16c':'#a7efc0');
+        if(reward.bonus>0)this.varietyNotice(reward.label,'#ffe291');
       }
       this.time.delayedCall(result.grade==='miss'?180:410,()=>{
         if(this.roundOver)return;
-        this.hideTarget(()=>this.time.delayedCall(this.currentPlan.pauseMs,()=>this.popTarget()));
+        this.hideTarget(()=>this.time.delayedCall(this.pendingDouble?105:this.currentPlan.pauseMs,()=>this.popTarget()));
       });
     });
   }
   update(){
+    if(this.hero?.active && this.accessory?.active)syncAccessory(this.hero,this.accessory);
     if(this.hero?.active && this.sticker?.visible){
       const lip=raminLipPoint(this.hero);
       this.sticker.setPosition(lip.x,lip.y).setRotation(this.hero.rotation);

@@ -99,3 +99,12 @@ No accounts, on-chain interactions, payout eligibility, server, multiplayer, glo
 - Spawn coordinates now reference the exact rendered trunk axis. The outer trees always peek inward, and the middle tree supports both sides.
 - Spaced mobile trees across the complete 540px portrait viewport; the face stays clear of the front bark when aiming and the body emerges from behind it.
 - Added deterministic geometry and edge-lane tests without changing scoring, audio, menus or backend scope.
+
+
+### v0.7 — Character variety and special events
+
+- Appearance rates: regular 55%, sunglasses 18%, round glasses 12%, pink headband 10%, rare gold crown 5%. Procedurally generated transparent pixel accessories align with every character animation and rotation without covering the mouth.
+- Golden Ramin awards +50 for GOOD or PERFECT. Sunglasses Ramin awards +25 for PERFECT only. Bonuses apply at projectile impact; misses cannot gain bonuses.
+- After six seconds (but not in the last six), telegraphed FAKE-OUTs can appear (up to 7%); they ignore taps, do not fire, and do not break combos.
+- DOUBLE POP (~12%) queues a rapid second scorable appearance at another tree. Each appearance is one shot, as before.
+- Pure probability/bonus rules have unit tests; scores remain local-only practice scores, not redeemable rewards.
