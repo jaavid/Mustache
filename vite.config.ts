@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 
-export default defineConfig(({ mode }) => ({
-  base: mode === 'pages' ? '/Mustache/' : '/',
+// Relative asset URLs work on custom-domain roots and project subpaths alike.
+export default defineConfig({
+  base: './',
   build: { target: 'es2022' },
-}));
+});
