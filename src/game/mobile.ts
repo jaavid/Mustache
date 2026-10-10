@@ -7,6 +7,7 @@ import { emptyStats, recordShot, summarizeRound, type RoundStats, type RoundSumm
 import { haptic } from './haptics';
 import {addArcadeAccents,addLivingForest,addPhaseHud,addMissionStrip,announcePhase,celebrateCombo,impactRing,raminMoment,rarePerfectSlowMo} from './arcadeVisuals';
 import {tunePopPlan} from '../logic/arcadePhases';
+import { setMusicPhase } from './sound';
 import {addResultsExtras} from './replayUi';
 import { applyRaminMood, makeRamin, RAMIN_MOBILE_SCALE, raminLipPoint } from './ramin';
 import { evaluateShot, readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
@@ -128,6 +129,7 @@ export class MobilePlayScene extends Phaser.Scene {
   private previousEvent:SpawnEvent='normal';
   private stats:RoundStats={...emptyStats};
   private updatePhase!:(elapsed:number)=>void;
+  private followLighting!:(hero:Phaser.GameObjects.Sprite)=>void;
   private updateMissions!:(score:number,perfect:number,combo:number)=>void;
 
   constructor() { super('Play'); }
@@ -140,8 +142,9 @@ export class MobilePlayScene extends Phaser.Scene {
     portraitBackdrop(this);
     trees(this);
     addArcadeAccents(this,true);
-    const atmosphere=addLivingForest(this,true);
-    const phaseHud=addPhaseHud(this,true,phase=>{atmosphere(phase);announcePhase(this,true,phase);});
+    const lighting=addLivingForest(this,true);
+    this.followLighting=lighting.follow;
+    const phaseHud=addPhaseHud(this,true,phase=>{lighting.setPhase(phase);setMusicPhase(phase);announcePhase(this,true,phase);});
     this.updatePhase=phaseHud.update;
     this.updateMissions=addMissionStrip(this,true).update;
     this.hero = makeRamin(this, -300, FACE_Y + 18, RAMIN_MOBILE_SCALE, 'idle').setVisible(false);
@@ -331,6 +334,7 @@ export class MobilePlayScene extends Phaser.Scene {
     });
   }
   update(){
+    if(this.hero?.active)this.followLighting(this.hero);
     if(this.hero?.active && this.accessory?.active)syncAccessory(this.hero,this.accessory);
     if(this.hero?.active && this.sticker?.visible){
       const lip=raminLipPoint(this.hero);

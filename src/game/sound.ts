@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
+import { PHASE_PROFILES, type RoundPhase } from '../logic/arcadePhases';
 
-export type SoundEffect='start'|'select'|'shot'|'perfect'|'good'|'miss'|'finish';
+export type SoundEffect='start'|'select'|'shot'|'perfect'|'good'|'miss'|'finish'|'phase';
 const SFX_KEY='n5-mustache-sfx-enabled-v1';
 const MUSIC_KEY='n5-mustache-music-enabled-v1';
 function readBool(key:string,fallback:boolean):boolean{
@@ -53,13 +54,16 @@ export function playSfx(effect:SoundEffect):void{
       beep(ctx,t,660,.10);beep(ctx,t+.085,880,.11);beep(ctx,t+.18,1175,.21,'sine');break;
     case 'miss':
       beep(ctx,t,196,.12,'sawtooth',.03);beep(ctx,t+.09,140,.16,'triangle',.025);break;
+    case 'phase':
+      beep(ctx,t,587,.11,'triangle',.035);beep(ctx,t+.13,784,.12,'sine',.032);
+      beep(ctx,t+.28,1175,.19,'sine',.035);break;
     case 'finish':
       beep(ctx,t,523,.13);beep(ctx,t+.14,659,.14);beep(ctx,t+.29,784,.14);beep(ctx,t+.46,1047,.3,'sine');break;
   }
 }
 const NOTES=[0,7,9,7,5,7,2,-1, 0,5,7,12,9,7,5,-1, 4,7,11,7,5,4,2,-1, 0,2,5,7,9,5,2,-1];
 const ROOT=220;
-const INTERVAL=.234375; // gentle 128 BPM eighth-note pixel forest loop
+let beatInterval=30/PHASE_PROFILES.WARMUP.tempoBpm; // warm-up 112 bpm, rises to 160 bpm
 function pitch(semitones:number):number{return ROOT*Math.pow(2,semitones/12);}
 function pump():void{
   if(!music||!active||paused||(typeof document!=='undefined'&&document.hidden))return;
@@ -69,10 +73,10 @@ function pump():void{
   while(nextNote<ctx.currentTime+.17){
     const step=noteIndex%NOTES.length;
     const melody=NOTES[step];
-    if(melody>=0)beep(ctx,nextNote,pitch(melody+12),INTERVAL*.78,'square',.012);
-    if(step%4===0)beep(ctx,nextNote,pitch([0,5,7,3][Math.floor(step/8)%4]-12),INTERVAL*3,'triangle',.021);
-    if(step%8===4)beep(ctx,nextNote,pitch(19),INTERVAL*.4,'sine',.008);
-    nextNote+=INTERVAL;
+    if(melody>=0)beep(ctx,nextNote,pitch(melody+12),beatInterval*.78,'square',.012);
+    if(step%4===0)beep(ctx,nextNote,pitch([0,5,7,3][Math.floor(step/8)%4]-12),beatInterval*3,'triangle',.021);
+    if(step%8===4)beep(ctx,nextNote,pitch(19),beatInterval*.4,'sine',.008);
+    nextNote+=beatInterval;
     noteIndex++;
   }
 }
@@ -83,6 +87,13 @@ function scheduleMusic():void{
 }
 function haltScheduler():void{
   if(scheduler!==null){clearInterval(scheduler);scheduler=null;}
+}
+export function setMusicPhase(phase:RoundPhase):void{
+  const newInterval=30/PHASE_PROFILES[phase].tempoBpm;
+  if(beatInterval===newInterval)return;
+  beatInterval=newInterval;
+  nextNote=0;
+  if(active&&!paused&&phase!=='WARMUP')playSfx('phase');
 }
 export function startMusic():void{
   active=true;paused=false;nextNote=0;noteIndex=0;
