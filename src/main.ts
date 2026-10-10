@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import './style.css';
 import { BootScene, MenuScene, PlayScene, ResultsScene } from './game/scenes';
 
-const game = new Phaser.Game({
+new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
   backgroundColor: '#0e1a31',
