@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { burstLeaves, burstStars } from './ambience';
+import { applyRaminMood, makeRamin, RAMIN_MOBILE_SCALE, raminLipPoint } from './ramin';
 import { evaluateShot, readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
 import { normalizeTouchDistance } from '../logic/touch';
 
@@ -11,7 +12,6 @@ const FONT = '"Courier New", monospace';
 const SELECTOR_TOP = 768;
 const HUD_BOTTOM = 164;
 const FACE_Y = 547;
-const HERO_SIZE = 3.45;
 // Slightly more forgiving hit zones on touchscreens without changing the scoring contract.
 
 
@@ -68,8 +68,13 @@ export class MobileMenuScene extends Phaser.Scene {
     text(this, 270, 151, 'MUSTACHE', 52, '#ffce77');
     text(this, 270, 216, 'MAYHEM', 64, '#c5a2ff');
     text(this, 270, 288, 'AIM · SHOOT · STACHE', 20, '#e1dac7');
-    const hero = this.add.image(270, 511, 'ramin').setScale(4.35).setDepth(43);
-    this.add.image(270, 503, 'stache-0').setDisplaySize(136, 56).setDepth(44);
+    const hero = makeRamin(this, 270, 530, RAMIN_MOBILE_SCALE, 'blink').setDepth(43);
+    const lip = raminLipPoint(hero);
+    const menuStache=this.add.image(lip.x, lip.y, 'stache-0').setDisplaySize(136, 56).setDepth(44);
+    this.events.on(Phaser.Scenes.Events.UPDATE,()=>{
+      const target=raminLipPoint(hero);
+      menuStache.setPosition(target.x,target.y);
+    });
     this.add.image(451, 390, 'coin').setDisplaySize(70, 70).setDepth(48);
     this.tweens.add({targets: hero, y: 498, duration: 1550, yoyo:true, repeat:-1, ease: 'Sine.inOut'});
     text(this, 270, 691, 'CATCH RAMIN IN THE FOREST!', 22, '#fbe8bc');
@@ -90,7 +95,7 @@ export class MobilePlayScene extends Phaser.Scene {
   private roundOver = false;
   private spawnSerial = 0;
   private previousSlot = -1;
-  private hero!: Phaser.GameObjects.Image;
+  private hero!: Phaser.GameObjects.Sprite;
   private sticker!: Phaser.GameObjects.Image;
   private scoreText!: Phaser.GameObjects.Text;
   private comboText!: Phaser.GameObjects.Text;
@@ -104,7 +109,7 @@ export class MobilePlayScene extends Phaser.Scene {
     this.spawnSerial=0; this.previousSlot=-1;
     portraitBackdrop(this);
     trees(this);
-    this.hero = this.add.image(-300, FACE_Y, 'ramin').setScale(HERO_SIZE).setDepth(20).setVisible(false);
+    this.hero = makeRamin(this, -300, FACE_Y + 18, RAMIN_MOBILE_SCALE, 'idle').setVisible(false);
     this.sticker = this.add.image(-300, FACE_Y, 'stache-0').setDisplaySize(108, 51).setDepth(31).setVisible(false);
     this.hud();
     this.styles();
@@ -166,7 +171,8 @@ export class MobilePlayScene extends Phaser.Scene {
     const serial=++this.spawnSerial;
     this.activeTarget=true;
     const x=SPAWNS[slot];
-    this.hero.setTexture('ramin').setPosition(x,FACE_Y+66).setAlpha(0).setVisible(true)
+    applyRaminMood(this.hero,'idle');
+    this.hero.setPosition(x,FACE_Y+54).setAlpha(0).setVisible(true)
       .setAngle(Phaser.Math.Between(-5,5));
     this.sticker.setVisible(false);
     burstLeaves(this,x-55,650,9);
@@ -188,7 +194,8 @@ export class MobilePlayScene extends Phaser.Scene {
     const x=pointer.x, y=pointer.y;
     if(this.roundOver||this.shooting||y < HUD_BOTTOM||y > SELECTOR_TOP) return;
     this.shooting=true;
-    const distance=Phaser.Math.Distance.Between(x,y,this.hero.x,this.hero.y-4);
+    const lip = raminLipPoint(this.hero);
+    const distance=Phaser.Math.Distance.Between(x,y,lip.x,lip.y);
     const result=evaluateShot(normalizeTouchDistance(distance),this.combo,this.activeTarget);
     if(result.grade!=='miss') {
       this.activeTarget=false;
@@ -212,17 +219,24 @@ export class MobilePlayScene extends Phaser.Scene {
           this.feedback(x,y,'MISS!','#ff8eaa');
           burstLeaves(this,x,y,3);
         }else{
-          this.hero.setTexture('ramin-surprised');
+          applyRaminMood(this.hero,'surprised');
+          const mouth = raminLipPoint(this.hero);
           this.sticker.setTexture(`stache-${this.selectedStyle}`)
-            .setPosition(this.hero.x,this.hero.y-4).setVisible(true);
-          burstStars(this,this.hero.x,this.hero.y-4,result.grade==='perfect');
-          this.feedback(this.hero.x,this.hero.y-125,
+            .setPosition(mouth.x,mouth.y).setVisible(true);
+          burstStars(this,mouth.x,mouth.y,result.grade==='perfect');
+          this.feedback(mouth.x,this.hero.y-190,
             result.grade==='perfect'?`+${result.points} PERFECT!`:`+${result.points} GOOD!`,
             result.grade==='perfect'?'#ffe083':'#aaf3d4');
-          this.tweens.add({targets:this.hero,scale:HERO_SIZE*1.04,duration:110,yoyo:true});
+          this.tweens.add({targets:this.hero,scale:RAMIN_MOBILE_SCALE*1.04,duration:110,yoyo:true});
           this.time.delayedCall(460,()=>this.hide(()=>this.time.delayedCall(170,()=>this.pop())));
         }
       }});
+  }
+  update(){
+    if(this.hero?.active && this.sticker?.visible){
+      const lip=raminLipPoint(this.hero);
+      this.sticker.setPosition(lip.x,lip.y);
+    }
   }
   private feedback(x:number,y:number,words:string,color:string){
     const sx=Phaser.Math.Clamp(x,110,430);
@@ -249,8 +263,14 @@ export class MobileResultsScene extends Phaser.Scene {
     portraitBackdrop(this);
     panel(this,270,481,512,848,0x132137,.96,50);
     text(this,270,108,'ROUND COMPLETE!',38,'#ffd281');
-    this.add.image(270,345,'ramin').setScale(4.55).setDepth(55);
-    this.add.image(270,335,'stache-0').setDisplaySize(145,65).setDepth(56);
+    const hero = makeRamin(this,270,382,RAMIN_MOBILE_SCALE * 1.06,'victory').setDepth(55);
+    const lip = raminLipPoint(hero);
+    const resultsStache = this.add.image(lip.x,lip.y,'stache-0').setDisplaySize(145,65).setDepth(56);
+    this.tweens.add({targets:hero,y:375,angle:2,duration:1500,yoyo:true,repeat:-1,ease:'Sine.inOut'});
+    this.events.on(Phaser.Scenes.Events.UPDATE,()=>{
+      const mouth=raminLipPoint(hero);
+      resultsStache.setPosition(mouth.x,mouth.y);
+    });
     this.add.image(433,247,'coin').setDisplaySize(74,74).setDepth(57);
     text(this,270,549,'YOUR SCORE',24,'#d9c8e4');
     text(this,270,616,String(this.score).padStart(5,'0'),67,'#fff0b1');

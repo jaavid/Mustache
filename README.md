@@ -54,9 +54,9 @@ No accounts, on-chain interactions, payout eligibility, server, multiplayer, glo
 
 ### Next iterations
 
-1. Replace procedural pixel-art Ramin with hand-crafted animation frames based on the reference portrait.
-2. Add 4–6 detailed forest layers and muzzle/impact effects.
-3. Tune appearance timing and add sound (with accessible mute toggle).
+1. Tune appearance timing and add sound (with accessible mute toggle).
+2. Add secondary poses for lateral pop-outs and a tighter results composition.
+3. Replace placeholder moustaches with higher-detail pixel variants and impact FX.
 4. Introduce a verified server-authoritative scoreboard only when prizes become part of the scope.
 
 ### Mobile portrait v0.3
@@ -65,3 +65,12 @@ No accounts, on-chain interactions, payout eligibility, server, multiplayer, glo
 - Readable mobile HUD, large mustache selectors and a taller aiming area.
 - Hit grading uses 0.8× touch distance to make facial targeting on small screens practical.
 - No backend, ranking, or token payout.
+
+### Portrait-driven Ramin sprite v0.4
+
+- Replaced the procedural face/body with a dedicated four-frame, center-aligned transparent sprite sheet inspired by the provided portrait.
+- Desktop and portrait-mobile both use the same frame set: idle, blink, surprised, and victory.
+- Mustache placement now targets a calibrated upper-lip point computed from the sprite frame instead of a hard-coded generic face center.
+
+- Asset: `src/assets/ramin-sheet.png` (4 × 420×724 frames), loaded through the Vite bundle.
+- Animated blink / idle / surprised expressions and a victory bob with lip-attached mustache overlays.

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { createArt } from './art';
 import { addForestLife, burstLeaves, burstStars } from './ambience';
+import { applyRaminMood, ensureRaminAnimations, makeRamin, preloadRamin, RAMIN_DESKTOP_SCALE, raminLipPoint } from './ramin';
 import { evaluateShot, readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
 
 const WIDTH = 960;
@@ -42,7 +43,8 @@ function addTrees(scene:Phaser.Scene) {
 
 export class BootScene extends Phaser.Scene {
   constructor(){super('Boot');}
-  create(){createArt(this);this.scene.start('Menu');}
+  preload(){ preloadRamin(this); }
+  create(){ createArt(this); ensureRaminAnimations(this); this.scene.start('Menu'); }
 }
 
 export class MenuScene extends Phaser.Scene {
@@ -60,14 +62,14 @@ export class MenuScene extends Phaser.Scene {
     const start=()=>this.scene.start('Play');
     button(this,305,385,285,68,'▶  PLAY NOW',start);
     label(this,305,454,'45 SECONDS  •  3 STYLES  •  BIG COMBOS',15,'#e3d5e6');
-    const hero=this.add.image(775,320,'ramin').setScale(3.35).setDepth(41);
+    const hero=makeRamin(this,775,326,RAMIN_DESKTOP_SCALE,'blink').setDepth(41);
     hero.setAngle(-5);
-    this.time.addEvent({delay:3200,loop:true,callback:()=>{
-      hero.setTexture('ramin-blink');
-      this.time.delayedCall(160,()=>{if(hero.active)hero.setTexture('ramin');});
-    }});
     this.tweens.add({targets:hero,y:312,duration:1400,ease:'Sine.inOut',yoyo:true,repeat:-1});
-    this.add.image(756,304,'stache-0').setScale(3.5).setDepth(46).setAngle(-8);
+    const menuStache=this.add.image(775,278,'stache-0').setScale(2.6).setDepth(46).setAngle(-5);
+    this.events.on(Phaser.Scenes.Events.UPDATE,()=>{
+      const lip=raminLipPoint(hero);
+      menuStache.setPosition(lip.x,lip.y);
+    });
     this.add.image(862,106,'coin').setScale(1.6).setDepth(46);
     label(this,790,481,'MEET RAMIN!',23,'#ffe19a');
     label(this,310,513,'Click his upper lip, not his nose!',14,'#c0efd8');
@@ -81,7 +83,7 @@ export class PlayScene extends Phaser.Scene {
   private combo=0;
   private remaining=ROUND_LENGTH_SECONDS;
   private selectedStyle=0;
-  private hero!:Phaser.GameObjects.Image;
+  private hero!:Phaser.GameObjects.Sprite;
   private sticker!:Phaser.GameObjects.Image;
   private scoreText!:Phaser.GameObjects.Text;
   private timerText!:Phaser.GameObjects.Text;
@@ -99,7 +101,7 @@ export class PlayScene extends Phaser.Scene {
     this.score=0;this.combo=0;this.remaining=ROUND_LENGTH_SECONDS;this.selectedStyle=0;
     this.active=false;this.roundOver=false;this.shooting=false;this.spawnSerial=0;this.previousSlot=-1;
     backdrop(this);addTrees(this);
-    this.hero=this.add.image(-200,320,'ramin').setScale(2.45).setDepth(20).setVisible(false);
+    this.hero=makeRamin(this,-200,324,RAMIN_DESKTOP_SCALE,'idle').setVisible(false);
     this.sticker=this.add.image(-200,320,'stache-0').setDisplaySize(86,41).setDepth(31).setVisible(false);
     this.createHud();
     this.createSelector();
@@ -175,7 +177,8 @@ export class PlayScene extends Phaser.Scene {
     this.previousSlot=slot;
     const serial=++this.spawnSerial;
     this.active=true;
-    this.hero.setTexture('ramin').setPosition(SPAWN_POINTS[slot],370).setAlpha(0).setVisible(true).setAngle(Phaser.Math.Between(-5,5));
+    applyRaminMood(this.hero,'idle');
+    this.hero.setPosition(SPAWN_POINTS[slot],354).setAlpha(0).setVisible(true).setAngle(Phaser.Math.Between(-5,5));
     burstLeaves(this,SPAWN_POINTS[slot]-53,385,7);
     this.sticker.setVisible(false);
     this.tweens.add({targets:this.hero,y:315,alpha:1,duration:240,ease:'Back.easeOut'});
@@ -195,8 +198,9 @@ export class PlayScene extends Phaser.Scene {
     // Prevent accidental shooting at the HUD when changing an option.
     if(pointer.y<125)return;
     this.shooting=true;
-    const targetX=this.hero.x;
-    const targetY=this.hero.y - 4;
+    const lip = raminLipPoint(this.hero);
+    const targetX=lip.x;
+    const targetY=lip.y;
     const distance=Phaser.Math.Distance.Between(pointer.x,pointer.y,targetX,targetY);
     const result=evaluateShot(distance,this.combo,this.active);
     if(result.grade!=='miss'){
@@ -221,15 +225,22 @@ export class PlayScene extends Phaser.Scene {
         this.popFeedback(pointer.x,pointer.y,'MISS!', '#ff848f');
         burstLeaves(this,pointer.x,pointer.y,3);
       }else{
-        this.hero.setTexture('ramin-surprised');
-        this.sticker.setTexture(`stache-${this.selectedStyle}`).setPosition(this.hero.x,this.hero.y-4).setVisible(true);
-        burstStars(this,this.hero.x,this.hero.y-4,result.grade==='perfect');
+        applyRaminMood(this.hero,'surprised');
+        const mouth = raminLipPoint(this.hero);
+        this.sticker.setTexture(`stache-${this.selectedStyle}`).setPosition(mouth.x,mouth.y).setVisible(true);
+        burstStars(this,mouth.x,mouth.y,result.grade==='perfect');
         if(result.grade==='perfect')this.cameras.main.shake(100,0.0025);
-        this.popFeedback(this.hero.x,this.hero.y-88,result.grade==='perfect'?`+${result.points} PERFECT!`:`+${result.points} GOOD!`,result.grade==='perfect'?'#ffd16c':'#a7efc0');
-        this.tweens.add({targets:this.hero,scaleX:2.53,scaleY:2.53,duration:90,yoyo:true});
+        this.popFeedback(mouth.x,this.hero.y-165,result.grade==='perfect'?`+${result.points} PERFECT!`:`+${result.points} GOOD!`,result.grade==='perfect'?'#ffd16c':'#a7efc0');
+        this.tweens.add({targets:this.hero,scaleX:RAMIN_DESKTOP_SCALE*1.04,scaleY:RAMIN_DESKTOP_SCALE*1.04,duration:90,yoyo:true});
         this.time.delayedCall(510,()=>this.hideTarget(()=>this.time.delayedCall(180,()=>this.popTarget())));
       }
     }});
+  }
+  update(){
+    if(this.hero?.active && this.sticker?.visible){
+      const lip=raminLipPoint(this.hero);
+      this.sticker.setPosition(lip.x,lip.y);
+    }
   }
   private popFeedback(x:number,y:number,message:string,color:string){
     const cappedX=Phaser.Math.Clamp(x,170,790);
@@ -257,12 +268,14 @@ export class ResultsScene extends Phaser.Scene {
     this.add.rectangle(500,271,885,445,0x142036,.94).setStrokeStyle(7,0x806048).setDepth(40);
     this.add.rectangle(501,59,860,10,0xc49c65).setDepth(41);
     label(this,466,118,'ROUND COMPLETE!',43,'#ffcb6e');
-    const resultsHero=this.add.image(220,299,'ramin').setScale(3.3).setDepth(53);
-    this.time.addEvent({delay:2900,loop:true,callback:()=>{
-      resultsHero.setTexture('ramin-blink');
-      this.time.delayedCall(140,()=>{if(resultsHero.active)resultsHero.setTexture('ramin');});
-    }});
-    this.add.image(220,284,'stache-0').setScale(3.25).setDepth(54);
+    const resultsHero=makeRamin(this,220,318,RAMIN_DESKTOP_SCALE,'victory').setDepth(53);
+    const resultsLip = raminLipPoint(resultsHero);
+    const resultStache = this.add.image(resultsLip.x, resultsLip.y,'stache-0').setScale(3.25).setDepth(54);
+    this.tweens.add({targets:resultsHero,y:312,angle:2,duration:1400,yoyo:true,repeat:-1,ease:'Sine.inOut'});
+    this.events.on(Phaser.Scenes.Events.UPDATE,()=>{
+      const mouth=raminLipPoint(resultsHero);
+      resultStache.setPosition(mouth.x,mouth.y);
+    });
     this.add.image(317,221,'coin').setScale(1.2).setDepth(55);
     label(this,640,204,'YOUR SCORE',22,'#d7bee8');
     label(this,640,259,String(this.finalScore).padStart(5,'0'),62,'#fff2bf');
