@@ -120,7 +120,7 @@ function toggleButton(scene:Phaser.Scene,x:number,y:number,width:number,
     caption.setText(word+' '+(get()?'ON':'OFF'));
     hit.setStrokeStyle(3,get()?0xc5a0fa:0x617083);
   };
-  hit.on('pointerdown',(pointer:Phaser.Input.Pointer,_lx:number,_ly:number,event:Phaser.Types.Input.EventData)=>{
+  hit.on('pointerdown',(_pointer:Phaser.Input.Pointer,_lx:number,_ly:number,event:Phaser.Types.Input.EventData)=>{
     event.stopPropagation();
     toggle();update();
   });

@@ -11,3 +11,5 @@
 - v0.6: Scoring must happen at projectile impact; never before the mustache visually arrives. Appearance serials invalidate old timeouts; preserve one-shot-per-pop and mobile portrait-safe X positioning.
 
 - v0.7: Keep cosmetic accessories aligned to the 210×362 sprite and do not cover the mouth. Fake-outs cannot reduce combo. Double-pop follow-up must use a different tree and remain scorable. Only grant bonus on confirmed projectile impact.
+
+- v0.8: Pause and tutorial overlays must run independently of the paused Play scene. Stop music on scene shutdown and orientation remount. Keep HUD touch targets safe and record stats exclusively at projectile impact.

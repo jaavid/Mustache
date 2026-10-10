@@ -1,6 +1,10 @@
 import Phaser from 'phaser';
 import { createArt } from './art';
 import {addSoundToggle,playSfx} from './sound';
+import { addMusicToggle, startMusic, stopMusic } from './sound';
+import { addPauseButton, beginTutorial, registerRoundVisibility } from './overlays';
+import { emptyStats, recordShot, summarizeRound, type RoundStats, type RoundSummary } from '../logic/roundStats';
+import { haptic } from './haptics';
 import { addForestLife, burstLeaves, burstStars } from './ambience';
 import { applyRaminMood, ensureRaminAnimations, makeRamin, preloadRamin, RAMIN_DESKTOP_SCALE, raminLipPoint } from './ramin';
 import { evaluateShot, readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
@@ -90,6 +94,7 @@ export class MenuScene extends Phaser.Scene {
     label(this,310,267,'AIM  ·  SHOOT  ·  STACHE',18,'#e4dbb7');
     const start=()=>{playSfx('start');this.scene.start('Play');};
     addSoundToggle(this,895,42);
+    addMusicToggle(this,895,94,106);
     button(this,305,385,285,68,'▶  PLAY NOW',start);
     label(this,305,454,'45 SECONDS  •  3 STYLES  •  BIG COMBOS',15,'#e3d5e6');
     const hero=makeRamin(this,775,326,RAMIN_DESKTOP_SCALE,'blink').setDepth(41);
@@ -130,18 +135,22 @@ export class PlayScene extends Phaser.Scene {
   private currentVariant:RaminVariant='normal';
   private pendingDouble=false;
   private previousEvent:SpawnEvent='normal';
+  private stats:RoundStats={...emptyStats};
 
   constructor(){super('Play');}
   create(){
     this.score=0;this.combo=0;this.remaining=ROUND_LENGTH_SECONDS;this.selectedStyle=0;
     this.active=false;this.roundOver=false;this.shooting=false;this.spawnSerial=0;this.previousSlot=-1;
     this.pendingDouble=false;this.previousEvent='normal';this.currentVariant='normal';
+    this.stats={...emptyStats};
     backdrop(this);addTrees(this);
     this.hero=makeRamin(this,-200,324,RAMIN_DESKTOP_SCALE,'idle').setVisible(false);
     this.accessory=makeAccessory(this);
     this.sticker=this.add.image(-200,320,'stache-0').setDisplaySize(66,37).setDepth(31).setVisible(false);
     this.createHud();
     addSoundToggle(this,895,36);
+    addMusicToggle(this,896,105,106);
+    addPauseButton(this,780,105,false);
     this.createSelector();
     this.cursor=this.add.graphics().setDepth(95);
     this.input.on('pointermove',(pointer:Phaser.Input.Pointer)=>this.drawCursor(pointer.x,pointer.y));
@@ -159,6 +168,9 @@ export class PlayScene extends Phaser.Scene {
     }});
     label(this,480,109,'WAIT FOR RAMIN...',18,'#fff0c2').setDepth(55).setAlpha(.75);
     this.time.delayedCall(650,()=>this.popTarget());
+    startMusic();
+    registerRoundVisibility(this,false);
+    beginTutorial(this,false);
   }
   private createHud(){
     const top=this.add.rectangle(480,36,938,66,0x131d2b,.92).setStrokeStyle(4,0x6e547e).setDepth(72);
@@ -289,6 +301,8 @@ export class PlayScene extends Phaser.Scene {
       const mouth=raminLipPoint(this.hero);
       const distance=Phaser.Math.Distance.Between(aim.x,aim.y,mouth.x,mouth.y);
       const result=evaluateShot(distance,this.combo,true);
+      this.stats=recordShot(this.stats,result.grade,result.combo);
+      haptic(result.grade);
       if(result.grade==='miss'){
         this.combo=0;
         this.comboText.setText('× 0');
@@ -336,24 +350,31 @@ export class PlayScene extends Phaser.Scene {
     if(this.roundOver)return;
     this.roundOver=true;this.active=false;this.input.enabled=false;
     playSfx('finish');
+    stopMusic();
     const best=Math.max(this.score,readBestScore());
     saveBestScore(best);
-    this.scene.start('Results',{score:this.score,best});
+    const summary=summarizeRound(this.stats,this.score);
+    this.scene.start('Results',{score:this.score,best,summary});
   }
 }
 
-type ResultsData = { score:number; best:number };
+type ResultsData = { score:number; best:number; summary:RoundSummary };
 export class ResultsScene extends Phaser.Scene {
   private finalScore=0;
   private bestScore=0;
+  private summary:RoundSummary=summarizeRound(emptyStats,0);
   constructor(){super('Results');}
-  init(data:ResultsData){this.finalScore=data.score??0;this.bestScore=data.best??0;}
+  init(data:ResultsData){
+    this.finalScore=data.score??0;this.bestScore=data.best??0;
+    this.summary=data.summary??summarizeRound(emptyStats,this.finalScore);
+  }
   create(){
     backdrop(this);
     this.add.rectangle(500,271,885,445,0x142036,.94).setStrokeStyle(7,0x806048).setDepth(40);
     this.add.rectangle(501,59,860,10,0xc49c65).setDepth(41);
     label(this,466,118,'ROUND COMPLETE!',43,'#ffcb6e');
     addSoundToggle(this,861,79);
+    addMusicToggle(this,861,133,110);
     const resultsHero=makeRamin(this,220,318,RAMIN_DESKTOP_SCALE,'victory').setDepth(53);
     const resultsLip = raminLipPoint(resultsHero);
     const resultStache = this.add.image(resultsLip.x, resultsLip.y,'stache-0').setDisplaySize(70,40).setDepth(54);
@@ -365,8 +386,11 @@ export class ResultsScene extends Phaser.Scene {
     this.add.image(317,221,'coin').setScale(1.2).setDepth(55);
     label(this,640,204,'YOUR SCORE',22,'#d7bee8');
     label(this,640,259,String(this.finalScore).padStart(5,'0'),62,'#fff2bf');
+    label(this,640,163,'MEDAL: '+this.summary.medal,25,
+      this.summary.medal==='GOLD'?'#ffe085':this.summary.medal==='SILVER'?'#dbeaff':'#d7a788');
     label(this,640,312,`PERSONAL BEST: ${this.bestScore}`,21,'#b5f6c6');
-    label(this,645,351,'Saved on this device only',16,'#b5b9c5');
+    label(this,645,348,`ACCURACY: ${this.summary.accuracy}%   PERFECT: ${this.summary.perfect}`,18,'#f1e8c6');
+    label(this,645,377,`HITS: ${this.summary.hits}/${this.summary.shots}   BEST COMBO: ${this.summary.maxCombo}`,17,'#cce9e3');
     const again=()=>{playSfx('start');this.scene.start('Play');};
     button(this,642,432,324,67,'↻  PLAY AGAIN',again);
     label(this,493,511,'NO REAL TOKENS · PRACTICE MODE',16,'#d1bbdb');

@@ -108,3 +108,13 @@ No accounts, on-chain interactions, payout eligibility, server, multiplayer, glo
 - After six seconds (but not in the last six), telegraphed FAKE-OUTs can appear (up to 7%); they ignore taps, do not fire, and do not break combos.
 - DOUBLE POP (~12%) queues a rapid second scorable appearance at another tree. Each appearance is one shot, as before.
 - Pure probability/bonus rules have unit tests; scores remain local-only practice scores, not redeemable rewards.
+
+### v0.8 — Arcade experience and onboarding
+
+- The pink bandana is a broad neon-fuchsia ribbon with a visible knot and two pixel trailing tails, without covering the mouth.
+- Procedural 8-bit forest music has separate persisted MUSIC and SFX toggles. It begins after PLAY and stops on finish or orientation change.
+- A Pause button and P keyboard shortcut freeze the round, with a three-second countdown before resume; hiding the browser tab auto-pauses.
+- Three tutorial steps guide first-time players for around 10 seconds. NEXT and SKIP allow fast onboarding without consuming round time.
+- Every impact records hits, misses, Perfects and maximum combo. Results now display accuracy and Bronze/Silver/Gold medals.
+- Opt-in haptic feedback (off by default) is available through the Pause overlay on compatible mobile devices.
+- Local practice only: no server, accounts or token rewards.
