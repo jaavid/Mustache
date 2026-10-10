@@ -5,7 +5,7 @@ import { addMusicToggle, startMusic, stopMusic } from './sound';
 import { addPauseButton, beginTutorial, registerRoundVisibility } from './overlays';
 import { emptyStats, recordShot, summarizeRound, type RoundStats, type RoundSummary } from '../logic/roundStats';
 import { haptic } from './haptics';
-import {addArcadeAccents,addLivingForest,addPhaseHud,announcePhase,celebrateCombo,impactRing,raminMoment} from './arcadeVisuals';
+import {addArcadeAccents,addLivingForest,addPhaseHud,addMissionStrip,announcePhase,celebrateCombo,impactRing,raminMoment,rarePerfectSlowMo} from './arcadeVisuals';
 import {tunePopPlan} from '../logic/arcadePhases';
 import {addResultsExtras} from './replayUi';
 import { addForestLife, burstLeaves, burstStars } from './ambience';
@@ -141,6 +141,7 @@ export class PlayScene extends Phaser.Scene {
   private previousEvent:SpawnEvent='normal';
   private stats:RoundStats={...emptyStats};
   private updatePhase!:(elapsed:number)=>void;
+  private updateMissions!:(score:number,perfect:number,combo:number)=>void;
 
   constructor(){super('Play');}
   create(){
@@ -153,6 +154,7 @@ export class PlayScene extends Phaser.Scene {
     const atmosphere=addLivingForest(this,false);
     const phaseHud=addPhaseHud(this,false,phase=>{atmosphere(phase);announcePhase(this,false,phase);});
     this.updatePhase=phaseHud.update;
+    this.updateMissions=addMissionStrip(this,false).update;
     this.hero=makeRamin(this,-200,324,RAMIN_DESKTOP_SCALE,'idle').setVisible(false);
     this.accessory=makeAccessory(this);
     this.sticker=this.add.image(-200,320,'stache-0').setDisplaySize(66,37).setDepth(31).setVisible(false);
@@ -176,8 +178,8 @@ export class PlayScene extends Phaser.Scene {
       if(this.remaining<=10)this.timerText.setColor('#ff929c');
       if(this.remaining<=0)this.finishRound();
     }});
-    const hint=label(this,480,178,'WATCH THE TREES · AIM FOR THE LIP!',17,'#ffedbc').setDepth(65);
-    this.tweens.add({targets:hint,alpha:0,y:164,duration:850,delay:1500,onComplete:()=>hint.destroy()});
+    const hint=label(this,480,216,'WATCH THE TREES · AIM FOR THE LIP!',17,'#ffedbc').setDepth(65);
+    this.tweens.add({targets:hint,alpha:0,y:203,duration:850,delay:1500,onComplete:()=>hint.destroy()});
     this.time.delayedCall(650,()=>this.popTarget());
     startMusic();
     registerRoundVisibility(this,false);
@@ -207,7 +209,9 @@ export class PlayScene extends Phaser.Scene {
     for(let i=0;i<3;i++){
       const x=355+i*124;
       const mark=this.add.rectangle(x,498,102,62,0x2c2d49).setStrokeStyle(4,0x68627c).setDepth(73).setInteractive({useHandCursor:true});
-      mark.on('pointerdown',()=>this.selectStyle(i));
+      mark.on('pointerdown',(_p:Phaser.Input.Pointer,_x:number,_y:number,event:Phaser.Types.Input.EventData)=>{
+        event.stopPropagation();this.selectStyle(i);playSfx('select');haptic('select');
+      });
       this.add.image(x,498,`stache-${i}`).setDisplaySize(86,40).setDepth(74);
       label(this,x-43,472,String(i+1),12,'#fbd88e');
       this.styleMarkers.push(mark);
@@ -340,7 +344,12 @@ export class PlayScene extends Phaser.Scene {
         this.popFeedback(mouth.x,this.hero.y-165,'+'+gained+' '+result.grade.toUpperCase()+'!',
           result.grade==='perfect'?'#ffd16c':'#a7efc0');
         if(reward.bonus>0)this.varietyNotice(reward.label,'#ffe291');
+        if(result.grade==='perfect'&&this.combo>=3&&Math.random()<.3){
+          applyRaminMood(this.hero,'victory');raminMoment(this,this.hero,false);
+        }
+        rarePerfectSlowMo(this,result.grade==='perfect',this.combo);
       }
+      this.updateMissions(this.score,this.stats.perfect,this.combo);
       this.time.delayedCall(result.grade==='miss'?180:410,()=>{
         if(this.roundOver)return;
         this.hideTarget(()=>this.time.delayedCall(this.pendingDouble?105:this.currentPlan.pauseMs,()=>this.popTarget()));

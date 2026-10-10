@@ -127,3 +127,5 @@ No accounts, on-chain interactions, payout eligibility, server, multiplayer, glo
 - **v0.9.4 — replay goals:** three measurable round missions, five persistent local badges, new-unlock feedback and a shareable text result (Web Share or clipboard). Shared text clearly states that scores are local/unverified.
 - **v0.9.5 — QA and balance:** deterministic tests cover phase thresholds, fair windows, combo rewards, local goals and share attribution. Reduced-motion preference suppresses extra ambient movement.
 - No server, wallet, token payments or fraud-proof tournament claims.
+
+- Final v0.9.5 polish: all three live quest targets are visible during play, pointer events on the mustache selector do not bubble into shooting, and 5× Perfect streaks add a short tween-only slow-motion beat. An occasional triumphant Ramin pose rewards sustained precision.

@@ -90,7 +90,7 @@ export function addPhaseHud(scene:Phaser.Scene,portrait:boolean,onPhase:(phase:R
 
 export function announcePhase(scene:Phaser.Scene,portrait:boolean,phase:RoundPhase):void{
   if(phase==='WARMUP')return;
-  const x=scene.scale.width/2,y=portrait?308:185;
+  const x=scene.scale.width/2,y=portrait?318:217;
   const headline=phase==='GROOVE'?'TWILIGHT TIME!':'FINAL 15 SECONDS!';
   const text=scene.add.text(x,y,headline,{
     fontFamily:PIXEL_FONT,fontSize:portrait?'28px':'26px',fontStyle:'bold',
@@ -125,7 +125,7 @@ export function impactRing(scene:Phaser.Scene,x:number,y:number,perfect:boolean)
 export function raminMoment(scene:Phaser.Scene,hero:Phaser.GameObjects.Sprite,portrait:boolean):void{
   const sayings=['HEH!', '?!', 'PSST!', 'TRY ME!', 'OOPS!'];
   const x=Phaser.Math.Clamp(hero.x+(portrait?-72:84),portrait?70:70,scene.scale.width-70);
-  const y=hero.y-(portrait?182:130);
+  const y=hero.y-(portrait?182:92);
   const txt=scene.add.text(x,y,sayings[Phaser.Math.Between(0,sayings.length-1)],{
     fontFamily:PIXEL_FONT,fontSize:portrait?'19px':'17px',fontStyle:'bold',
     color:'#ffe6ad',backgroundColor:'#263047',
@@ -133,4 +133,34 @@ export function raminMoment(scene:Phaser.Scene,hero:Phaser.GameObjects.Sprite,po
   }).setDepth(64).setOrigin(.5).setAlpha(0);
   scene.tweens.add({targets:txt,y:y-28,alpha:1,duration:190,yoyo:true,
     hold:340,onComplete:()=>txt.destroy()});
+}
+
+/** Compact, always-readable quest tracker; updated only after an actual shot impact. */
+export function addMissionStrip(scene:Phaser.Scene,portrait:boolean):{update:(score:number,perfect:number,combo:number)=>void}{
+  const center=scene.scale.width/2;
+  const y=portrait?250:183;
+  const fontSize=portrait?'15px':'14px';
+  scene.add.rectangle(center,y,portrait?501:506,31,0x142138,.77)
+    .setStrokeStyle(2,0x72578a,.65).setDepth(85);
+  const txt=scene.add.text(center,y,'',{
+    fontFamily:PIXEL_FONT,fontSize,fontStyle:'bold',color:'#f4dcb5',
+    stroke:'#1a2035',strokeThickness:2,
+  }).setOrigin(.5).setDepth(86);
+  const update=(score:number,perfect:number,combo:number)=>{
+    const a=Math.min(500,score),b=Math.min(3,perfect),c=Math.min(4,combo);
+    txt.setText('QUESTS  '+a+'/500 SCORE  ·  '+b+'/3 PERFECT  ·  '+c+'/4 COMBO');
+    txt.setColor(a===500&&b===3&&c===4?'#b2ffd5':'#f4dcb5');
+  };
+  update(0,0,0);
+  return {update};
+}
+
+/** A very brief tween-only slow-motion accent on exceptional Perfect streaks.
+ * Never modifies Phaser's round clock or input timing, so scoring stays fair.
+ */
+export function rarePerfectSlowMo(scene:Phaser.Scene,perfect:boolean,combo:number):void{
+  if(!perfect||combo<5)return;
+  const previous=scene.tweens.timeScale;
+  scene.tweens.timeScale=.48;
+  scene.time.delayedCall(145,()=>{if(scene.tweens)scene.tweens.timeScale=previous;});
 }
