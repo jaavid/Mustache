@@ -2,12 +2,15 @@ import Phaser from 'phaser';
 import './style.css';
 import { BootScene, MenuScene, PlayScene, ResultsScene } from './game/scenes';
 import { MobileMenuScene, MobilePlayScene, MobileResultsScene } from './game/mobile';
+import { GuideScene, PauseOverlayScene } from './game/overlays';
+import { stopMusic } from './game/sound';
 
 const portraitMedia = window.matchMedia('(max-width: 700px) and (orientation: portrait)');
 let game: Phaser.Game | undefined;
 
 function mountGame(): void {
   const isPortrait = portraitMedia.matches;
+  stopMusic();
   game?.destroy(true);
   document.documentElement.classList.toggle('portrait-game', isPortrait);
   game = new Phaser.Game({
@@ -22,8 +25,8 @@ function mountGame(): void {
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     input: { activePointers: 2 },
     scene: isPortrait
-      ? [BootScene, MobileMenuScene, MobilePlayScene, MobileResultsScene]
-      : [BootScene, MenuScene, PlayScene, ResultsScene],
+      ? [BootScene, MobileMenuScene, MobilePlayScene, MobileResultsScene, GuideScene, PauseOverlayScene]
+      : [BootScene, MenuScene, PlayScene, ResultsScene, GuideScene, PauseOverlayScene],
   });
 }
 
