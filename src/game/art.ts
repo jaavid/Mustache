@@ -214,11 +214,24 @@ function raminAccessory(c: Ctx, variant: RaminVariant) {
     return;
   }
   if (variant === 'headband') {
-    // Pink headband stays on the hairline, well above eyes and mouth.
-    rect(c,60,75,91,9,'#a6497a');rect(c,63,78,84,5,'#e9a3c5');
-    rect(c,98,75,13,9,'#ffe0a5');
-    rect(c,64,83,6,5,'#692e52');rect(c,143,83,7,5,'#692e52');
-    rect(c,151,79,10,6,'#a6497a');
+    // High-contrast neon-pink pixel bandana. Broad sash and two distinct
+    // trailing ribbons make it readable even when the mobile canvas is scaled.
+    // All cloth stays above/aside from the 136px upper-lip aim point.
+    rect(c,56,78,100,17,'#442339');
+    rect(c,59,79,95,13,'#ff459b');
+    rect(c,61,81,90,5,'#ffc0dc');
+    rect(c,61,88,91,4,'#d81e77');
+    rect(c,88,79,22,12,'#ff8bc1');
+    rect(c,94,83,8,5,'#ffe2ef');
+    // Readable knot on the right temple and wind-blown scarf tips.
+    rect(c,149,77,15,19,'#6f2656');
+    rect(c,152,79,10,14,'#ff459b');
+    rect(c,158,86,19,8,'#ff459b');
+    rect(c,165,89,15,10,'#d81e77');
+    rect(c,173,93,9,7,'#ffc0dc');
+    rect(c,157,96,10,23,'#602043');
+    rect(c,160,98,8,24,'#ff459b');
+    rect(c,164,113,7,8,'#ffc0dc');
     return;
   }
   // Rare golden crown with glints outside the facial aiming area.
