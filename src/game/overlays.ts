@@ -127,7 +127,7 @@ export class PauseOverlayScene extends Phaser.Scene {
       button.txt.setText('GET READY...');
       let remaining=3;
       countdown.setText(String(remaining));
-      this.time.addEvent({delay:700,repeat:2,callback:()=>{
+      this.time.addEvent({delay:1000,repeat:2,callback:()=>{
         remaining--;
         if(remaining===0){
           this.scene.resume('Play');

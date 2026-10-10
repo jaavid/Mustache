@@ -105,7 +105,7 @@ export class MenuScene extends Phaser.Scene {
       const lip=raminLipPoint(hero);
       menuStache.setPosition(lip.x,lip.y).setRotation(hero.rotation);
     });
-    this.add.image(862,106,'coin').setScale(1.6).setDepth(46);
+    this.add.image(745,106,'coin').setScale(1.6).setDepth(46);
     label(this,790,481,'MEET RAMIN!',23,'#ffe19a');
     label(this,310,513,'Click his upper lip, not his nose!',14,'#c0efd8');
     this.input.keyboard?.once('keydown-ENTER',start);
