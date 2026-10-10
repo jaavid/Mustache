@@ -6,6 +6,7 @@ const SH = 270;
 
 function makeCanvas(scene: Phaser.Scene, key: string, width: number, height: number, draw: (ctx: Ctx) => void) {
   const tex = scene.textures.createCanvas(key, width, height);
+  if (!tex) throw new Error(`Canvas texture creation failed: ${key}`);
   const ctx = tex.getContext();
   ctx.imageSmoothingEnabled = false;
   draw(ctx);

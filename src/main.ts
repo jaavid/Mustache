@@ -15,6 +15,3 @@ const game = new Phaser.Game({
   input: { activePointers: 2 },
   scene: [BootScene, MenuScene, PlayScene, ResultsScene],
 });
-
-// Useful in a manual browser console during development; not used for scoring.
-if (import.meta.env.DEV) (window as typeof window & { __N5_GAME__?: Phaser.Game }).__N5_GAME__ = game;
