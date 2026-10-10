@@ -5,6 +5,9 @@ import { addMusicToggle, startMusic, stopMusic } from './sound';
 import { addPauseButton, beginTutorial, registerRoundVisibility } from './overlays';
 import { emptyStats, recordShot, summarizeRound, type RoundStats, type RoundSummary } from '../logic/roundStats';
 import { haptic } from './haptics';
+import {addArcadeAccents,addLivingForest,addPhaseHud,announcePhase,celebrateCombo,impactRing,raminMoment} from './arcadeVisuals';
+import {tunePopPlan} from '../logic/arcadePhases';
+import {addResultsExtras} from './replayUi';
 import { applyRaminMood, makeRamin, RAMIN_MOBILE_SCALE, raminLipPoint } from './ramin';
 import { evaluateShot, readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
 import { normalizeTouchDistance } from '../logic/touch';
@@ -76,6 +79,7 @@ export class MobileMenuScene extends Phaser.Scene {
   constructor() { super('Menu'); }
   create() {
     portraitBackdrop(this);
+    addArcadeAccents(this,true);
     panel(this, 270, 192, 496, 292, 0x122037, .91, 45);
     text(this, 270, 79, '✦ N5 ARCADE ✦', 25, '#ffe199');
     text(this, 270, 151, 'MUSTACHE', 52, '#ffce77');
@@ -95,7 +99,7 @@ export class MobileMenuScene extends Phaser.Scene {
     addMusicToggle(this,72,38,118);
     const start=()=>{playSfx('start');this.scene.start('Play');};
     largeButton(this,270,792,'▶ PLAY NOW',start);
-    text(this, 270, 871, '45 SEC  ·  3 STYLES  ·  COMBOS', 17, '#decbea');
+    text(this, 270, 871, '45 SEC  ·  3 MISSIONS  ·  COMBOS', 17, '#decbea');
     text(this, 270, 924, 'Tap just below his nose!', 18, '#b0efcf');
     this.input.keyboard?.once('keydown-ENTER',start);
   }
@@ -123,6 +127,7 @@ export class MobilePlayScene extends Phaser.Scene {
   private pendingDouble=false;
   private previousEvent:SpawnEvent='normal';
   private stats:RoundStats={...emptyStats};
+  private updatePhase!:(elapsed:number)=>void;
 
   constructor() { super('Play'); }
   create() {
@@ -133,6 +138,10 @@ export class MobilePlayScene extends Phaser.Scene {
     this.stats={...emptyStats};
     portraitBackdrop(this);
     trees(this);
+    addArcadeAccents(this,true);
+    const atmosphere=addLivingForest(this,true);
+    const phaseHud=addPhaseHud(this,true,phase=>{atmosphere(phase);announcePhase(this,true,phase);});
+    this.updatePhase=phaseHud.update;
     this.hero = makeRamin(this, -300, FACE_Y + 18, RAMIN_MOBILE_SCALE, 'idle').setVisible(false);
     this.accessory=makeAccessory(this);
     this.sticker = this.add.image(-300, FACE_Y, 'stache-0').setDisplaySize(82,46).setDepth(31).setVisible(false);
@@ -149,11 +158,13 @@ export class MobilePlayScene extends Phaser.Scene {
     this.time.addEvent({delay:1000,loop:true,callback:()=>{
       if (this.roundOver) return;
       this.remaining--;
+      this.updatePhase(ROUND_LENGTH_SECONDS-this.remaining);
       this.timeText.setText(`00:${String(Math.max(0,this.remaining)).padStart(2,'0')}`);
       if(this.remaining<=10) this.timeText.setColor('#ff929c');
       if(this.remaining<=0) this.finish();
     }});
-    text(this,270,214,'WAIT FOR RAMIN...',22,'#f5e8bb').setDepth(50);
+    const hint=text(this,270,265,'WATCH THE TREES · AIM FOR THE LIP!',19,'#f5e8bb').setDepth(61);
+    this.tweens.add({targets:hint,alpha:0,y:244,duration:850,delay:1500,onComplete:()=>hint.destroy()});
     this.time.delayedCall(650,()=>this.pop());
     startMusic();
     registerRoundVisibility(this,true);
@@ -206,7 +217,7 @@ export class MobilePlayScene extends Phaser.Scene {
     if(!fromDouble)this.previousEvent=event;
     if(event==='double')this.pendingDouble=true;
     this.currentVariant=event==='fake-out'?'normal':chooseRaminVariant(Math.random());
-    const plan=popPlan(ROUND_LENGTH_SECONDS-this.remaining,Math.random());
+    const plan=tunePopPlan(popPlan(ROUND_LENGTH_SECONDS-this.remaining,Math.random()),ROUND_LENGTH_SECONDS-this.remaining);
     plan.side=chooseSpawnSide(slot,MOBILE_TREE_CENTERS.length,plan.side);
     plan.shift=MOBILE_PEEK_DISTANCE;
     if(event==='fake-out')plan.visibleMs=350;
@@ -236,6 +247,7 @@ export class MobilePlayScene extends Phaser.Scene {
         return;
       }
       this.activeTarget=true;
+      if(Math.random()<.18)raminMoment(this,this.hero,true);
       this.tweens.add({targets:this.hero,y:y-5,duration:480,ease:'Sine.inOut',yoyo:true,repeat:1});
       this.time.delayedCall(plan.visibleMs+100,()=>{
         if(this.roundOver||serial!==this.spawnSerial||!this.activeTarget)return;
@@ -291,11 +303,13 @@ export class MobilePlayScene extends Phaser.Scene {
         this.scoreText.setText(String(this.score).padStart(5,'0'));
         this.comboText.setText('× '+this.combo);
         this.tweens.add({targets:this.comboText,scale:1.25,duration:125,yoyo:true});
+        celebrateCombo(this,true,this.combo);
         playSfx(result.grade==='perfect'?'perfect':'good');
         applyRaminMood(this.hero,'surprised');
         this.sticker.setTexture('stache-'+style)
           .setPosition(mouth.x,mouth.y).setRotation(this.hero.rotation).setVisible(true);
         burstStars(this,mouth.x,mouth.y,result.grade==='perfect');
+        impactRing(this,mouth.x,mouth.y,result.grade==='perfect');
         hitReaction(this,this.hero,RAMIN_MOBILE_SCALE,result.grade==='perfect');
         this.feedback(mouth.x,this.hero.y-190,'+'+gained+' '+result.grade.toUpperCase()+'!',
           result.grade==='perfect'?'#ffe083':'#aaf3d4');
@@ -344,7 +358,8 @@ export class MobileResultsScene extends Phaser.Scene {
   }
   create(){
     portraitBackdrop(this);
-    panel(this,270,481,512,848,0x132137,.96,50);
+    addArcadeAccents(this,true);
+    panel(this,270,481,512,902,0x132137,.96,50);
     text(this,270,108,'ROUND COMPLETE!',38,'#ffd281');
     addSoundToggle(this,460,58,112);
     addMusicToggle(this,70,58,112);
@@ -363,9 +378,10 @@ export class MobileResultsScene extends Phaser.Scene {
       this.summary.medal==='GOLD'?'#ffe085':this.summary.medal==='SILVER'?'#daeaff':'#dba881');
     text(this,270,685,`PERSONAL BEST: ${this.best}`,22,'#adf3c8');
     text(this,270,729,`ACCURACY: ${this.summary.accuracy}%  ·  PERFECT: ${this.summary.perfect}`,21,'#f2e5be');
-    text(this,270,763,`HITS: ${this.summary.hits}/${this.summary.shots}  ·  MAX COMBO: ${this.summary.maxCombo}`,19,'#cbebdd');
-    largeButton(this,270,826,'↻ PLAY AGAIN',()=>{playSfx('start');this.scene.start('Play');});
-    text(this,270,915,'PRACTICE MODE · NO REAL TOKENS',16,'#dccae7');
+    text(this,270,751,`HITS: ${this.summary.hits}/${this.summary.shots}  ·  MAX COMBO: ${this.summary.maxCombo}`,19,'#cbebdd');
+    addResultsExtras(this,true,this.score,this.summary);
+    largeButton(this,270,839,'↻ PLAY AGAIN',()=>{playSfx('start');this.scene.start('Play');});
+    text(this,270,951,'PRACTICE MODE · NO REAL TOKENS',13,'#dccae7');
     this.input.keyboard?.once('keydown-ENTER',()=>this.scene.start('Play'));
   }
 }

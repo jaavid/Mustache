@@ -5,6 +5,9 @@ import { addMusicToggle, startMusic, stopMusic } from './sound';
 import { addPauseButton, beginTutorial, registerRoundVisibility } from './overlays';
 import { emptyStats, recordShot, summarizeRound, type RoundStats, type RoundSummary } from '../logic/roundStats';
 import { haptic } from './haptics';
+import {addArcadeAccents,addLivingForest,addPhaseHud,announcePhase,celebrateCombo,impactRing,raminMoment} from './arcadeVisuals';
+import {tunePopPlan} from '../logic/arcadePhases';
+import {addResultsExtras} from './replayUi';
 import { addForestLife, burstLeaves, burstStars } from './ambience';
 import { applyRaminMood, ensureRaminAnimations, makeRamin, preloadRamin, RAMIN_DESKTOP_SCALE, raminLipPoint } from './ramin';
 import { evaluateShot, readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
@@ -84,6 +87,7 @@ export class MenuScene extends Phaser.Scene {
   constructor(){super('Menu');}
   create(){
     backdrop(this);
+    addArcadeAccents(this,false);
     // Woodland signboard and stacked arcade title.
     this.add.rectangle(325,202,568,304,0x101b29,.74).setStrokeStyle(5,0x735745).setDepth(40);
     this.add.rectangle(325,73,552,11,0x92704b).setDepth(41);
@@ -96,7 +100,7 @@ export class MenuScene extends Phaser.Scene {
     addSoundToggle(this,895,42);
     addMusicToggle(this,895,94,106);
     button(this,305,385,285,68,'▶  PLAY NOW',start);
-    label(this,305,454,'45 SECONDS  •  3 STYLES  •  BIG COMBOS',15,'#e3d5e6');
+    label(this,305,454,'45 SECONDS  •  3 MISSIONS  •  BIG COMBOS',15,'#e3d5e6');
     const hero=makeRamin(this,775,326,RAMIN_DESKTOP_SCALE,'blink').setDepth(41);
     hero.setAngle(-5);
     this.tweens.add({targets:hero,y:312,duration:1400,ease:'Sine.inOut',yoyo:true,repeat:-1});
@@ -136,6 +140,7 @@ export class PlayScene extends Phaser.Scene {
   private pendingDouble=false;
   private previousEvent:SpawnEvent='normal';
   private stats:RoundStats={...emptyStats};
+  private updatePhase!:(elapsed:number)=>void;
 
   constructor(){super('Play');}
   create(){
@@ -144,6 +149,10 @@ export class PlayScene extends Phaser.Scene {
     this.pendingDouble=false;this.previousEvent='normal';this.currentVariant='normal';
     this.stats={...emptyStats};
     backdrop(this);addTrees(this);
+    addArcadeAccents(this,false);
+    const atmosphere=addLivingForest(this,false);
+    const phaseHud=addPhaseHud(this,false,phase=>{atmosphere(phase);announcePhase(this,false,phase);});
+    this.updatePhase=phaseHud.update;
     this.hero=makeRamin(this,-200,324,RAMIN_DESKTOP_SCALE,'idle').setVisible(false);
     this.accessory=makeAccessory(this);
     this.sticker=this.add.image(-200,320,'stache-0').setDisplaySize(66,37).setDepth(31).setVisible(false);
@@ -162,11 +171,13 @@ export class PlayScene extends Phaser.Scene {
     this.time.addEvent({delay:1000,loop:true,callback:()=>{
       if(this.roundOver)return;
       this.remaining--;
+      this.updatePhase(ROUND_LENGTH_SECONDS-this.remaining);
       this.timerText.setText(`00:${String(Math.max(this.remaining,0)).padStart(2,'0')}`);
       if(this.remaining<=10)this.timerText.setColor('#ff929c');
       if(this.remaining<=0)this.finishRound();
     }});
-    label(this,480,109,'WAIT FOR RAMIN...',18,'#fff0c2').setDepth(55).setAlpha(.75);
+    const hint=label(this,480,178,'WATCH THE TREES · AIM FOR THE LIP!',17,'#ffedbc').setDepth(65);
+    this.tweens.add({targets:hint,alpha:0,y:164,duration:850,delay:1500,onComplete:()=>hint.destroy()});
     this.time.delayedCall(650,()=>this.popTarget());
     startMusic();
     registerRoundVisibility(this,false);
@@ -232,7 +243,7 @@ export class PlayScene extends Phaser.Scene {
     if(!fromDouble)this.previousEvent=event;
     if(event==='double')this.pendingDouble=true;
     this.currentVariant=event==='fake-out'?'normal':chooseRaminVariant(Math.random());
-    const plan=popPlan(ROUND_LENGTH_SECONDS-this.remaining,Math.random());
+    const plan=tunePopPlan(popPlan(ROUND_LENGTH_SECONDS-this.remaining,Math.random()),ROUND_LENGTH_SECONDS-this.remaining);
     plan.side=chooseSpawnSide(slot,DESKTOP_TREE_CENTERS.length,plan.side);
     plan.shift=DESKTOP_PEEK_DISTANCE;
     if(event==='fake-out')plan.visibleMs=320;
@@ -262,6 +273,7 @@ export class PlayScene extends Phaser.Scene {
         return;
       }
       this.active=true;
+      if(Math.random()<.18)raminMoment(this,this.hero,false);
       this.tweens.add({targets:this.hero,y:y-5,duration:470,ease:'Sine.inOut',yoyo:true,repeat:1});
       this.time.delayedCall(plan.visibleMs,()=>{
         if(this.roundOver||serial!==this.spawnSerial||!this.active)return;
@@ -317,11 +329,13 @@ export class PlayScene extends Phaser.Scene {
         this.scoreText.setText(String(this.score).padStart(5,'0'));
         this.comboText.setText('× '+this.combo);
         this.tweens.add({targets:this.comboText,scale:1.22,duration:115,yoyo:true});
+        celebrateCombo(this,false,this.combo);
         playSfx(result.grade==='perfect'?'perfect':'good');
         applyRaminMood(this.hero,'surprised');
         this.sticker.setTexture('stache-'+chosenStyle)
           .setPosition(mouth.x,mouth.y).setRotation(this.hero.rotation).setVisible(true);
         burstStars(this,mouth.x,mouth.y,result.grade==='perfect');
+        impactRing(this,mouth.x,mouth.y,result.grade==='perfect');
         hitReaction(this,this.hero,RAMIN_DESKTOP_SCALE,result.grade==='perfect');
         this.popFeedback(mouth.x,this.hero.y-165,'+'+gained+' '+result.grade.toUpperCase()+'!',
           result.grade==='perfect'?'#ffd16c':'#a7efc0');
@@ -370,6 +384,7 @@ export class ResultsScene extends Phaser.Scene {
   }
   create(){
     backdrop(this);
+    addArcadeAccents(this,false);
     this.add.rectangle(500,271,885,445,0x142036,.94).setStrokeStyle(7,0x806048).setDepth(40);
     this.add.rectangle(501,59,860,10,0xc49c65).setDepth(41);
     label(this,466,118,'ROUND COMPLETE!',43,'#ffcb6e');
@@ -389,10 +404,11 @@ export class ResultsScene extends Phaser.Scene {
     label(this,640,163,'MEDAL: '+this.summary.medal,25,
       this.summary.medal==='GOLD'?'#ffe085':this.summary.medal==='SILVER'?'#dbeaff':'#d7a788');
     label(this,640,312,`PERSONAL BEST: ${this.bestScore}`,21,'#b5f6c6');
-    label(this,645,348,`ACCURACY: ${this.summary.accuracy}%   PERFECT: ${this.summary.perfect}`,18,'#f1e8c6');
-    label(this,645,377,`HITS: ${this.summary.hits}/${this.summary.shots}   BEST COMBO: ${this.summary.maxCombo}`,17,'#cce9e3');
+    label(this,645,340,`ACCURACY: ${this.summary.accuracy}%   PERFECT: ${this.summary.perfect}`,18,'#f1e8c6');
+    label(this,645,366,`HITS: ${this.summary.hits}/${this.summary.shots}   BEST COMBO: ${this.summary.maxCombo}`,17,'#cce9e3');
+    addResultsExtras(this,false,this.finalScore,this.summary);
     const again=()=>{playSfx('start');this.scene.start('Play');};
-    button(this,642,432,324,67,'↻  PLAY AGAIN',again);
+    button(this,642,452,324,67,'↻  PLAY AGAIN',again);
     label(this,493,511,'NO REAL TOKENS · PRACTICE MODE',16,'#d1bbdb');
     this.input.keyboard?.once('keydown-ENTER',again);
     this.input.keyboard?.once('keydown-SPACE',again);

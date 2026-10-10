@@ -118,3 +118,12 @@ No accounts, on-chain interactions, payout eligibility, server, multiplayer, glo
 - Every impact records hits, misses, Perfects and maximum combo. Results now display accuracy and Bronze/Silver/Gold medals.
 - Opt-in haptic feedback (off by default) is available through the Pause overlay on compatible mobile devices.
 - Local practice only: no server, accounts or token rewards.
+
+### v0.9.1–v0.9.5 — Arcade polish and replayability
+
+- **v0.9.1 — HUD and UI:** shared arcade frame styling, readable phase/time meter and improved mobile result layout with dedicated space for sharing.
+- **v0.9.2 — living forest:** multi-layer fog/parallax, windborne leaves and dynamic sunset-to-night lighting. Small character taunts appear occasionally without changing hit detection.
+- **v0.9.3 — 3-phase pacing:** 0–15s warmup, 15–30s groove, 30–45s finale; speed increases within tested lower bounds. Combo milestones, impact shockwaves and phase announcements make accuracy more rewarding.
+- **v0.9.4 — replay goals:** three measurable round missions, five persistent local badges, new-unlock feedback and a shareable text result (Web Share or clipboard). Shared text clearly states that scores are local/unverified.
+- **v0.9.5 — QA and balance:** deterministic tests cover phase thresholds, fair windows, combo rewards, local goals and share attribution. Reduced-motion preference suppresses extra ambient movement.
+- No server, wallet, token payments or fraud-proof tournament claims.

@@ -30,3 +30,19 @@ footer span { opacity:.65; padding-left:16px; }
   }
   footer { margin-top: 0; padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* v0.9 arcade cabinet: consistent twilight ink + gold/purple accent, no viewport scroll. */
+#game {
+  border-color: #9270ad;
+  border-radius: 8px;
+  box-shadow: 0 0 0 3px #12192d, 0 22px 65px #020610bf,
+    0 0 0 6px #22263f, 0 0 65px #8767ca44;
+}
+#game:focus-within { outline: 2px solid #eac382; outline-offset: 6px; }
+#game canvas { -webkit-tap-highlight-color: transparent; user-select: none; }
+@media (max-width: 700px) {
+  #game { border-radius: 3px; box-shadow: 0 0 0 2px #111a30, 0 8px 32px #050711ba; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #game { box-shadow: 0 0 0 3px #111a30; }
+}
