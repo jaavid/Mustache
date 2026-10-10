@@ -89,7 +89,7 @@ export class MenuScene extends Phaser.Scene {
     const menuStache=this.add.image(775,278,'stache-0').setDisplaySize(68,38).setDepth(46).setAngle(-5);
     this.events.on(Phaser.Scenes.Events.UPDATE,()=>{
       const lip=raminLipPoint(hero);
-      menuStache.setPosition(lip.x,lip.y);
+      menuStache.setPosition(lip.x,lip.y).setRotation(hero.rotation);
     });
     this.add.image(862,106,'coin').setScale(1.6).setDepth(46);
     label(this,790,481,'MEET RAMIN!',23,'#ffe19a');
@@ -252,7 +252,7 @@ export class PlayScene extends Phaser.Scene {
         playSfx(result.grade==='perfect'?'perfect':'good');
         applyRaminMood(this.hero,'surprised');
         const mouth = raminLipPoint(this.hero);
-        this.sticker.setTexture(`stache-${this.selectedStyle}`).setPosition(mouth.x,mouth.y).setVisible(true);
+        this.sticker.setTexture(`stache-${this.selectedStyle}`).setPosition(mouth.x,mouth.y).setRotation(this.hero.rotation).setVisible(true);
         burstStars(this,mouth.x,mouth.y,result.grade==='perfect');
         if(result.grade==='perfect')this.cameras.main.shake(100,0.0025);
         this.popFeedback(mouth.x,this.hero.y-165,result.grade==='perfect'?`+${result.points} PERFECT!`:`+${result.points} GOOD!`,result.grade==='perfect'?'#ffd16c':'#a7efc0');
@@ -264,7 +264,7 @@ export class PlayScene extends Phaser.Scene {
   update(){
     if(this.hero?.active && this.sticker?.visible){
       const lip=raminLipPoint(this.hero);
-      this.sticker.setPosition(lip.x,lip.y);
+      this.sticker.setPosition(lip.x,lip.y).setRotation(this.hero.rotation);
     }
   }
   private popFeedback(x:number,y:number,message:string,color:string){
@@ -301,7 +301,7 @@ export class ResultsScene extends Phaser.Scene {
     this.tweens.add({targets:resultsHero,y:312,angle:2,duration:1400,yoyo:true,repeat:-1,ease:'Sine.inOut'});
     this.events.on(Phaser.Scenes.Events.UPDATE,()=>{
       const mouth=raminLipPoint(resultsHero);
-      resultStache.setPosition(mouth.x,mouth.y);
+      resultStache.setPosition(mouth.x,mouth.y).setRotation(resultsHero.rotation);
     });
     this.add.image(317,221,'coin').setScale(1.2).setDepth(55);
     label(this,640,204,'YOUR SCORE',22,'#d7bee8');

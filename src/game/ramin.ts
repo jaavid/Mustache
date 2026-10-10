@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { rotatedOffsetPoint } from '../logic/rotatedOffsetPoint';
 
 const raminSheetUrl = new URL('../assets/ramin-sheet.png', import.meta.url).href;
 
@@ -83,8 +84,12 @@ export function applyRaminMood(hero: Phaser.GameObjects.Sprite, mood: RaminMood)
 }
 
 export function raminLipPoint(hero: Phaser.GameObjects.Sprite): { x: number; y: number } {
-  return {
-    x: hero.x + hero.displayWidth * LIP_X_RATIO,
-    y: hero.y + hero.displayHeight * LIP_Y_RATIO,
-  };
+  // Rotate the mouth offset with the hero; a plain x/y offset drifts off the face.
+  return rotatedOffsetPoint(
+    hero.x,
+    hero.y,
+    hero.displayWidth * LIP_X_RATIO,
+    hero.displayHeight * LIP_Y_RATIO,
+    hero.rotation,
+  );
 }

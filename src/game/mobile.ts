@@ -74,7 +74,7 @@ export class MobileMenuScene extends Phaser.Scene {
     const menuStache=this.add.image(lip.x, lip.y, 'stache-0').setDisplaySize(80,44).setDepth(44);
     this.events.on(Phaser.Scenes.Events.UPDATE,()=>{
       const target=raminLipPoint(hero);
-      menuStache.setPosition(target.x,target.y);
+      menuStache.setPosition(target.x,target.y).setRotation(hero.rotation);
     });
     this.add.image(451, 390, 'coin').setDisplaySize(70, 70).setDepth(48);
     this.tweens.add({targets: hero, y: 498, duration: 1550, yoyo:true, repeat:-1, ease: 'Sine.inOut'});
@@ -229,7 +229,7 @@ export class MobilePlayScene extends Phaser.Scene {
           applyRaminMood(this.hero,'surprised');
           const mouth = raminLipPoint(this.hero);
           this.sticker.setTexture(`stache-${this.selectedStyle}`)
-            .setPosition(mouth.x,mouth.y).setVisible(true);
+            .setPosition(mouth.x,mouth.y).setRotation(this.hero.rotation).setVisible(true);
           burstStars(this,mouth.x,mouth.y,result.grade==='perfect');
           this.feedback(mouth.x,this.hero.y-190,
             result.grade==='perfect'?`+${result.points} PERFECT!`:`+${result.points} GOOD!`,
@@ -242,7 +242,7 @@ export class MobilePlayScene extends Phaser.Scene {
   update(){
     if(this.hero?.active && this.sticker?.visible){
       const lip=raminLipPoint(this.hero);
-      this.sticker.setPosition(lip.x,lip.y);
+      this.sticker.setPosition(lip.x,lip.y).setRotation(this.hero.rotation);
     }
   }
   private feedback(x:number,y:number,words:string,color:string){
@@ -278,7 +278,7 @@ export class MobileResultsScene extends Phaser.Scene {
     this.tweens.add({targets:hero,y:375,angle:2,duration:1500,yoyo:true,repeat:-1,ease:'Sine.inOut'});
     this.events.on(Phaser.Scenes.Events.UPDATE,()=>{
       const mouth=raminLipPoint(hero);
-      resultsStache.setPosition(mouth.x,mouth.y);
+      resultsStache.setPosition(mouth.x,mouth.y).setRotation(hero.rotation);
     });
     this.add.image(433,247,'coin').setDisplaySize(74,74).setDepth(57);
     text(this,270,549,'YOUR SCORE',24,'#d9c8e4');
