@@ -7,3 +7,5 @@
 - All changes must pass `npm run typecheck`, `npm test` and `npm run build` when dependencies can be installed.
 - GitHub Pages canonical URL is `https://mustache.alexa.ir/`. Use Vite `base: './'` so custom-domain root and repo subpath both resolve assets.
 - Do not imply local high scores qualify for real NFIVE tokens.
+
+- v0.6: Scoring must happen at projectile impact; never before the mustache visually arrives. Appearance serials invalidate old timeouts; preserve one-shot-per-pop and mobile portrait-safe X positioning.

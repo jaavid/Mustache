@@ -4,6 +4,8 @@ import {addSoundToggle,playSfx} from './sound';
 import { applyRaminMood, makeRamin, RAMIN_MOBILE_SCALE, raminLipPoint } from './ramin';
 import { evaluateShot, readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
 import { normalizeTouchDistance } from '../logic/touch';
+import { nextSlot, popPlan, type PopPlan } from '../logic/gameplay';
+import { enterFromTree, exitBehindTree, hitReaction, launchMustache } from './gameFeel';
 
 /** Dedicated 540 × 960 portrait experience. Desktop scenes remain unchanged. */
 const W = 540;
@@ -104,6 +106,7 @@ export class MobilePlayScene extends Phaser.Scene {
   private comboText!: Phaser.GameObjects.Text;
   private timeText!: Phaser.GameObjects.Text;
   private selector: Phaser.GameObjects.Rectangle[] = [];
+  private currentPlan!:PopPlan;
 
   constructor() { super('Play'); }
   create() {
@@ -168,76 +171,82 @@ export class MobilePlayScene extends Phaser.Scene {
       .setStrokeStyle(5,index===i?0xffd374:0x6c6282));
   }
   private pop() {
-    if(this.roundOver) return;
-    let slot=Phaser.Math.Between(0,SPAWNS.length-1);
-    if(slot===this.previousSlot) slot=(slot+1+Phaser.Math.Between(0,1))%SPAWNS.length;
+    if(this.roundOver)return;
+    const slot=nextSlot(this.previousSlot,SPAWNS.length,Math.random());
     this.previousSlot=slot;
     const serial=++this.spawnSerial;
-    this.activeTarget=true;
-    const x=SPAWNS[slot];
+    const plan=popPlan(ROUND_LENGTH_SECONDS-this.remaining,Math.random());
+    // Left exits for the leftmost tree would clip the face on narrow phones.
+    if(slot===0)plan.side=1;
+    this.currentPlan=plan;
+    this.activeTarget=false;
+    this.shooting=false;
+    const treeX=SPAWNS[slot]-88;
+    const x=treeX+plan.side*79;
+    const y=FACE_Y;
     applyRaminMood(this.hero,'idle');
-    this.hero.setPosition(x,FACE_Y+54).setAlpha(0).setVisible(true)
-      .setAngle(Phaser.Math.Between(-5,5));
     this.sticker.setVisible(false);
-    burstLeaves(this,x-55,650,9);
-    this.tweens.add({targets:this.hero,y:FACE_Y,alpha:1,duration:265,ease:'Back.easeOut'});
-    this.time.delayedCall(Phaser.Math.Between(1650,2000),()=>{
-      if(serial!==this.spawnSerial||!this.activeTarget||this.roundOver)return;
-      this.activeTarget=false;
-      this.hide(()=>this.time.delayedCall(170,()=>this.pop()));
+    burstLeaves(this,treeX,650,8);
+    enterFromTree(this,this.hero,{x,y},RAMIN_MOBILE_SCALE,plan,()=>{
+      if(this.roundOver||serial!==this.spawnSerial)return;
+      this.activeTarget=true;
+      this.tweens.add({targets:this.hero,y:y-5,duration:480,ease:'Sine.inOut',yoyo:true,repeat:1});
+      this.time.delayedCall(plan.visibleMs+100,()=>{
+        if(this.roundOver||serial!==this.spawnSerial||!this.activeTarget)return;
+        this.activeTarget=false;
+        this.combo=0;
+        this.comboText.setText('× 0');
+        this.hide(()=>this.time.delayedCall(plan.pauseMs,()=>this.pop()));
+      });
     });
   }
   private hide(next:()=>void) {
-    this.tweens.add({targets:this.hero,y:FACE_Y+66,alpha:0,duration:220,ease:'Quad.easeIn',onComplete:()=>{
-      this.hero.setVisible(false);
+    exitBehindTree(this,this.hero,this.currentPlan,()=>{
       this.sticker.setVisible(false);
-      next();
-    }});
+      if(!this.roundOver)next();
+    });
   }
   private shoot(pointer:Phaser.Input.Pointer) {
-    const x=pointer.x, y=pointer.y;
-    if(this.roundOver||this.shooting||y < HUD_BOTTOM||y > SELECTOR_TOP) return;
+    const aim={x:pointer.x,y:pointer.y};
+    if(this.roundOver||this.shooting||!this.activeTarget||aim.y<HUD_BOTTOM||aim.y>SELECTOR_TOP)return;
     this.shooting=true;
-    const lip = raminLipPoint(this.hero);
-    const distance=Phaser.Math.Distance.Between(x,y,lip.x,lip.y);
-    const result=evaluateShot(normalizeTouchDistance(distance),this.combo,this.activeTarget);
-    if(result.grade!=='miss') {
-      this.activeTarget=false;
-      this.spawnSerial++;
-      this.combo=result.combo;
-      this.score+=result.points;
-      this.scoreText.setText(String(this.score).padStart(5,'0'));
-      this.comboText.setText(`× ${this.combo}`);
-    } else {
-      this.combo=0;
-      this.comboText.setText('× 0');
-    }
+    this.activeTarget=false;
+    this.spawnSerial++; // Prevent the exposure timer from hiding Ramin in flight.
+    this.tweens.killTweensOf(this.hero);
+    const style=this.selectedStyle;
     playSfx('shot');
-    const projectile=this.add.image(270,772,`stache-${this.selectedStyle}`)
-      .setDisplaySize(100,45).setDepth(96);
-    projectile.setRotation(Phaser.Math.Angle.Between(270,772,x,y)*.18);
-    this.tweens.add({targets:projectile,x,y,rotation:0,scaleX:.8,scaleY:.8,duration:235,
-      ease:'Quad.easeOut',onComplete:()=>{
-        projectile.destroy(); this.shooting=false;
-        if(this.roundOver) return;
-        if(result.grade==='miss'){
-          playSfx('miss');
-          this.feedback(x,y,'MISS!','#ff8eaa');
-          burstLeaves(this,x,y,3);
-        }else{
-          playSfx(result.grade==='perfect'?'perfect':'good');
-          applyRaminMood(this.hero,'surprised');
-          const mouth = raminLipPoint(this.hero);
-          this.sticker.setTexture(`stache-${this.selectedStyle}`)
-            .setPosition(mouth.x,mouth.y).setRotation(this.hero.rotation).setVisible(true);
-          burstStars(this,mouth.x,mouth.y,result.grade==='perfect');
-          this.feedback(mouth.x,this.hero.y-190,
-            result.grade==='perfect'?`+${result.points} PERFECT!`:`+${result.points} GOOD!`,
-            result.grade==='perfect'?'#ffe083':'#aaf3d4');
-          this.tweens.add({targets:this.hero,scale:RAMIN_MOBILE_SCALE*1.04,duration:110,yoyo:true});
-          this.time.delayedCall(460,()=>this.hide(()=>this.time.delayedCall(170,()=>this.pop())));
-        }
-      }});
+    launchMustache(this,'stache-'+style,{x:270,y:772},aim,{width:100,height:49},()=>{
+      if(this.roundOver)return;
+      this.shooting=false;
+      const mouth=raminLipPoint(this.hero);
+      const distance=Phaser.Math.Distance.Between(aim.x,aim.y,mouth.x,mouth.y);
+      const result=evaluateShot(normalizeTouchDistance(distance),this.combo,true);
+      if(result.grade==='miss'){
+        this.combo=0;
+        this.comboText.setText('× 0');
+        playSfx('miss');
+        this.feedback(aim.x,aim.y,'MISS!','#ff8eaa');
+        burstLeaves(this,aim.x,aim.y,3);
+      }else{
+        this.score+=result.points;
+        this.combo=result.combo;
+        this.scoreText.setText(String(this.score).padStart(5,'0'));
+        this.comboText.setText('× '+this.combo);
+        this.tweens.add({targets:this.comboText,scale:1.25,duration:125,yoyo:true});
+        playSfx(result.grade==='perfect'?'perfect':'good');
+        applyRaminMood(this.hero,'surprised');
+        this.sticker.setTexture('stache-'+style)
+          .setPosition(mouth.x,mouth.y).setRotation(this.hero.rotation).setVisible(true);
+        burstStars(this,mouth.x,mouth.y,result.grade==='perfect');
+        hitReaction(this,this.hero,RAMIN_MOBILE_SCALE,result.grade==='perfect');
+        this.feedback(mouth.x,this.hero.y-190,'+'+result.points+' '+result.grade.toUpperCase()+'!',
+          result.grade==='perfect'?'#ffe083':'#aaf3d4');
+      }
+      this.time.delayedCall(result.grade==='miss'?180:440,()=>{
+        if(this.roundOver)return;
+        this.hide(()=>this.time.delayedCall(this.currentPlan.pauseMs,()=>this.pop()));
+      });
+    });
   }
   update(){
     if(this.hero?.active && this.sticker?.visible){

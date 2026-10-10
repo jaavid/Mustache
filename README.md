@@ -82,3 +82,12 @@ No accounts, on-chain interactions, payout eligibility, server, multiplayer, glo
 - Real Phaser loader progress HUD for sprite assets, no artificial waiting.
 - Web Audio generated arcade effects for start, shoot, miss, good/perfect hit, and round completion; a persistent SFX toggle appears in menu, play and results on desktop and mobile.
 - Sound is initialized after a user interaction; no external audio files, libraries, or backend.
+
+
+### Gameplay Animation & Feel v0.6
+
+- Ramin peeks, hops or darts sideways from behind a randomly selected tree. The same tree never appears twice in succession, and the leftmost mobile tree never spawns a clipped left-side pose.
+- Difficulty gradually increases over the 45-second round while each appearance stays exposed for at least 990 ms **after** its entry animation. A missed shot or timed-out appearance breaks the combo.
+- The mustache travels on a quadratic curved path with a spark trail. Scoring happens **on arrival**, not on pointer-down; one shot consumes one appearance and locks the target until impact.
+- Hits trigger squash-and-stretch, synchronized face-attached mustache, small particles, combo pulse and a short PERFECT camera flash/shake.
+- Pure geometry/timing functions have unit tests. No backend, online assets or real-token reward flow.

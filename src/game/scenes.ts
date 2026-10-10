@@ -4,6 +4,8 @@ import {addSoundToggle,playSfx} from './sound';
 import { addForestLife, burstLeaves, burstStars } from './ambience';
 import { applyRaminMood, ensureRaminAnimations, makeRamin, preloadRamin, RAMIN_DESKTOP_SCALE, raminLipPoint } from './ramin';
 import { evaluateShot, readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
+import { nextSlot, popPlan, type PopPlan } from '../logic/gameplay';
+import { enterFromTree, exitBehindTree, hitReaction, launchMustache } from './gameFeel';
 
 const WIDTH = 960;
 const HEIGHT = 540;
@@ -116,6 +118,7 @@ export class PlayScene extends Phaser.Scene {
   private spawnSerial=0;
   private previousSlot=-1;
   private cursor!:Phaser.GameObjects.Graphics;
+  private currentPlan!:PopPlan;
 
   constructor(){super('Play');}
   create(){
@@ -194,72 +197,81 @@ export class PlayScene extends Phaser.Scene {
   }
   private popTarget(){
     if(this.roundOver)return;
-    let slot=Phaser.Math.Between(0,SPAWN_POINTS.length-1);
-    if(slot===this.previousSlot)slot=(slot+1+Phaser.Math.Between(0,1))%SPAWN_POINTS.length;
+    const slot=nextSlot(this.previousSlot,SPAWN_POINTS.length,Math.random());
     this.previousSlot=slot;
     const serial=++this.spawnSerial;
-    this.active=true;
+    const plan=popPlan(ROUND_LENGTH_SECONDS-this.remaining,Math.random());
+    this.currentPlan=plan;
+    this.active=false;
+    this.shooting=false;
+    const side=plan.side;
+    const treeX=SPAWN_POINTS[slot]-62;
+    const x=treeX+side*65;
+    const y=315;
     applyRaminMood(this.hero,'idle');
-    this.hero.setPosition(SPAWN_POINTS[slot],354).setAlpha(0).setVisible(true).setAngle(Phaser.Math.Between(-5,5));
-    burstLeaves(this,SPAWN_POINTS[slot]-53,385,7);
     this.sticker.setVisible(false);
-    this.tweens.add({targets:this.hero,y:315,alpha:1,duration:240,ease:'Back.easeOut'});
-    this.time.delayedCall(Phaser.Math.Between(1450,1900),()=>{
-      if(serial!==this.spawnSerial||!this.active||this.roundOver)return;
-      this.active=false;
-      this.hideTarget(()=>this.time.delayedCall(220,()=>this.popTarget()));
+    burstLeaves(this,treeX,y+95,7);
+    enterFromTree(this,this.hero,{x,y},RAMIN_DESKTOP_SCALE,plan,()=>{
+      if(this.roundOver||serial!==this.spawnSerial)return;
+      this.active=true;
+      // Hold still enough for fair aiming, but give every appearance a distinct pose.
+      this.tweens.add({targets:this.hero,y:y-5,duration:470,ease:'Sine.inOut',yoyo:true,repeat:1});
+      this.time.delayedCall(plan.visibleMs,()=>{
+        if(this.roundOver||serial!==this.spawnSerial||!this.active)return;
+        this.active=false;
+        this.combo=0;
+        this.comboText.setText('× 0');
+        this.hideTarget(()=>this.time.delayedCall(plan.pauseMs,()=>this.popTarget()));
+      });
     });
   }
   private hideTarget(onEnd:()=>void){
-    this.tweens.add({targets:this.hero,y:365,alpha:0,duration:210,ease:'Quad.easeIn',onComplete:()=>{
-      this.hero.setVisible(false);this.sticker.setVisible(false);onEnd();
-    }});
+    exitBehindTree(this,this.hero,this.currentPlan,()=>{
+      this.sticker.setVisible(false);
+      if(!this.roundOver)onEnd();
+    });
   }
   private handlePointer(pointer:Phaser.Input.Pointer){
-    if(this.roundOver||this.shooting||pointer.y>450)return;
-    // Prevent accidental shooting at the HUD when changing an option.
-    if(pointer.y<125)return;
+    if(this.roundOver||this.shooting||!this.active||pointer.y<125||pointer.y>450)return;
+    const aim={x:pointer.x,y:pointer.y};
     this.shooting=true;
-    const lip = raminLipPoint(this.hero);
-    const targetX=lip.x;
-    const targetY=lip.y;
-    const distance=Phaser.Math.Distance.Between(pointer.x,pointer.y,targetX,targetY);
-    const result=evaluateShot(distance,this.combo,this.active);
-    if(result.grade!=='miss'){
-      this.active=false;
-      this.spawnSerial++; // invalidates the old appearance timeout
-      this.score+=result.points;
-      this.combo=result.combo;
-      this.scoreText.setText(String(this.score).padStart(5,'0'));
-      this.comboText.setText(`× ${this.combo}`);
-    }else{
-      this.combo=0;
-      this.comboText.setText('× 0');
-    }
+    this.active=false;
+    this.spawnSerial++; // Lock this appearance until the projectile lands.
+    this.tweens.killTweensOf(this.hero);
+    const chosenStyle=this.selectedStyle;
     playSfx('shot');
-    const startX=480, startY=459;
-    const projectile=this.add.image(startX,startY,`stache-${this.selectedStyle}`).setDisplaySize(76,36).setDepth(92);
-    projectile.setRotation(Phaser.Math.Angle.Between(startX,startY,pointer.x,pointer.y)*.18);
-    this.tweens.add({targets:projectile,x:pointer.x,y:pointer.y,scaleX:.72,scaleY:.72,rotation:0,duration:240,ease:'Quad.easeOut',onComplete:()=>{
-      projectile.destroy();
-      this.shooting=false;
+    launchMustache(this,'stache-'+chosenStyle,{x:480,y:459},aim,{width:75,height:38},()=>{
       if(this.roundOver)return;
+      this.shooting=false;
+      const mouth=raminLipPoint(this.hero);
+      const distance=Phaser.Math.Distance.Between(aim.x,aim.y,mouth.x,mouth.y);
+      const result=evaluateShot(distance,this.combo,true);
       if(result.grade==='miss'){
+        this.combo=0;
+        this.comboText.setText('× 0');
         playSfx('miss');
-        this.popFeedback(pointer.x,pointer.y,'MISS!', '#ff848f');
-        burstLeaves(this,pointer.x,pointer.y,3);
+        this.popFeedback(aim.x,aim.y,'MISS!','#ff848f');
+        burstLeaves(this,aim.x,aim.y,3);
       }else{
+        this.score+=result.points;
+        this.combo=result.combo;
+        this.scoreText.setText(String(this.score).padStart(5,'0'));
+        this.comboText.setText('× '+this.combo);
+        this.tweens.add({targets:this.comboText,scale:1.22,duration:115,yoyo:true});
         playSfx(result.grade==='perfect'?'perfect':'good');
         applyRaminMood(this.hero,'surprised');
-        const mouth = raminLipPoint(this.hero);
-        this.sticker.setTexture(`stache-${this.selectedStyle}`).setPosition(mouth.x,mouth.y).setRotation(this.hero.rotation).setVisible(true);
+        this.sticker.setTexture('stache-'+chosenStyle)
+          .setPosition(mouth.x,mouth.y).setRotation(this.hero.rotation).setVisible(true);
         burstStars(this,mouth.x,mouth.y,result.grade==='perfect');
-        if(result.grade==='perfect')this.cameras.main.shake(100,0.0025);
-        this.popFeedback(mouth.x,this.hero.y-165,result.grade==='perfect'?`+${result.points} PERFECT!`:`+${result.points} GOOD!`,result.grade==='perfect'?'#ffd16c':'#a7efc0');
-        this.tweens.add({targets:this.hero,scaleX:RAMIN_DESKTOP_SCALE*1.04,scaleY:RAMIN_DESKTOP_SCALE*1.04,duration:90,yoyo:true});
-        this.time.delayedCall(510,()=>this.hideTarget(()=>this.time.delayedCall(180,()=>this.popTarget())));
+        hitReaction(this,this.hero,RAMIN_DESKTOP_SCALE,result.grade==='perfect');
+        this.popFeedback(mouth.x,this.hero.y-165,'+'+result.points+' '+result.grade.toUpperCase()+'!',
+          result.grade==='perfect'?'#ffd16c':'#a7efc0');
       }
-    }});
+      this.time.delayedCall(result.grade==='miss'?180:410,()=>{
+        if(this.roundOver)return;
+        this.hideTarget(()=>this.time.delayedCall(this.currentPlan.pauseMs,()=>this.popTarget()));
+      });
+    });
   }
   update(){
     if(this.hero?.active && this.sticker?.visible){
