@@ -91,3 +91,11 @@ No accounts, on-chain interactions, payout eligibility, server, multiplayer, glo
 - The mustache travels on a quadratic curved path with a spark trail. Scoring happens **on arrival**, not on pointer-down; one shot consumes one appearance and locks the target until impact.
 - Hits trigger squash-and-stretch, synchronized face-attached mustache, small particles, combo pulse and a short PERFECT camera flash/shake.
 - Pure geometry/timing functions have unit tests. No backend, online assets or real-token reward flow.
+
+### v0.6.1 — Tree readability and genuine trunk occlusion
+
+- Redesigned three distinct mossy pixel trees; removed all hanging lanterns from gameplay spawn lanes.
+- Each tree renders as a back canopy (depth 14) and a fixed front bark occluder (depth 28). Ramin renders between them (depth 20); only the crown gently sways.
+- Spawn coordinates now reference the exact rendered trunk axis. The outer trees always peek inward, and the middle tree supports both sides.
+- Spaced mobile trees across the complete 540px portrait viewport; the face stays clear of the front bark when aiming and the body emerges from behind it.
+- Added deterministic geometry and edge-lane tests without changing scoring, audio, menus or backend scope.

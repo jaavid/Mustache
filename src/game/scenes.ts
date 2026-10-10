@@ -5,11 +5,11 @@ import { addForestLife, burstLeaves, burstStars } from './ambience';
 import { applyRaminMood, ensureRaminAnimations, makeRamin, preloadRamin, RAMIN_DESKTOP_SCALE, raminLipPoint } from './ramin';
 import { evaluateShot, readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
 import { nextSlot, popPlan, type PopPlan } from '../logic/gameplay';
+import { DESKTOP_TREE_CENTERS, DESKTOP_PEEK_DISTANCE, chooseSpawnSide, peekPosition } from '../logic/treeGeometry';
 import { enterFromTree, exitBehindTree, hitReaction, launchMustache } from './gameFeel';
 
 const WIDTH = 960;
 const HEIGHT = 540;
-const SPAWN_POINTS = [255, 535, 810] as const;
 const FONT = '"Courier New", monospace';
 
 function label(scene: Phaser.Scene, x:number, y:number, message:string, size:number, color='#ffffff') {
@@ -38,10 +38,15 @@ function backdrop(scene:Phaser.Scene, withFireflies=true) {
   }
 }
 function addTrees(scene:Phaser.Scene) {
-  for (const x of SPAWN_POINTS) {
-    const tree=scene.add.image(x-62,300,'tree').setDisplaySize(184,412).setDepth(28);
-    scene.tweens.add({ targets: tree, angle: 0.8, duration: 2600 + x, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-  }
+  DESKTOP_TREE_CENTERS.forEach((center,index)=>{
+    const crown=scene.add.image(center,300,`tree-back-${index}`)
+      .setDisplaySize(190,430).setDepth(14);
+    // Only the crown sways; the physical trunk stays fixed with the lane.
+    scene.tweens.add({targets:crown,angle:index===1?-.8:.8,duration:2900+index*330,
+      yoyo:true,repeat:-1,ease:'Sine.inOut'});
+    scene.add.image(center,300,`tree-front-${index}`)
+      .setDisplaySize(190,430).setDepth(28);
+  });
 }
 
 export class BootScene extends Phaser.Scene {
@@ -197,16 +202,17 @@ export class PlayScene extends Phaser.Scene {
   }
   private popTarget(){
     if(this.roundOver)return;
-    const slot=nextSlot(this.previousSlot,SPAWN_POINTS.length,Math.random());
+    const slot=nextSlot(this.previousSlot,DESKTOP_TREE_CENTERS.length,Math.random());
     this.previousSlot=slot;
     const serial=++this.spawnSerial;
     const plan=popPlan(ROUND_LENGTH_SECONDS-this.remaining,Math.random());
+    plan.side=chooseSpawnSide(slot,DESKTOP_TREE_CENTERS.length,plan.side);
+    plan.shift=DESKTOP_PEEK_DISTANCE; // begin directly behind the tree's occluding trunk
     this.currentPlan=plan;
     this.active=false;
     this.shooting=false;
-    const side=plan.side;
-    const treeX=SPAWN_POINTS[slot]-62;
-    const x=treeX+side*65;
+    const treeX=DESKTOP_TREE_CENTERS[slot];
+    const x=peekPosition(treeX,plan.side,DESKTOP_PEEK_DISTANCE);
     const y=315;
     applyRaminMood(this.hero,'idle');
     this.sticker.setVisible(false);

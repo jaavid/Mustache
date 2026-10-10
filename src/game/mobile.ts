@@ -5,12 +5,12 @@ import { applyRaminMood, makeRamin, RAMIN_MOBILE_SCALE, raminLipPoint } from './
 import { evaluateShot, readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
 import { normalizeTouchDistance } from '../logic/touch';
 import { nextSlot, popPlan, type PopPlan } from '../logic/gameplay';
+import { MOBILE_TREE_CENTERS, MOBILE_PEEK_DISTANCE, chooseSpawnSide, peekPosition } from '../logic/treeGeometry';
 import { enterFromTree, exitBehindTree, hitReaction, launchMustache } from './gameFeel';
 
 /** Dedicated 540 × 960 portrait experience. Desktop scenes remain unchanged. */
 const W = 540;
 const H = 960;
-const SPAWNS = [134, 270, 406] as const;
 const FONT = '"Courier New", monospace';
 const SELECTOR_TOP = 768;
 const HUD_BOTTOM = 164;
@@ -55,11 +55,15 @@ function portraitBackdrop(scene: Phaser.Scene) {
 }
 
 function trees(scene: Phaser.Scene) {
-  for (const x of SPAWNS) {
-    const tree = scene.add.image(x-88, 552, 'tree').setDisplaySize(146, 430).setDepth(28);
-    scene.tweens.add({ targets: tree, angle: .65, duration: 2450+x, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-  }
-  scene.add.image(270, 748, 'forest-front').setDisplaySize(545, 125).setDepth(40);
+  MOBILE_TREE_CENTERS.forEach((center,index)=>{
+    const canopy=scene.add.image(center,552,`tree-back-${index}`)
+      .setDisplaySize(146,430).setDepth(14);
+    scene.tweens.add({targets:canopy,angle:index===1?-.6:.6,duration:2550+index*310,
+      yoyo:true,repeat:-1,ease:'Sine.inOut'});
+    scene.add.image(center,552,`tree-front-${index}`)
+      .setDisplaySize(146,430).setDepth(28);
+  });
+  scene.add.image(270,748,'forest-front').setDisplaySize(545,125).setDepth(40);
 }
 
 export class MobileMenuScene extends Phaser.Scene {
@@ -172,17 +176,17 @@ export class MobilePlayScene extends Phaser.Scene {
   }
   private pop() {
     if(this.roundOver)return;
-    const slot=nextSlot(this.previousSlot,SPAWNS.length,Math.random());
+    const slot=nextSlot(this.previousSlot,MOBILE_TREE_CENTERS.length,Math.random());
     this.previousSlot=slot;
     const serial=++this.spawnSerial;
     const plan=popPlan(ROUND_LENGTH_SECONDS-this.remaining,Math.random());
-    // Left exits for the leftmost tree would clip the face on narrow phones.
-    if(slot===0)plan.side=1;
+    plan.side=chooseSpawnSide(slot,MOBILE_TREE_CENTERS.length,plan.side);
+    plan.shift=MOBILE_PEEK_DISTANCE; // start directly behind the occluding bark
     this.currentPlan=plan;
     this.activeTarget=false;
     this.shooting=false;
-    const treeX=SPAWNS[slot]-88;
-    const x=treeX+plan.side*79;
+    const treeX=MOBILE_TREE_CENTERS[slot];
+    const x=peekPosition(treeX,plan.side,MOBILE_PEEK_DISTANCE);
     const y=FACE_Y;
     applyRaminMood(this.hero,'idle');
     this.sticker.setVisible(false);

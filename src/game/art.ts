@@ -101,37 +101,88 @@ function forestBackground(c: Ctx) {
   }
 }
 
-function trunk(c: Ctx) {
-  const r=rand(2026);
-  // Tree trunk with liana, canopy, bark ridges and golden lamp.
-  rect(c,31,0,33,194,'#172f34');
-  rect(c,36,0,23,191,'#514337');
-  rect(c,43,0,12,191,'#6b4d3b');
-  rect(c,57,0,4,180,'#302d2d');
-  rect(c,35,16,3,121,'#816342');
-  for(let i=0;i<35;i++){
-    const x=38+r()*18,y=r()*180;
-    rect(c,x,y,1+r()*4,3+r()*11, i%3===0?'#986f4a':'#322e2f');
+
+/**
+ * Each spawn tree is split into independently layered textures:
+ * a low-depth crown / rear branches, and a high-depth bark occluder.
+ * Keep the upper-lip lane completely free of hanging lanterns or other props.
+ * Shared canvas size and trunk axis (x=48) guarantee perfect layer alignment.
+ */
+function treeBack(c: Ctx, variant: number) {
+  const r=rand(6061+variant*97);
+  const canopy=[
+    ['#193d3f','#275349','#35654d','#467755'],
+    ['#183c47','#285359','#32645e','#4b7b65'],
+    ['#263d46','#335552','#41675a','#577c59'],
+  ][variant];
+  // Wide but cropped-at-top leafy crown, growing out of the trunk.
+  for(let i=0;i<52;i++){
+    const px=8+r()*82;
+    const py=2+r()*76;
+    const rad=8+r()*16;
+    ellipse(c,px,py,rad,7+r()*12,canopy[(i+Math.floor(r()*3))%4]);
   }
-  // Roots and left-screen silhouette.
-  ellipse(c,46,193,47,14,'#273c36');
-  rect(c,5,184,62,10,'#4b4137');
-  ellipse(c,24,186,34,9,'#2f463a');
-  // Leaf branches jut toward the top.
-  for(let i=0;i<40;i++){
-    const x=r()*90,y=r()*65-13;
-    ellipse(c,x,y,8+r()*18,6+r()*14,['#133c3a','#195244','#285940','#315b44'][i%4]);
+  // Pixel stepped edge and brighter clustered foliage; no hanging ornaments.
+  for(let i=0;i<65;i++){
+    const px=r()*96,py=r()*72;
+    if(Math.pow((px-48)/52,2)+Math.pow((py-26)/55,2)>1.3)continue;
+    rect(c,px,py,3+r()*7,2+r()*5,canopy[1+Math.floor(r()*3)]);
   }
-  // Vine curls.
-  rect(c,29,0,3,98,'#2a6447');
-  for(let y=9;y<96;y+=13){rect(c,24,y,8,2,'#41784d');rect(c,28,y+3,6,2,'#3d8b54');}
-  // Mini hanging lantern from bough.
-  rect(c,72,44,2,30,'#937755');rect(c,67,73,13,17,'#302e36');
-  rect(c,69,76,9,10,'#e1ab62');rect(c,71,77,5,9,'#ffe6a4');
-  rect(c,66,90,15,3,'#191c2c');
-  rect(c,20,180,30,3,'#64a059');
-  for(let i=0;i<20;i++)rect(c,r()*80,172+r()*30,3+r()*5,2,'#39664a');
+  // Branches are background objects: Ramin's face draws in front of them.
+  rect(c,20,55,55,6,'#463c38');
+  rect(c,23,51,7,5,'#5c5040');
+  rect(c,58,60,25,6,'#4c4039');
+  rect(c,61,57,7,4,'#6a5441');
+  for(let i=0;i<24;i++) {
+    const x=15+r()*72,y=20+r()*55;
+    if(i%4===0)rect(c,x,y,3,2,'#80a469');
+  }
 }
+
+function treeFront(c: Ctx, variant: number) {
+  const r=rand(1737+variant*83);
+  const bark=[
+    ['#201f2e','#4f3b34','#79553c','#a47449'],
+    ['#1c2930','#4a443a','#746148','#a18a5a'],
+    ['#252b2f','#544337','#826044','#ad8054'],
+  ][variant];
+  // High-contrast trunk with a persistent, clear silhouette at all Y positions.
+  // The trunk alone occludes the character, not foliage or a lamp.
+  rect(c,33,38,31,159,bark[0]);
+  rect(c,36,34,27,163,bark[1]);
+  rect(c,41,29,18,168,bark[2]);
+  rect(c,44,31,6,160,bark[3]);
+  rect(c,58,39,4,154,bark[0]);
+  rect(c,35,54,4,119,bark[0]);
+  // Forked bark near the canopy, kept close to the actual trunk axis.
+  rect(c,34,27,10,21,bark[1]);
+  rect(c,56,23,8,30,bark[1]);
+  rect(c,31,35,6,20,bark[0]);
+  rect(c,62,28,5,22,bark[0]);
+  // Highly legible bark striations; independent variation per tree.
+  for(let i=0;i<54;i++){
+    const x=38+r()*21,y=51+r()*132;
+    rect(c,x,y,1+r()*3,3+r()*13,i%4===0?bark[3]:i%3===0?bark[0]:bark[1]);
+  }
+  // Moss is embedded in the bark, not a separate foreground prop.
+  for(let i=0;i<20;i++){
+    const x=36+r()*23,y=84+r()*105;
+    rect(c,x,y,2+r()*3,1+r()*3,i%2===0?'#42664a':'#6e8653');
+  }
+  // Wide root flare at the bottom. No loose decoration near face/aim point.
+  rect(c,28,179,43,17,bark[1]);
+  rect(c,19,191,56,9,bark[0]);
+  rect(c,11,197,74,8,bark[1]);
+  rect(c,21,197,58,7,bark[2]);
+  rect(c,33,192,31,10,bark[3]);
+  rect(c,8,204,82,4,'#203d35');
+  rect(c,18,202,59,4,'#496b4b');
+  for(let i=0;i<18;i++) {
+    const x=14+r()*70,y=198+r()*11;
+    rect(c,x,y,2+r()*4,1+r()*2,i%2===0?'#3c7651':'#668b51');
+  }
+}
+
 function hero(c: Ctx, expression: 'normal' | 'blink' | 'surprised' = 'normal') {
   // 64×88 heroic portrait sprite; original pixel character inspired by Ramin's short dark hair and black hoodie.
   // feet/body and hood
@@ -253,7 +304,10 @@ function butterfly(c: Ctx) {
 
 export function createArt(scene: Phaser.Scene) {
   makeCanvas(scene,'forest',SW,SH,forestBackground);
-  makeCanvas(scene,'tree',92,206,trunk);
+  for(let i=0;i<3;i++){
+    makeCanvas(scene,`tree-back-${i}`,96,220,ctx=>treeBack(ctx,i));
+    makeCanvas(scene,`tree-front-${i}`,96,220,ctx=>treeFront(ctx,i));
+  }
   makeCanvas(scene,'ramin',64,88,ctx=>hero(ctx));
   makeCanvas(scene,'ramin-blink',64,88,ctx=>hero(ctx,'blink'));
   makeCanvas(scene,'ramin-surprised',64,88,ctx=>hero(ctx,'surprised'));

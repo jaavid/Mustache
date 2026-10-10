@@ -37,7 +37,7 @@ export function exitBehindTree(
   scene.tweens.killTweensOf(hero);
   scene.tweens.add({
     targets: hero,
-    x: hero.x - plan.side * plan.shift * .8,
+    x: hero.x - plan.side * plan.shift,
     y: hero.y + plan.lift,
     alpha: 0,
     angle: -plan.side * 10,
