@@ -129,3 +129,14 @@ No accounts, on-chain interactions, payout eligibility, server, multiplayer, glo
 - No server, wallet, token payments or fraud-proof tournament claims.
 
 - Final v0.9.5 polish: all three live quest targets are visible during play, pointer events on the mustache selector do not bubble into shooting, and 5× Perfect streaks add a short tween-only slow-motion beat. An occasional triumphant Ramin pose rewards sustained precision.
+
+
+### v0.9.6 — Three clearly visible stages (lighting + pacing fix)
+
+Previous phase tuning was too subtle: low-opacity lighting sat behind the character/trees, and dwell differences were often only a fraction of a second.
+
+- **00–15s SUNSET:** full-scene amber lighting + glowing sun; warm-up aim windows 1.78–2.05s, slow music at 112 BPM, no surprise events.
+- **15–30s TWILIGHT:** visible violet tint and emerging stars/moon; aim windows 1.26–1.51s, music rises to 132 BPM, fake-outs and double-pops enabled.
+- **30–45s NIGHT RUSH:** dark navy stage lighting, moon and bright stars, mobile/desktop face spotlight to keep the lip visible; aim windows 1.05–1.19s and 160 BPM music; more frequent double-pops until the last six seconds.
+- Prominent STAGE 2/3 and STAGE 3/3 transition banners, distinct phase HUD labels, colored mist, stage chimes. Hit detection and scoring thresholds are unchanged.
+- Dynamic night coloring now sits over **the whole playfield but beneath the HUD** (depth 41), rather than only coloring the distant background. The face light is purely visual and does not change targeting.

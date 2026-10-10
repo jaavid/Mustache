@@ -35,7 +35,7 @@ export function addLivingForest(scene:Phaser.Scene,portrait:boolean):ForestLight
   const sunlight=scene.add.rectangle(w/2,h/2,w,h,0xffb06b,1).setDepth(41).setAlpha(.17);
   const twilight=scene.add.rectangle(w/2,h/2,w,h,0x6553b4,1).setDepth(41.1).setAlpha(0);
   const midnight=scene.add.rectangle(w/2,h/2,w,h,0x05122e,1).setDepth(41.2).setAlpha(0);
-  const skyX=portrait?w*.76:w*.82;
+  const skyX=portrait?w*.76:w*.92;
   const skyY=portrait?319:195;
   const sunHalo=scene.add.circle(skyX,skyY,portrait?62:57,0xffad70,.25).setDepth(42);
   const sun=scene.add.circle(skyX,skyY,portrait?30:27,0xffdf9c,.9).setDepth(43);
