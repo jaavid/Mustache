@@ -1,10 +1,116 @@
-:root { color-scheme: dark; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #10182a; }
+:root {
+  color-scheme: dark;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: #10182a;
+}
+
 * { box-sizing: border-box; }
-html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
-body { display: flex; flex-direction: column; background: radial-gradient(ellipse at 50% 20%,#2b3350 0%,#16182c 60%,#0b101d 100%); }
-#app { flex: 1; display: flex; justify-content: center; align-items: center; min-height: 0; padding: clamp(4px,1.6vw,16px); }
-#game { width: min(100%, calc((100dvh - 44px) * 16 / 9)); max-height: 100%; border: 4px solid #54436f; box-shadow: 0 0 0 3px #0a101b,0 25px 70px #000a,0 0 50px #7658d633; aspect-ratio: 16 / 9; overflow: hidden; background:#112236; }
-#game canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; touch-action: none; cursor: crosshair; }
-footer { color:#9b9ab9; font-size:9px; letter-spacing:1.5px; padding:3px 16px 10px; text-align:center; flex-shrink:0; }
-footer span { opacity:.65; padding-left:16px; }
-@media (max-width:700px) { #app{padding:2px} #game{border-width:2px} footer{font-size:7px;padding-bottom:6px;letter-spacing:.4px} footer span{display:block;padding:4px 0 0;} }
+
+html, body {
+  margin: 0;
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  background: radial-gradient(ellipse at 50% 20%, #2b3350 0%, #16182c 60%, #0b101d 100%);
+}
+
+#rotate-hint { display: none; }
+
+#app {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 0;
+  padding: clamp(4px, 1.6vw, 16px);
+}
+
+#game {
+  width: min(100%, calc((100dvh - 44px) * 16 / 9));
+  max-height: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #112236;
+  border: 4px solid #54436f;
+  box-shadow: 0 0 0 3px #0a101b, 0 25px 70px #000a, 0 0 50px #7658d633;
+}
+
+#game canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+footer {
+  flex-shrink: 0;
+  color: #9b9ab9;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  padding: 3px 16px 10px;
+  text-align: center;
+}
+
+footer span {
+  opacity: .65;
+  padding-left: 16px;
+}
+
+@media (max-width: 700px) {
+  #app { padding: 2px; }
+  #game { border-width: 2px; }
+  footer {
+    font-size: 7px;
+    padding: 4px 8px 6px;
+    letter-spacing: .4px;
+  }
+  footer span {
+    display: block;
+    padding: 4px 0 0;
+  }
+}
+
+/* Portrait layout: keep the game near the top instead of vertically centering
+   a 16:9 canvas in a tall mobile viewport. Preserve Phaser's 960x540 world. */
+@media (max-width: 700px) and (orientation: portrait) {
+  #rotate-hint {
+    display: block;
+    padding: calc(9px + env(safe-area-inset-top, 0px)) 12px 10px;
+    color: #d7c8ff;
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: center;
+    letter-spacing: 0;
+  }
+
+  #app {
+    flex: 0 0 auto;
+    width: 100%;
+    min-height: 0;
+    padding: 0;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  #game {
+    width: 100%;
+    max-width: 100%;
+    max-height: none;
+    border-left: 0;
+    border-right: 0;
+    box-shadow: 0 0 0 2px #0a101b, 0 12px 32px #0008;
+  }
+
+  footer {
+    margin-top: 12px;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  }
+}
