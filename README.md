@@ -74,3 +74,11 @@ No accounts, on-chain interactions, payout eligibility, server, multiplayer, glo
 
 - Asset: `src/assets/ramin-sheet.png` (4 × 420×724 frames), loaded through the Vite bundle.
 - Animated blink / idle / surprised expressions and a victory bob with lip-attached mustache overlays.
+
+### v0.5 — Mustaches, loader and audio
+
+- Three truly different pixel mustache silhouettes: narrow classic, curled handlebar, and heavy walrus; derived from the approved concept art and packed into tiny offline raster masks.
+- Smaller mustache overlays accurately fit Ramin's upper lip. Selection thumbnails stay large.
+- Real Phaser loader progress HUD for sprite assets, no artificial waiting.
+- Web Audio generated arcade effects for start, shoot, miss, good/perfect hit, and round completion; a persistent SFX toggle appears in menu, play and results on desktop and mobile.
+- Sound is initialized after a user interaction; no external audio files, libraries, or backend.

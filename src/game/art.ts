@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {decodeMustache,MUSTACHE_WIDTH,MUSTACHE_HEIGHT} from '../logic/mustachePixels';
 
 type Ctx = CanvasRenderingContext2D;
 const SW = 480;
@@ -187,16 +188,14 @@ function hero(c: Ctx, expression: 'normal' | 'blink' | 'surprised' = 'normal') {
     rect(c,28,47,10,4,'#a76061');rect(c,30,48,6,2,'#4e2d39');
   }
 }
-function mustache(c: Ctx, style: number) {
-  // Each style uses a very readable silhouette against the face, pixel-indexed canvas 38x18.
-  const dark='#11141e', glint='#31303d';
-  const segments: Array<[number,number,number,number]> = style===1 ?
-    [[3,8,9,3],[1,6,5,3],[9,9,10,3],[17,8,5,4],[21,9,9,3],[29,8,7,3],[32,5,5,4],[15,7,8,2]] :
-    style===2 ? [[1,5,9,5],[5,9,11,3],[13,8,12,4],[24,9,10,3],[31,6,7,5],[1,4,4,2],[34,3,3,4],[17,6,5,3]] :
-    [[3,6,8,4],[2,3,4,5],[8,7,9,5],[15,8,9,4],[21,7,10,5],[29,6,7,4],[33,2,4,6],[17,6,5,2]];
-  for(const [x,y,w,h] of segments)rect(c,x,y,w,h,dark);
-  rect(c,10,6,5,1,glint);rect(c,24,6,5,1,glint);
-  rect(c,16,10,6,2,dark);
+function mustache(c:Ctx,style:number){
+  const pixels=decodeMustache(style);
+  const shades=['','#1c1921','#54494e','#807476'];
+  for(let y=0;y<MUSTACHE_HEIGHT;y++)
+    for(let x=0;x<MUSTACHE_WIDTH;x++){
+      const shade=pixels[y*MUSTACHE_WIDTH+x];
+      if(shade)rect(c,x,y,1,1,shades[shade]);
+    }
 }
 function icon(c:Ctx){
   ellipse(c,20,20,19,19,'#8a551c');ellipse(c,20,19,17,17,'#ffc450');ellipse(c,20,19,13,13,'#d79a32');
@@ -264,5 +263,5 @@ export function createArt(scene: Phaser.Scene) {
   makeCanvas(scene,'butterfly',16,16,butterfly);
   for(let i=0;i<3;i++)makeCanvas(scene,`leaf-${i}`,8,10,ctx=>leaf(ctx,i));
   makeCanvas(scene,'coin',40,40,icon);
-  for(let style=0;style<3;style++)makeCanvas(scene,`stache-${style}`,38,18,ctx=>mustache(ctx,style));
+  for(let style=0;style<3;style++)makeCanvas(scene,`stache-${style}`,MUSTACHE_WIDTH,MUSTACHE_HEIGHT,ctx=>mustache(ctx,style));
 }

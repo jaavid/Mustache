@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { createArt } from './art';
+import {addSoundToggle,playSfx} from './sound';
 import { addForestLife, burstLeaves, burstStars } from './ambience';
 import { applyRaminMood, ensureRaminAnimations, makeRamin, preloadRamin, RAMIN_DESKTOP_SCALE, raminLipPoint } from './ramin';
 import { evaluateShot, readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
@@ -43,7 +44,26 @@ function addTrees(scene:Phaser.Scene) {
 
 export class BootScene extends Phaser.Scene {
   constructor(){super('Boot');}
-  preload(){ preloadRamin(this); }
+  preload(){
+    const w=this.scale.width,h=this.scale.height;
+    this.add.rectangle(w/2,h/2,w,h,0x10182a);
+    this.add.text(w/2,h/2-67,'N5 · MUSTACHE MAYHEM',{
+      fontFamily:'"Courier New", monospace',fontSize:'25px',fontStyle:'bold',color:'#ffd681'
+    }).setOrigin(.5);
+    const progressText=this.add.text(w/2,h/2+55,'LOADING 0%',{
+      fontFamily:'"Courier New", monospace',fontSize:'18px',color:'#dec2ff'
+    }).setOrigin(.5);
+    const bar=this.add.graphics();
+    const redraw=(value:number)=>{
+      bar.clear();
+      bar.fillStyle(0x332d46).fillRect(w/2-166,h/2-9,332,30);
+      bar.fillStyle(0xb58af1).fillRect(w/2-162,h/2-5,324*value,22);
+      progressText.setText('LOADING '+Math.round(value*100)+'%');
+    };
+    redraw(0);
+    this.load.on('progress',redraw);
+    preloadRamin(this);
+  }
   create(){ createArt(this); ensureRaminAnimations(this); this.scene.start('Menu'); }
 }
 
@@ -59,13 +79,14 @@ export class MenuScene extends Phaser.Scene {
     label(this,310,140,'MUSTACHE',55,'#ffd173').setShadow(4,5,'#3c1a35',0,true,true);
     label(this,310,207,'MAYHEM',65,'#c49bff').setShadow(4,5,'#38193e',0,true,true);
     label(this,310,267,'AIM  ·  SHOOT  ·  STACHE',18,'#e4dbb7');
-    const start=()=>this.scene.start('Play');
+    const start=()=>{playSfx('start');this.scene.start('Play');};
+    addSoundToggle(this,895,42);
     button(this,305,385,285,68,'▶  PLAY NOW',start);
     label(this,305,454,'45 SECONDS  •  3 STYLES  •  BIG COMBOS',15,'#e3d5e6');
     const hero=makeRamin(this,775,326,RAMIN_DESKTOP_SCALE,'blink').setDepth(41);
     hero.setAngle(-5);
     this.tweens.add({targets:hero,y:312,duration:1400,ease:'Sine.inOut',yoyo:true,repeat:-1});
-    const menuStache=this.add.image(775,278,'stache-0').setScale(2.6).setDepth(46).setAngle(-5);
+    const menuStache=this.add.image(775,278,'stache-0').setDisplaySize(68,38).setDepth(46).setAngle(-5);
     this.events.on(Phaser.Scenes.Events.UPDATE,()=>{
       const lip=raminLipPoint(hero);
       menuStache.setPosition(lip.x,lip.y);
@@ -102,8 +123,9 @@ export class PlayScene extends Phaser.Scene {
     this.active=false;this.roundOver=false;this.shooting=false;this.spawnSerial=0;this.previousSlot=-1;
     backdrop(this);addTrees(this);
     this.hero=makeRamin(this,-200,324,RAMIN_DESKTOP_SCALE,'idle').setVisible(false);
-    this.sticker=this.add.image(-200,320,'stache-0').setDisplaySize(86,41).setDepth(31).setVisible(false);
+    this.sticker=this.add.image(-200,320,'stache-0').setDisplaySize(66,37).setDepth(31).setVisible(false);
     this.createHud();
+    addSoundToggle(this,895,36);
     this.createSelector();
     this.cursor=this.add.graphics().setDepth(95);
     this.input.on('pointermove',(pointer:Phaser.Input.Pointer)=>this.drawCursor(pointer.x,pointer.y));
@@ -214,6 +236,7 @@ export class PlayScene extends Phaser.Scene {
       this.combo=0;
       this.comboText.setText('× 0');
     }
+    playSfx('shot');
     const startX=480, startY=459;
     const projectile=this.add.image(startX,startY,`stache-${this.selectedStyle}`).setDisplaySize(76,36).setDepth(92);
     projectile.setRotation(Phaser.Math.Angle.Between(startX,startY,pointer.x,pointer.y)*.18);
@@ -222,9 +245,11 @@ export class PlayScene extends Phaser.Scene {
       this.shooting=false;
       if(this.roundOver)return;
       if(result.grade==='miss'){
+        playSfx('miss');
         this.popFeedback(pointer.x,pointer.y,'MISS!', '#ff848f');
         burstLeaves(this,pointer.x,pointer.y,3);
       }else{
+        playSfx(result.grade==='perfect'?'perfect':'good');
         applyRaminMood(this.hero,'surprised');
         const mouth = raminLipPoint(this.hero);
         this.sticker.setTexture(`stache-${this.selectedStyle}`).setPosition(mouth.x,mouth.y).setVisible(true);
@@ -251,6 +276,7 @@ export class PlayScene extends Phaser.Scene {
   private finishRound(){
     if(this.roundOver)return;
     this.roundOver=true;this.active=false;this.input.enabled=false;
+    playSfx('finish');
     const best=Math.max(this.score,readBestScore());
     saveBestScore(best);
     this.scene.start('Results',{score:this.score,best});
@@ -268,9 +294,10 @@ export class ResultsScene extends Phaser.Scene {
     this.add.rectangle(500,271,885,445,0x142036,.94).setStrokeStyle(7,0x806048).setDepth(40);
     this.add.rectangle(501,59,860,10,0xc49c65).setDepth(41);
     label(this,466,118,'ROUND COMPLETE!',43,'#ffcb6e');
+    addSoundToggle(this,861,79);
     const resultsHero=makeRamin(this,220,318,RAMIN_DESKTOP_SCALE,'victory').setDepth(53);
     const resultsLip = raminLipPoint(resultsHero);
-    const resultStache = this.add.image(resultsLip.x, resultsLip.y,'stache-0').setScale(3.25).setDepth(54);
+    const resultStache = this.add.image(resultsLip.x, resultsLip.y,'stache-0').setDisplaySize(70,40).setDepth(54);
     this.tweens.add({targets:resultsHero,y:312,angle:2,duration:1400,yoyo:true,repeat:-1,ease:'Sine.inOut'});
     this.events.on(Phaser.Scenes.Events.UPDATE,()=>{
       const mouth=raminLipPoint(resultsHero);
@@ -281,7 +308,7 @@ export class ResultsScene extends Phaser.Scene {
     label(this,640,259,String(this.finalScore).padStart(5,'0'),62,'#fff2bf');
     label(this,640,312,`PERSONAL BEST: ${this.bestScore}`,21,'#b5f6c6');
     label(this,645,351,'Saved on this device only',16,'#b5b9c5');
-    const again=()=>this.scene.start('Play');
+    const again=()=>{playSfx('start');this.scene.start('Play');};
     button(this,642,432,324,67,'↻  PLAY AGAIN',again);
     label(this,493,511,'NO REAL TOKENS · PRACTICE MODE',16,'#d1bbdb');
     this.input.keyboard?.once('keydown-ENTER',again);

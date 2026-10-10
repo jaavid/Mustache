@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { burstLeaves, burstStars } from './ambience';
+import {addSoundToggle,playSfx} from './sound';
 import { applyRaminMood, makeRamin, RAMIN_MOBILE_SCALE, raminLipPoint } from './ramin';
 import { evaluateShot, readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
 import { normalizeTouchDistance } from '../logic/touch';
@@ -70,7 +71,7 @@ export class MobileMenuScene extends Phaser.Scene {
     text(this, 270, 288, 'AIM · SHOOT · STACHE', 20, '#e1dac7');
     const hero = makeRamin(this, 270, 530, RAMIN_MOBILE_SCALE, 'blink').setDepth(43);
     const lip = raminLipPoint(hero);
-    const menuStache=this.add.image(lip.x, lip.y, 'stache-0').setDisplaySize(136, 56).setDepth(44);
+    const menuStache=this.add.image(lip.x, lip.y, 'stache-0').setDisplaySize(80,44).setDepth(44);
     this.events.on(Phaser.Scenes.Events.UPDATE,()=>{
       const target=raminLipPoint(hero);
       menuStache.setPosition(target.x,target.y);
@@ -78,10 +79,12 @@ export class MobileMenuScene extends Phaser.Scene {
     this.add.image(451, 390, 'coin').setDisplaySize(70, 70).setDepth(48);
     this.tweens.add({targets: hero, y: 498, duration: 1550, yoyo:true, repeat:-1, ease: 'Sine.inOut'});
     text(this, 270, 691, 'CATCH RAMIN IN THE FOREST!', 22, '#fbe8bc');
-    largeButton(this, 270, 792, '▶ PLAY NOW', () => this.scene.start('Play'));
+    addSoundToggle(this,468,38,118);
+    const start=()=>{playSfx('start');this.scene.start('Play');};
+    largeButton(this,270,792,'▶ PLAY NOW',start);
     text(this, 270, 871, '45 SEC  ·  3 STYLES  ·  COMBOS', 17, '#decbea');
     text(this, 270, 924, 'Tap just below his nose!', 18, '#b0efcf');
-    this.input.keyboard?.once('keydown-ENTER', () => this.scene.start('Play'));
+    this.input.keyboard?.once('keydown-ENTER',start);
   }
 }
 
@@ -110,8 +113,9 @@ export class MobilePlayScene extends Phaser.Scene {
     portraitBackdrop(this);
     trees(this);
     this.hero = makeRamin(this, -300, FACE_Y + 18, RAMIN_MOBILE_SCALE, 'idle').setVisible(false);
-    this.sticker = this.add.image(-300, FACE_Y, 'stache-0').setDisplaySize(108, 51).setDepth(31).setVisible(false);
+    this.sticker = this.add.image(-300, FACE_Y, 'stache-0').setDisplaySize(82,46).setDepth(31).setVisible(false);
     this.hud();
+    addSoundToggle(this,469,27,112);
     this.styles();
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.shoot(pointer));
     this.input.keyboard?.on('keydown-ONE',()=>this.chooseStyle(0));
@@ -208,6 +212,7 @@ export class MobilePlayScene extends Phaser.Scene {
       this.combo=0;
       this.comboText.setText('× 0');
     }
+    playSfx('shot');
     const projectile=this.add.image(270,772,`stache-${this.selectedStyle}`)
       .setDisplaySize(100,45).setDepth(96);
     projectile.setRotation(Phaser.Math.Angle.Between(270,772,x,y)*.18);
@@ -216,9 +221,11 @@ export class MobilePlayScene extends Phaser.Scene {
         projectile.destroy(); this.shooting=false;
         if(this.roundOver) return;
         if(result.grade==='miss'){
+          playSfx('miss');
           this.feedback(x,y,'MISS!','#ff8eaa');
           burstLeaves(this,x,y,3);
         }else{
+          playSfx(result.grade==='perfect'?'perfect':'good');
           applyRaminMood(this.hero,'surprised');
           const mouth = raminLipPoint(this.hero);
           this.sticker.setTexture(`stache-${this.selectedStyle}`)
@@ -247,6 +254,7 @@ export class MobilePlayScene extends Phaser.Scene {
   private finish(){
     if(this.roundOver) return;
     this.roundOver=true; this.activeTarget=false; this.input.enabled=false;
+    playSfx('finish');
     const best=Math.max(this.score,readBestScore());
     saveBestScore(best);
     this.scene.start('Results',{score:this.score,best});
@@ -263,9 +271,10 @@ export class MobileResultsScene extends Phaser.Scene {
     portraitBackdrop(this);
     panel(this,270,481,512,848,0x132137,.96,50);
     text(this,270,108,'ROUND COMPLETE!',38,'#ffd281');
+    addSoundToggle(this,460,58,112);
     const hero = makeRamin(this,270,382,RAMIN_MOBILE_SCALE * 1.06,'victory').setDepth(55);
     const lip = raminLipPoint(hero);
-    const resultsStache = this.add.image(lip.x,lip.y,'stache-0').setDisplaySize(145,65).setDepth(56);
+    const resultsStache = this.add.image(lip.x,lip.y,'stache-0').setDisplaySize(88,48).setDepth(56);
     this.tweens.add({targets:hero,y:375,angle:2,duration:1500,yoyo:true,repeat:-1,ease:'Sine.inOut'});
     this.events.on(Phaser.Scenes.Events.UPDATE,()=>{
       const mouth=raminLipPoint(hero);
@@ -276,7 +285,7 @@ export class MobileResultsScene extends Phaser.Scene {
     text(this,270,616,String(this.score).padStart(5,'0'),67,'#fff0b1');
     text(this,270,687,`PERSONAL BEST: ${this.best}`,22,'#adf3c8');
     text(this,270,729,'Saved on this device only',16,'#bbbfca');
-    largeButton(this,270,826,'↻ PLAY AGAIN',()=>this.scene.start('Play'));
+    largeButton(this,270,826,'↻ PLAY AGAIN',()=>{playSfx('start');this.scene.start('Play');});
     text(this,270,915,'PRACTICE MODE · NO REAL TOKENS',16,'#dccae7');
     this.input.keyboard?.once('keydown-ENTER',()=>this.scene.start('Play'));
   }
