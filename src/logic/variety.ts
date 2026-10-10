@@ -18,10 +18,15 @@ export function chooseRaminVariant(random: number): RaminVariant {
  * The fake-out cannot penalize combos and never repeats immediately.
  */
 export function chooseSpawnEvent(elapsed: number, remaining: number, random: number, previous: SpawnEvent): SpawnEvent {
-  if (elapsed < 6 || remaining <= 6) return 'normal';
+  // First stage is intentionally predictable. The surprise rate rises at night,
+  // so the three phases change behavior rather than only their HUD labels.
+  if (elapsed < 15 || remaining <= 6) return 'normal';
   const roll = Math.min(.999999999, Math.max(0, random));
-  if (roll < .07 && previous !== 'fake-out') return 'fake-out';
-  if (roll >= .07 && roll < .19 && previous !== 'double') return 'double';
+  const finale=elapsed >= 30;
+  const fakeOutRate=finale ? .04 : .07;
+  const doubleRate=finale ? .27 : .19;
+  if (roll < fakeOutRate && previous !== 'fake-out') return 'fake-out';
+  if (roll >= fakeOutRate && roll < doubleRate && previous !== 'double') return 'double';
   return 'normal';
 }
 

@@ -14,9 +14,11 @@ describe('Ramin variation and fair event rules', () => {
 
   it('reserves event spawns for the middle of a round', () => {
     expect(chooseSpawnEvent(3,42,.01,'normal')).toBe('normal');
+    expect(chooseSpawnEvent(12,33,.01,'normal')).toBe('normal');
     expect(chooseSpawnEvent(20,25,.01,'normal')).toBe('fake-out');
     expect(chooseSpawnEvent(20,25,.1,'normal')).toBe('double');
     expect(chooseSpawnEvent(20,25,.8,'normal')).toBe('normal');
+    expect(chooseSpawnEvent(34,11,.22,'normal')).toBe('double');
     expect(chooseSpawnEvent(40,5,.01,'normal')).toBe('normal');
   });
 
