@@ -26,7 +26,8 @@ Navigate to the local URL printed by Vite. After the first install, commit the g
 - Consecutive hits add a capped combo bonus. One scoring hit per appearance.
 - Pick from three mustache styles with the bar along the bottom; keys **1**, **2**, **3** also work.
 - The game saves only **your personal best** in this browser using `localStorage`.
-- Mobile supports touch; use landscape orientation for a larger game view.
+- Mobile portrait uses a separate touch-first 540×960 Phaser layout; landscape and desktop use the existing 960×540 game. Rotating restarts the current round.
+- Portrait has large mustache selectors and slightly more forgiving touch aiming; the scoring formula stays unchanged.
 
 ### Test and build
 
@@ -57,3 +58,10 @@ No accounts, on-chain interactions, payout eligibility, server, multiplayer, glo
 2. Add 4–6 detailed forest layers and muzzle/impact effects.
 3. Tune appearance timing and add sound (with accessible mute toggle).
 4. Introduce a verified server-authoritative scoreboard only when prizes become part of the scope.
+
+### Mobile portrait v0.3
+
+- Responsive scene selection on orientation change (mobile 540×960; desktop/landscape 960×540).
+- Readable mobile HUD, large mustache selectors and a taller aiming area.
+- Hit grading uses 0.8× touch distance to make facial targeting on small screens practical.
+- No backend, ranking, or token payout.
