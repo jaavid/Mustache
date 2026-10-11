@@ -367,7 +367,9 @@ export class MobilePlayScene extends Phaser.Scene {
           haptic('select');
         },
       );
-      this.styleIcons.push(this.add.image(x, 869, `stache-${i}`).setDisplaySize(115, 54).setDepth(80));
+      this.styleIcons.push(
+        this.add.image(x, 869, `stache-${i}`).setDisplaySize(115, 54).setDepth(80),
+      );
       this.styleLabels.push(text(this, x - 53, 833, String(i + 1), 19, '#fff2bb'));
       this.selector.push(hit);
     }
@@ -397,8 +399,13 @@ export class MobilePlayScene extends Phaser.Scene {
       const chosen = index === this.selectedStyle;
       const goldSlot = index === 1 && this.golden.ready;
       box
-        .setFillStyle(goldSlot ? (this.goldenArmed ? 0x705331 : 0x3d3041) : chosen ? 0x594171 : 0x302b48)
-        .setStrokeStyle(5, goldSlot ? (this.goldenArmed ? 0xfff3b7 : 0xe7b747) : chosen ? 0xffd374 : 0x6c6282);
+        .setFillStyle(
+          goldSlot ? (this.goldenArmed ? 0x705331 : 0x3d3041) : chosen ? 0x594171 : 0x302b48,
+        )
+        .setStrokeStyle(
+          5,
+          goldSlot ? (this.goldenArmed ? 0xfff3b7 : 0xe7b747) : chosen ? 0xffd374 : 0x6c6282,
+        );
     });
   }
   private pop() {
@@ -507,7 +514,9 @@ export class MobilePlayScene extends Phaser.Scene {
     if (this.roundOver || this.shooting) return;
     if (this.golden.tryCollect(aim.x, aim.y, this.roundElapsedMs)) return;
     if (!this.activeTarget || aim.y < HUD_BOTTOM || aim.y > SELECTOR_TOP) return;
-    const shotIsGolden = shouldLaunchGolden(this.selectedStyle, this.goldenArmed, this.golden.ready) && this.golden.consume();
+    const shotIsGolden =
+      shouldLaunchGolden(this.selectedStyle, this.goldenArmed, this.golden.ready) &&
+      this.golden.consume();
     this.goldenArmed = false;
     this.shooting = true;
     this.activeTarget = false;

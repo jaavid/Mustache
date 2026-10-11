@@ -7,10 +7,6 @@ export function armGoldenForSelection(style: number, ready: boolean): boolean {
   return style === GOLDEN_SELECTOR_INDEX && ready;
 }
 
-export function shouldLaunchGolden(
-  style: number,
-  armed: boolean,
-  ready: boolean,
-): boolean {
+export function shouldLaunchGolden(style: number, armed: boolean, ready: boolean): boolean {
   return style === GOLDEN_SELECTOR_INDEX && armed && ready;
 }

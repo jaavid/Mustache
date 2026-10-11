@@ -426,7 +426,9 @@ export class PlayScene extends Phaser.Scene {
           haptic('select');
         },
       );
-      this.styleIcons.push(this.add.image(x, 498, `stache-${i}`).setDisplaySize(86, 40).setDepth(74));
+      this.styleIcons.push(
+        this.add.image(x, 498, `stache-${i}`).setDisplaySize(86, 40).setDepth(74),
+      );
       this.styleLabels.push(label(this, x - 43, 472, String(i + 1), 12, '#fbd88e'));
       this.styleMarkers.push(mark);
     }
@@ -456,8 +458,13 @@ export class PlayScene extends Phaser.Scene {
       const chosen = index === this.selectedStyle;
       const goldSlot = index === 1 && this.golden.ready;
       mark
-        .setStrokeStyle(4, goldSlot ? (this.goldenArmed ? 0xfff3b7 : 0xe7b747) : chosen ? 0xffcd62 : 0x68627c)
-        .setFillStyle(goldSlot ? (this.goldenArmed ? 0x705331 : 0x3d3041) : chosen ? 0x55436d : 0x2c2d49);
+        .setStrokeStyle(
+          4,
+          goldSlot ? (this.goldenArmed ? 0xfff3b7 : 0xe7b747) : chosen ? 0xffcd62 : 0x68627c,
+        )
+        .setFillStyle(
+          goldSlot ? (this.goldenArmed ? 0x705331 : 0x3d3041) : chosen ? 0x55436d : 0x2c2d49,
+        );
     });
   }
   private drawCursor(x: number, y: number) {
@@ -577,7 +584,9 @@ export class PlayScene extends Phaser.Scene {
     if (this.golden.tryCollect(pointer.x, pointer.y, this.roundElapsedMs)) return;
     if (!this.active || pointer.y < 125 || pointer.y > 450) return;
     const aim = { x: pointer.x, y: pointer.y };
-    const shotIsGolden = shouldLaunchGolden(this.selectedStyle, this.goldenArmed, this.golden.ready) && this.golden.consume();
+    const shotIsGolden =
+      shouldLaunchGolden(this.selectedStyle, this.goldenArmed, this.golden.ready) &&
+      this.golden.consume();
     this.goldenArmed = false;
     this.shooting = true;
     this.active = false;

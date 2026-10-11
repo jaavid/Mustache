@@ -29,14 +29,6 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - name: Temporary manual-gold formatting verification
-        run: |
-          npx prettier --write src/game/mobile.ts src/game/scenes.ts src/game/goldenFlyer.ts src/logic/goldenSelection.ts src/logic/__tests__/goldenSelection.test.ts docs/GOLDEN_MUSTACHE.md README.md
-          node --input-type=module - <<'JS'
-          import { readFileSync } from 'node:fs';
-          const paths = ["src/game/mobile.ts","src/game/scenes.ts","src/game/goldenFlyer.ts","src/logic/goldenSelection.ts","src/logic/__tests__/goldenSelection.test.ts","docs/GOLDEN_MUSTACHE.md","README.md"];
-          for (const path of paths) console.log('FORMAT_BEGIN:' + path + ':' + readFileSync(path).toString('base64') + ':FORMAT_END');
-          JS
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
