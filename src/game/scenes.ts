@@ -56,6 +56,7 @@ import { attachMustache, resolveMissImpact, showLandingPrecision } from './impac
 import { toHeroAnchor, fromHeroAnchor, type StickerAnchor } from '../logic/stickerAnchor';
 import { RaminMomentController } from './raminMoments';
 import { GoldenFlyer } from './goldenFlyer';
+import { armGoldenForSelection, shouldLaunchGolden } from '../logic/goldenSelection';
 
 const WIDTH = 960;
 const HEIGHT = 540;
@@ -436,7 +437,7 @@ export class PlayScene extends Phaser.Scene {
   private selectStyle(style: number) {
     this.selectedStyle = style;
     // Reselect slot 2 after charging to arm the special shot; never auto-arm.
-    this.goldenArmed = style === 1 && this.golden.ready;
+    this.goldenArmed = armGoldenForSelection(style, this.golden.ready);
     this.refreshSelector();
   }
   private updateGoldenSelector(ready: boolean) {
@@ -576,7 +577,7 @@ export class PlayScene extends Phaser.Scene {
     if (this.golden.tryCollect(pointer.x, pointer.y, this.roundElapsedMs)) return;
     if (!this.active || pointer.y < 125 || pointer.y > 450) return;
     const aim = { x: pointer.x, y: pointer.y };
-    const shotIsGolden = this.goldenArmed && this.golden.consume();
+    const shotIsGolden = shouldLaunchGolden(this.selectedStyle, this.goldenArmed, this.golden.ready) && this.golden.consume();
     this.goldenArmed = false;
     this.shooting = true;
     this.active = false;
