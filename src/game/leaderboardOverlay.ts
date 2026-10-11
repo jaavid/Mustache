@@ -173,7 +173,7 @@ export function showLeaderboardOverlay(
     );
     ownLine.setText(
       current.me
-        ? 'YOUR RANK: #' + number(current.me.rank) + ' · ' + number(current.me.score) + ' PTS'
+        ? 'YOUR RANK: #' + number(current.me.rank) + ' · ' + number(current.me.score) + ' PTS' + (current.me.goldenPerfect ? ' ★ GOLD' : '')
         : 'YOUR RANK: NO RECORDED SCORE',
     );
     const left = current.remainingSeconds;
@@ -187,7 +187,7 @@ export function showLeaderboardOverlay(
       '  ' +
       row.name.slice(0, portrait ? 13 : 18).padEnd(portrait ? 13 : 18) +
       '  ' +
-      number(row.score)
+      number(row.score) + (row.goldenPerfect ? ' ★' : '')
     );
   }
   async function activate(tab: Tab, weekOffset = 0): Promise<void> {
