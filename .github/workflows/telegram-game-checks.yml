@@ -29,6 +29,11 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --no-audit --no-fund
+      - name: Inspect exact Prettier corrections
+        run: |
+          npx prettier --write src/platform/competitiveScores.ts docs/TELEGRAM_SCORES.md
+          git diff -- src/platform/competitiveScores.ts docs/TELEGRAM_SCORES.md
+          exit 1
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
