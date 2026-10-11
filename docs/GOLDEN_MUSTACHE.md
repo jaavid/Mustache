@@ -29,4 +29,3 @@ The next regular Tehran weekly rollover (Saturday 00:00) is a clean weekly compe
 - Duplicate, fabricated, premature or replayed pickup rejection
 - Server score parity, old-client compatibility and migration defaults
 - Results/Telegram badge for the verified best round
-

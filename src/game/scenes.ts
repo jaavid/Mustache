@@ -322,7 +322,9 @@ export class PlayScene extends Phaser.Scene {
       .setDepth(31)
       .setVisible(false);
     this.createHud();
-    this.golden = new GoldenFlyer(this, false, (message, color) => this.varietyNotice(message, color));
+    this.golden = new GoldenFlyer(this, false, (message, color) =>
+      this.varietyNotice(message, color),
+    );
     addSoundToggle(this, 895, 36);
     addMusicToggle(this, 896, 105, 106);
     addPauseButton(this, 780, 105, false);

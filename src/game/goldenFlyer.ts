@@ -1,5 +1,10 @@
 import Phaser from 'phaser';
-import { goldenHit, goldenPosition, GOLDEN_REQUIRED, GOLDEN_SPAWN_MS } from '../../shared/goldenRules.js';
+import {
+  goldenHit,
+  goldenPosition,
+  GOLDEN_REQUIRED,
+  GOLDEN_SPAWN_MS,
+} from '../../shared/goldenRules.js';
 import { recordCompetitiveGoldenPickup } from '../platform/competitiveScores';
 
 /** Cosmetic and input presentation only; authoritative flight rules live in shared/. */
@@ -13,26 +18,44 @@ export class GoldenFlyer {
   private readonly collected = new Set<number>();
   private spent = false;
 
-  constructor(scene: Phaser.Scene, portrait: boolean, notice: (message: string, color: string) => void) {
+  constructor(
+    scene: Phaser.Scene,
+    portrait: boolean,
+    notice: (message: string, color: string) => void,
+  ) {
     this.scene = scene;
     this.portrait = portrait;
     this.notice = notice;
-    this.glow = scene.add.circle(-100, -100, portrait ? 48 : 41, 0xffd84e, 0.2)
-      .setDepth(63).setVisible(false);
-    this.sprite = scene.add.image(-100, -100, 'stache-gold')
+    this.glow = scene.add
+      .circle(-100, -100, portrait ? 48 : 41, 0xffd84e, 0.2)
+      .setDepth(63)
+      .setVisible(false);
+    this.sprite = scene.add
+      .image(-100, -100, 'stache-gold')
       .setDisplaySize(portrait ? 94 : 84, portrait ? 53 : 45)
-      .setDepth(64).setVisible(false);
+      .setDepth(64)
+      .setVisible(false);
     scene.tweens.add({
-      targets: this.glow, scale: 1.22, alpha: 0.07, duration: 500, yoyo: true, repeat: -1,
+      targets: this.glow,
+      scale: 1.22,
+      alpha: 0.07,
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
     });
-    this.hud = scene.add.text(
-      portrait ? 270 : 480, portrait ? 218 : 144, 'GOLD 0/3', {
+    this.hud = scene.add
+      .text(portrait ? 270 : 480, portrait ? 218 : 144, 'GOLD 0/3', {
         fontFamily: '"Courier New", monospace',
-        fontSize: portrait ? '20px' : '18px', fontStyle: 'bold',
-        color: '#ffe69b', backgroundColor: '#172038',
-        stroke: '#322345', strokeThickness: 3, padding: { x: 9, y: 5 },
-      },
-    ).setOrigin(0.5).setDepth(89);
+        fontSize: portrait ? '20px' : '18px',
+        fontStyle: 'bold',
+        color: '#ffe69b',
+        backgroundColor: '#172038',
+        stroke: '#322345',
+        strokeThickness: 3,
+        padding: { x: 9, y: 5 },
+      })
+      .setOrigin(0.5)
+      .setDepth(89);
   }
 
   get ready(): boolean {
@@ -67,13 +90,18 @@ export class GoldenFlyer {
       if (this.collected.has(i) || !goldenHit(i, elapsedMs, { x, y }, this.portrait)) continue;
       this.collected.add(i);
       recordCompetitiveGoldenPickup({
-        index: i, tMs: Math.min(46000, Math.round(elapsedMs)), aim: { x, y },
+        index: i,
+        tMs: Math.min(46000, Math.round(elapsedMs)),
+        aim: { x, y },
       });
       this.sprite.setVisible(false);
       this.glow.setVisible(false);
       this.hud.setText(this.ready ? 'GOLD READY!' : 'GOLD ' + this.collected.size + '/3');
       this.scene.tweens.add({ targets: this.hud, scale: 1.25, duration: 140, yoyo: true });
-      this.notice(this.ready ? 'GOLDEN SHOT READY!' : 'GOLD COLLECTED! ' + this.collected.size + '/3', '#ffe58b');
+      this.notice(
+        this.ready ? 'GOLDEN SHOT READY!' : 'GOLD COLLECTED! ' + this.collected.size + '/3',
+        '#ffe58b',
+      );
       return true;
     }
     return false;

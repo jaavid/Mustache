@@ -343,7 +343,9 @@ function raminAccessory(c: Ctx, variant: RaminVariant) {
 
 function mustache(c: Ctx, style: number, golden = false) {
   const pixels = decodeMustache(style);
-  const shades = golden ? ['', '#755016', '#d6a02f', '#ffe58b'] : ['', '#1c1921', '#54494e', '#807476'];
+  const shades = golden
+    ? ['', '#755016', '#d6a02f', '#ffe58b']
+    : ['', '#1c1921', '#54494e', '#807476'];
   for (let y = 0; y < MUSTACHE_HEIGHT; y++)
     for (let x = 0; x < MUSTACHE_WIDTH; x++) {
       const shade = pixels[y * MUSTACHE_WIDTH + x];
@@ -446,5 +448,7 @@ export function createArt(scene: Phaser.Scene) {
     makeCanvas(scene, `stache-${style}`, MUSTACHE_WIDTH, MUSTACHE_HEIGHT, (ctx) =>
       mustache(ctx, style),
     );
-  makeCanvas(scene, 'stache-gold', MUSTACHE_WIDTH, MUSTACHE_HEIGHT, (ctx) => mustache(ctx, 2, true));
+  makeCanvas(scene, 'stache-gold', MUSTACHE_WIDTH, MUSTACHE_HEIGHT, (ctx) =>
+    mustache(ctx, 2, true),
+  );
 }

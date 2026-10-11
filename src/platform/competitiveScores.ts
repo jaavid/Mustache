@@ -108,7 +108,8 @@ async function api(path: string, payload: unknown) {
   }
 }
 
-let active: { started: Promise<string>; shots: Trace[]; goldenPickups: GoldenPickup[] } | null = null;
+let active: { started: Promise<string>; shots: Trace[]; goldenPickups: GoldenPickup[] } | null =
+  null;
 
 export function startCompetitiveRound(portrait: boolean): void {
   if (!sessionToken) {
@@ -141,7 +142,12 @@ export async function submitCompetitiveRound(score: number): Promise<Submission>
   if (!sessionToken || !current) return { state: 'local' };
   try {
     const roundId = await current.started;
-    const result = await api('/api/round/finish', { roundId, score, shots: current.shots, goldenPickups: current.goldenPickups });
+    const result = await api('/api/round/finish', {
+      roundId,
+      score,
+      shots: current.shots,
+      goldenPickups: current.goldenPickups,
+    });
     return {
       state: 'saved',
       telegramSynced: !!result.telegramSynced,

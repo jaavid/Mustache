@@ -31,13 +31,16 @@ describe('shared shot transaction', () => {
 
   it('pays +350 only for a single charged PERFECT', () => {
     expect(resolveRoundShot({ ...base, aim: base.lip, goldenShot: true })).toMatchObject({
-      gained: 470, goldenPerfect: true,
+      gained: 470,
+      goldenPerfect: true,
     });
     expect(resolveRoundShot({ ...base, aim: { x: 295, y: 350 }, goldenShot: true })).toMatchObject({
-      gained: 70, goldenPerfect: false,
+      gained: 70,
+      goldenPerfect: false,
     });
     expect(resolveRoundShot({ ...base, aim: { x: 500, y: 350 }, goldenShot: true })).toMatchObject({
-      gained: 0, goldenPerfect: false,
+      gained: 0,
+      goldenPerfect: false,
     });
   });
 

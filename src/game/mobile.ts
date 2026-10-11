@@ -279,7 +279,9 @@ export class MobilePlayScene extends Phaser.Scene {
       .setDepth(31)
       .setVisible(false);
     this.hud();
-    this.golden = new GoldenFlyer(this, true, (message, color) => this.varietyNotice(message, color));
+    this.golden = new GoldenFlyer(this, true, (message, color) =>
+      this.varietyNotice(message, color),
+    );
     addSoundToggle(this, 469, 27, 112);
     addMusicToggle(this, 70, 27, 112);
     addPauseButton(this, 473, 195, true);
@@ -475,12 +477,7 @@ export class MobilePlayScene extends Phaser.Scene {
     const aim = { x: pointer.x, y: pointer.y };
     if (this.roundOver || this.shooting) return;
     if (this.golden.tryCollect(aim.x, aim.y, this.roundElapsedMs)) return;
-    if (
-      !this.activeTarget ||
-      aim.y < HUD_BOTTOM ||
-      aim.y > SELECTOR_TOP
-    )
-      return;
+    if (!this.activeTarget || aim.y < HUD_BOTTOM || aim.y > SELECTOR_TOP) return;
     const shotIsGolden = this.golden.consume();
     this.shooting = true;
     this.activeTarget = false;
