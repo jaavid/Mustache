@@ -341,25 +341,26 @@ function raminAccessory(c: Ctx, variant: RaminVariant) {
   rect(c, 146, 62, 12, 4, '#f7d58c');
 }
 
-
 /** Borhan's three exclusive 72×40 pixel masks: chevron, handlebar, horseshoe.
  * Cosmetic only. Same physical image bounds and landing rules as Ramin.
  */
 function borhanMustache(c: Ctx, style: number, golden = false): void {
-  const tones = golden
-    ? ['#694214', '#bd801e', '#ffe38b']
-    : ['#160f13', '#402522', '#9c644a'];
+  const tones = golden ? ['#694214', '#bd801e', '#ffe38b'] : ['#160f13', '#402522', '#9c644a'];
   for (let x = 2; x < 70; x++) {
     const offset = Math.abs(x - 35.5);
     const t = offset / 34;
-    let center = 15, thick = 8;
-    if (style === 0) { // Broad, pointed chevron with downward sweeping wings.
+    let center = 15,
+      thick = 8;
+    if (style === 0) {
+      // Broad, pointed chevron with downward sweeping wings.
       center = 12 + 11 * t;
       thick = 8 + 3 * (1 - t) - 7 * Math.pow(t, 3);
-    } else if (style === 1) { // Thin upward-twirled handlebar.
+    } else if (style === 1) {
+      // Thin upward-twirled handlebar.
       center = 15 - 8 * Math.pow(t, 3);
       thick = 4 + 3 * (1 - t);
-    } else { // Dense horseshoe with drooping ends.
+    } else {
+      // Dense horseshoe with drooping ends.
       center = 14 + 13 * Math.pow(t, 3);
       thick = 8 + 3 * t - 5 * Math.pow(t, 4);
     }
@@ -368,7 +369,7 @@ function borhanMustache(c: Ctx, style: number, golden = false): void {
     const bottom = Math.min(37, Math.round(center + thick / 2));
     for (let y = top; y <= bottom; y++) {
       const outline = y === top || y === bottom || x < 4 || x > 67;
-      const shine = !outline && y <= top + 2 && (x % 11 !== 0);
+      const shine = !outline && y <= top + 2 && x % 11 !== 0;
       rect(c, x, y, 1, 1, tones[outline ? 0 : shine ? 2 : 1]);
     }
   }

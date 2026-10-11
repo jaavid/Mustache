@@ -519,8 +519,10 @@ export class PlayScene extends Phaser.Scene {
     if (event === 'fake-out') this.varietyNotice('FAKE-OUT!', '#ffc3ab');
     else if (fromDouble) this.varietyNotice('AGAIN!', '#ffdd82');
     else if (event === 'double') this.varietyNotice('DOUBLE POP!', '#ffdd82');
-    else if (this.currentVariant === 'gold') this.varietyNotice(`GOLD ${characterName()} · +50`, '#ffd774');
-    else if (this.currentVariant === 'sunglasses') this.varietyNotice(`COOL ${characterName()}`, '#b6d5ff');
+    else if (this.currentVariant === 'gold')
+      this.varietyNotice(`GOLD ${characterName()} · +50`, '#ffd774');
+    else if (this.currentVariant === 'sunglasses')
+      this.varietyNotice(`COOL ${characterName()}`, '#b6d5ff');
     enterFromTree(this, this.hero, { x, y }, RAMIN_DESKTOP_SCALE, plan, () => {
       if (this.roundOver || serial !== this.spawnSerial) return;
       if (event === 'fake-out') {

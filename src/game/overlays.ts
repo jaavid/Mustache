@@ -179,7 +179,13 @@ export class GuideScene extends Phaser.Scene {
       description.setText(steps[index][1]);
       hint.setText(steps[index][2]);
       progress.setText('STEP ' + (index + 1) + ' / 3');
-      visual.setTexture(index === 1 ? (getSelectedCharacter() === 'borhan' ? 'borhan-sheet' : 'ramin-sheet') : mustacheTexture(index === 0 ? 1 : 2));
+      visual.setTexture(
+        index === 1
+          ? getSelectedCharacter() === 'borhan'
+            ? 'borhan-sheet'
+            : 'ramin-sheet'
+          : mustacheTexture(index === 0 ? 1 : 2),
+      );
       if (index === 1) visual.setFrame(0).setDisplaySize(105, 178);
       else visual.setDisplaySize(135, 60);
     };

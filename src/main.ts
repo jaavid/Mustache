@@ -35,7 +35,15 @@ function mountGame(): void {
           GuideScene,
           PauseOverlayScene,
         ]
-      : [BootScene, MenuScene, CharacterSelectScene, PlayScene, ResultsScene, GuideScene, PauseOverlayScene],
+      : [
+          BootScene,
+          MenuScene,
+          CharacterSelectScene,
+          PlayScene,
+          ResultsScene,
+          GuideScene,
+          PauseOverlayScene,
+        ],
   });
 }
 

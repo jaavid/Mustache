@@ -33,21 +33,25 @@ export class CharacterSelectScene extends Phaser.Scene {
     const heroY = cy - (portrait ? 13 : 11);
     const nameY = cy + cardH / 2 - (portrait ? 36 : 28);
 
-    this.add.image(cx, h / 2, 'forest')
+    this.add
+      .image(cx, h / 2, 'forest')
       .setDisplaySize(portrait ? 1500 : w, portrait ? 970 : h)
       .setDepth(-20);
     this.add.rectangle(cx, h / 2, w, h, 0x0a1421, 0.58).setDepth(-10);
 
     const uiText = (x: number, y: number, caption: string, size: number, color = '#ffffff') =>
-      this.add.text(x, y, caption, {
-        fontFamily: '"Courier New", monospace',
-        fontSize: `${size}px`,
-        fontStyle: 'bold',
-        color,
-        align: 'center',
-        stroke: '#171423',
-        strokeThickness: 5,
-      }).setOrigin(0.5).setDepth(60);
+      this.add
+        .text(x, y, caption, {
+          fontFamily: '"Courier New", monospace',
+          fontSize: `${size}px`,
+          fontStyle: 'bold',
+          color,
+          align: 'center',
+          stroke: '#171423',
+          strokeThickness: 5,
+        })
+        .setOrigin(0.5)
+        .setDepth(60);
 
     uiText(cx, portrait ? 77 : 45, 'CHOOSE YOUR HERO', portrait ? 36 : 40, '#ffdb80');
     uiText(cx, portrait ? 137 : 91, '6 SECONDS TO PICK  •  1 OR 2', portrait ? 18 : 19, '#c9f4df');
@@ -67,7 +71,8 @@ export class CharacterSelectScene extends Phaser.Scene {
     CHARACTER_IDS.forEach((id, index) => {
       const x = centers[index];
       this.add.rectangle(x + 5, cy + 8, cardW, cardH, 0x060e17, 0.82).setDepth(7);
-      const card = this.add.rectangle(x, cy, cardW, cardH, 0x111e2c, 0.9)
+      const card = this.add
+        .rectangle(x, cy, cardW, cardH, 0x111e2c, 0.9)
         .setStrokeStyle(4, 0x566978)
         .setInteractive({ useHandCursor: true })
         .setDepth(8);
@@ -93,7 +98,13 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     let remaining = CHARACTER_PICK_SECONDS;
     let started = false;
-    const counter = uiText(cx, portrait ? 748 : 478, `STARTING IN ${remaining}`, portrait ? 24 : 21, '#c4f8d7');
+    const counter = uiText(
+      cx,
+      portrait ? 748 : 478,
+      `STARTING IN ${remaining}`,
+      portrait ? 24 : 21,
+      '#c4f8d7',
+    );
     const launch = () => {
       if (started) return;
       started = true;
@@ -112,9 +123,11 @@ export class CharacterSelectScene extends Phaser.Scene {
     });
     const readyY = portrait ? 851 : 520;
     const buttonWidth = portrait ? 342 : 235;
-    const ready = this.add.rectangle(cx, readyY, buttonWidth, portrait ? 75 : 40, 0xb084ec)
+    const ready = this.add
+      .rectangle(cx, readyY, buttonWidth, portrait ? 75 : 40, 0xb084ec)
       .setStrokeStyle(4, 0x49315b)
-      .setInteractive({ useHandCursor: true }).setDepth(45);
+      .setInteractive({ useHandCursor: true })
+      .setDepth(45);
     uiText(cx, readyY, 'READY  ▶', portrait ? 27 : 20);
     ready.on('pointerdown', launch);
 

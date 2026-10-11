@@ -55,19 +55,19 @@ Run `npm run format` for documentation and config files. Formatting the whole le
 
 ## Architecture
 
-| Files                                                | Responsibility                                             |
-| ---------------------------------------------------- | ---------------------------------------------------------- |
-| `src/main.ts`                                        | Viewport/layout selection                                  |
-| `src/game/scenes.ts`, `src/game/mobile.ts`           | Desktop and mobile Phaser presentation                     |
-| `src/logic/shotResolution.ts`                        | Shared shot outcome: score, combo, bonuses and round stats |
-| `src/logic/scoring.ts`                               | Pure elliptical hit detection                              |
-| `src/logic/gameplay.ts`, `src/logic/arcadePhases.ts` | Timings and difficulty                                     |
-| `src/game/gameFeel.ts`, `src/game/impactFx.ts`       | Projectile and impact visuals                              |
-| `src/game/ramin.ts`, `src/game/raminMoments.ts`      | Both heroes' states, expressions and gestures             |
-| `src/game/characterSelect.ts`, `src/game/characterChoice.ts` | Six-second character selection shared by both layouts |
-| `src/game/art.ts`                                    | Canvas-generated pixel art                                 |
-| `src/game/facialAtlas.ts`                            | Six-frame Ramin atlas derived from original four frames    |
-| `src/assets/ramin-sheet.png`, `src/assets/borhan-sheet.png` | Aligned four-frame character sprite sheets            |
+| Files                                                        | Responsibility                                             |
+| ------------------------------------------------------------ | ---------------------------------------------------------- |
+| `src/main.ts`                                                | Viewport/layout selection                                  |
+| `src/game/scenes.ts`, `src/game/mobile.ts`                   | Desktop and mobile Phaser presentation                     |
+| `src/logic/shotResolution.ts`                                | Shared shot outcome: score, combo, bonuses and round stats |
+| `src/logic/scoring.ts`                                       | Pure elliptical hit detection                              |
+| `src/logic/gameplay.ts`, `src/logic/arcadePhases.ts`         | Timings and difficulty                                     |
+| `src/game/gameFeel.ts`, `src/game/impactFx.ts`               | Projectile and impact visuals                              |
+| `src/game/ramin.ts`, `src/game/raminMoments.ts`              | Both heroes' states, expressions and gestures              |
+| `src/game/characterSelect.ts`, `src/game/characterChoice.ts` | Six-second character selection shared by both layouts      |
+| `src/game/art.ts`                                            | Canvas-generated pixel art                                 |
+| `src/game/facialAtlas.ts`                                    | Six-frame Ramin atlas derived from original four frames    |
+| `src/assets/ramin-sheet.png`, `src/assets/borhan-sheet.png`  | Aligned four-frame character sprite sheets                 |
 
 See [Architecture](docs/ARCHITECTURE.md), [Art pipeline](assets/README.md), [Contributing](CONTRIBUTING.md), and [Changelog](CHANGELOG.md).
 

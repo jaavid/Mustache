@@ -28,7 +28,9 @@ describe('pre-round hero selection', () => {
     setSelectedCharacter('borhan');
     expect(BORHAN_MUSTACHE_NAMES).toHaveLength(3);
     expect([0, 1, 2].map((index) => mustacheTexture(index))).toEqual([
-      'borhan-stache-0', 'borhan-stache-1', 'borhan-stache-2'
+      'borhan-stache-0',
+      'borhan-stache-1',
+      'borhan-stache-2',
     ]);
     expect(mustacheTexture(1, true)).toBe('borhan-stache-gold');
     setSelectedCharacter('ramin');

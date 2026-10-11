@@ -40,7 +40,10 @@ export function createFacialAtlas(
   };
   for (let frame = 0; frame < 4; frame++) drawOriginal(frame, frame);
   // Borhan's supplied second pose is already a complete wink (no eye patch needed).
-  drawOriginal(sourceKey === 'borhan-sheet' ? FACE_FRAME_INDEX.blink : FACE_FRAME_INDEX.idle, FACE_FRAME_INDEX.wink);
+  drawOriginal(
+    sourceKey === 'borhan-sheet' ? FACE_FRAME_INDEX.blink : FACE_FRAME_INDEX.idle,
+    FACE_FRAME_INDEX.wink,
+  );
   drawOriginal(FACE_FRAME_INDEX.idle, FACE_FRAME_INDEX.serious);
 
   /** Replace source pixels with no additional foreground layer. Use a tiny

@@ -181,7 +181,10 @@ export class MobileMenuScene extends Phaser.Scene {
     text(this, 270, 288, 'AIM · SHOOT · STACHE', 20, '#e1dac7');
     const hero = makeRamin(this, 270, 530, RAMIN_MOBILE_SCALE, 'blink').setDepth(43);
     const lip = raminLipPoint(hero);
-    const menuStache = this.add.image(lip.x, lip.y, mustacheTexture(0)).setDisplaySize(80, 44).setDepth(44);
+    const menuStache = this.add
+      .image(lip.x, lip.y, mustacheTexture(0))
+      .setDisplaySize(80, 44)
+      .setDepth(44);
     this.events.on(Phaser.Scenes.Events.UPDATE, () => {
       const target = raminLipPoint(hero);
       menuStache.setPosition(target.x, target.y).setRotation(hero.rotation);
@@ -450,7 +453,8 @@ export class MobilePlayScene extends Phaser.Scene {
     else if (fromDouble) this.varietyNotice('AGAIN!', '#ffdd82');
     else if (event === 'double') this.varietyNotice('DOUBLE POP!', '#ffdd82');
     else if (this.currentVariant === 'gold') this.varietyNotice('GOLD +50!', '#ffd774');
-    else if (this.currentVariant === 'sunglasses') this.varietyNotice(`COOL ${characterName()}`, '#b6d5ff');
+    else if (this.currentVariant === 'sunglasses')
+      this.varietyNotice(`COOL ${characterName()}`, '#b6d5ff');
     enterFromTree(this, this.hero, { x, y }, RAMIN_MOBILE_SCALE, plan, () => {
       if (this.roundOver || serial !== this.spawnSerial) return;
       if (event === 'fake-out') {
