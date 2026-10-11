@@ -29,11 +29,6 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - name: Inspect score API Prettier changes
-        run: |
-          npx prettier --write src/logic/__tests__/competitiveApiRouting.test.ts src/platform/competitiveScores.ts
-          git diff -- src/logic/__tests__/competitiveApiRouting.test.ts src/platform/competitiveScores.ts
-          exit 1
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck

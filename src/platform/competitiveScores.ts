@@ -65,7 +65,7 @@ export class ScoreApiError extends Error {
 }
 
 async function requestScoreApi(path: string, init: RequestInit): Promise<Response> {
-  const orderedHosts = [preferredApiHost, ...API_HOSTS.filter(host => host !== preferredApiHost)];
+  const orderedHosts = [preferredApiHost, ...API_HOSTS.filter((host) => host !== preferredApiHost)];
   let lastCode = 'NETWORK_OR_CORS';
   for (const host of orderedHosts) {
     try {
@@ -156,7 +156,10 @@ export async function getLeaderboard(
   const query = new URLSearchParams({ period, offset: String(offset) });
   try {
     const headers = sessionToken ? { authorization: 'Bearer ' + sessionToken } : undefined;
-    let response = await requestScoreApi('/api/leaderboard?' + query, { cache: 'no-store', headers });
+    let response = await requestScoreApi('/api/leaderboard?' + query, {
+      cache: 'no-store',
+      headers,
+    });
     // Expired sessions should still show public rankings.
     if (response.status === 401) {
       response = await requestScoreApi('/api/leaderboard?' + query, { cache: 'no-store' });
