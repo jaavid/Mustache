@@ -116,17 +116,19 @@ sensitive data.
 - Test the standalone web version; it must still use Web Share/clipboard.
 - Optionally try inline mode by typing `@RJTtobot mustache` in another chat.
 
-## 5. Scores, D1 and prize restrictions
+## 5. Scores and competition windows
 
-Native Game Card scores and D1 weekly top-ten are now implemented. Before
-merging the scoring PR, provision the D1 database and the additional GitHub
-secret `CLOUDFLARE_D1_DATABASE_ID`. The deploy workflow applies migrations
-before updating the Worker; it still never changes the existing Telegram webhook.
+Cloudflare D1 records the accepted round score; the Worker then updates the
+native Telegram Game Card via \`setGameScore\` when it is a new personal high.
+The result screen automatically opens the **Saturday-to-Saturday Tehran**
+weekly top-ten, and the bot supports \`/top\` or \`/score\`.
 
-Read [Telegram scores and weekly rankings](TELEGRAM_SCORES.md) for exact setup,
-the difference between all-time Telegram rankings and weekly D1 rankings,
-API behavior and the explicit anti-cheat limitation. N5 prizes remain
-disabled; client-controlled target positions cannot certify honest play.
+Other tabs: **daily, Persian monthly, all-time and Telegram chat high scores**.
+Existing records are grouped by actual round end time, including rounds
+stored before the Tehran-week change. No webhook reconfiguration is needed.
+
+See [Telegram scores and Tehran leaderboards](TELEGRAM_SCORES.md).
+Real N5 rewards are still disabled pending full server-side anti-cheat.
 
 Official documentation:
 

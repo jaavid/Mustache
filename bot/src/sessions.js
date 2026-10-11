@@ -1,4 +1,5 @@
-import { mondayUtc, verifyRoundShots } from './scoring.js';
+import { verifyRoundShots } from './scoring.js';
+import { periodBounds, tehranWeekStart } from './periods.js';
 
 const SESSION_TTL_MS = 60 * 60 * 1000;
 const ROUND_TTL_MS = 3 * 60 * 1000;
@@ -64,7 +65,7 @@ export async function finishRound(db, session, data, now = Date.now()) {
   const duration = now - round.started_at;
   if (duration < 35000 || now > round.expires_at) throw new Error('INVALID_ROUND_DURATION');
   const { score } = verifyRoundShots(data.shots, !!round.portrait, data.score);
-  const weekStart = mondayUtc(now);
+  const weekStart = tehranWeekStart(now);
   const result = await db.prepare('UPDATE game_rounds SET score=?, week_start=?, finished_at=? WHERE id=? AND token_hash=? AND score IS NULL AND expires_at>=?').bind(
     score, weekStart, now, round.id, session.token_hash, now,
   ).run();
@@ -76,14 +77,42 @@ export async function finishRound(db, session, data, now = Date.now()) {
   return { score, weekStart, duplicate: false };
 }
 
-export async function leaderboard(db, now = Date.now()) {
-  const weekStart = mondayUtc(now);
-  const list = await db.prepare(`
-    SELECT g.user_id, u.display_name, MAX(g.score) AS score
-    FROM game_rounds g JOIN game_users u ON u.user_id=g.user_id
-    WHERE g.week_start=? AND g.score IS NOT NULL
-    GROUP BY g.user_id, u.display_name
-    ORDER BY score DESC, g.user_id ASC LIMIT 10
-  `).bind(weekStart).all();
-  return { weekStart: new Date(weekStart).toISOString().slice(0,10), weekEnds: new Date(weekStart + 604800000).toISOString().slice(0,10), players: (list.results || []).map((row,i) => ({ rank: i+1, name: row.display_name, score: row.score })) };
+/** Rankings use finished_at rather than the legacy UTC-Monday week_start column.
+ * Thus already-recorded production scores are correctly re-bucketed in Tehran.
+ */
+export async function leaderboard(db, now = Date.now(), options = {}) {
+  const period = options.period || 'week';
+  const offset = options.offset ?? 0;
+  const bounds = periodBounds(now, period, offset);
+  const viewer = Number.isSafeInteger(options.userId) && options.userId > 0 ? options.userId : 0;
+  const range = bounds.start === null ? '' : ' AND finished_at >= ? AND finished_at < ?';
+  const sql = [
+    'WITH highs AS (',
+    ' SELECT user_id, MAX(score) AS score FROM game_rounds',
+    ' WHERE score IS NOT NULL' + range,
+    ' GROUP BY user_id',
+    '), ranked AS (',
+    ' SELECT h.user_id, u.display_name, h.score,',
+    ' ROW_NUMBER() OVER (ORDER BY h.score DESC, h.user_id ASC) AS rank,',
+    ' COUNT(*) OVER () AS player_count',
+    ' FROM highs h JOIN game_users u ON u.user_id=h.user_id',
+    ')',
+    'SELECT user_id, display_name, score, rank, player_count FROM ranked',
+    'WHERE rank <= 10 OR user_id = ? ORDER BY rank',
+  ].join(' ');
+  const bindings = bounds.start === null ? [viewer] : [bounds.start, bounds.end, viewer];
+  const list = await db.prepare(sql).bind(...bindings).all();
+  const rows = list.results || [];
+  const mapEntry = row => ({
+    rank: Number(row.rank), name: row.display_name, score: Number(row.score),
+  });
+  const result = {
+    ...bounds, playerCount: rows.length ? Number(rows[0].player_count) : 0,
+    players: rows.filter(row => Number(row.rank) <= 10).map(mapEntry),
+  };
+  if (viewer) {
+    const self = rows.find(row => Number(row.user_id) === viewer);
+    result.me = self ? mapEntry(self) : null;
+  }
+  return result;
 }

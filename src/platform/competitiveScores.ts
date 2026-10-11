@@ -12,11 +12,26 @@ type Trace = {
   variant: Variant;
   comboBefore: number;
 };
-type Leader = { rank: number; name: string; score: number };
-export type Board = { weekStart: string; weekEnds: string; players: Leader[] };
+export type Leader = { rank: number; name: string; score: number };
+export type Period = 'day' | 'week' | 'month' | 'all';
+export type Board = {
+  period: Period;
+  offset: number;
+  timeZone: string;
+  start: number | null;
+  end: number | null;
+  startLabel: string;
+  endLabel: string | null;
+  remainingSeconds: number | null;
+  playerCount: number;
+  players: Leader[];
+  me?: Leader | null;
+};
 export type Submission = {
   state: 'local' | 'saved' | 'unavailable';
   telegramSynced?: boolean;
+  telegramState?: 'updated' | 'previous_best' | 'retry' | 'pending';
+  telegramScores?: Leader[];
   board?: Board;
 };
 
@@ -76,6 +91,8 @@ export async function submitCompetitiveRound(score: number): Promise<Submission>
     return {
       state: 'saved',
       telegramSynced: !!result.telegramSynced,
+      telegramState: result.telegramState,
+      telegramScores: result.telegramScores as Leader[],
       board: result.leaderboard as Board,
     };
   } catch {
@@ -84,13 +101,27 @@ export async function submitCompetitiveRound(score: number): Promise<Submission>
   }
 }
 
-/** Public weekly board for browser visitors and for retries after submission. */
-export async function getWeeklyLeaderboard(): Promise<Board | undefined> {
+/** Public standings, plus authenticated personal rank when launched from Telegram. */
+export async function getLeaderboard(
+  period: Period = 'week',
+  offset = 0,
+): Promise<Board | undefined> {
+  const query = new URLSearchParams({ period, offset: String(offset) });
   try {
-    const response = await fetch(API + '/api/leaderboard', { cache: 'no-store' });
+    const headers = sessionToken ? { authorization: 'Bearer ' + sessionToken } : undefined;
+    let response = await fetch(API + '/api/leaderboard?' + query, { cache: 'no-store', headers });
+    // Expired sessions should still show public rankings.
+    if (response.status === 401) {
+      response = await fetch(API + '/api/leaderboard?' + query, { cache: 'no-store' });
+    }
     if (!response.ok) return undefined;
     return (await response.json()) as Board;
   } catch {
     return undefined;
   }
+}
+
+/** Retained for callers that only request the current Tehran competition. */
+export function getWeeklyLeaderboard(): Promise<Board | undefined> {
+  return getLeaderboard('week');
 }
