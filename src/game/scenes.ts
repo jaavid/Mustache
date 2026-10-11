@@ -35,6 +35,7 @@ import {
 } from './ramin';
 import { readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
 import { resolveRoundShot } from '../logic/shotResolution';
+import { startCompetitiveRound, recordCompetitiveShot } from '../platform/competitiveScores';
 import { nextSlot, popPlan, type PopPlan } from '../logic/gameplay';
 import {
   DESKTOP_TREE_CENTERS,
@@ -248,6 +249,7 @@ export class MenuScene extends Phaser.Scene {
 
 export class PlayScene extends Phaser.Scene {
   private score = 0;
+  private roundStartAt = 0;
   private combo = 0;
   private remaining = ROUND_LENGTH_SECONDS;
   private selectedStyle = 0;
@@ -280,6 +282,8 @@ export class PlayScene extends Phaser.Scene {
   }
   create() {
     this.score = 0;
+    this.roundStartAt = this.time.now;
+    startCompetitiveRound(false);
     this.combo = 0;
     this.remaining = ROUND_LENGTH_SECONDS;
     this.selectedStyle = 0;
@@ -554,6 +558,7 @@ export class PlayScene extends Phaser.Scene {
         if (this.roundOver) return;
         this.shooting = false;
         const mouth = raminLipPoint(this.hero);
+        const comboBefore = this.combo;
         const outcome = resolveRoundShot({
           aim,
           lip: mouth,
@@ -564,6 +569,13 @@ export class PlayScene extends Phaser.Scene {
           portrait: false,
         });
         const { result, reward, gained } = outcome;
+        recordCompetitiveShot({
+          tMs: Math.max(0, Math.round(this.time.now - this.roundStartAt)),
+          aim,
+          lip: mouth,
+          variant,
+          comboBefore,
+        });
         this.stats = outcome.stats;
         this.score = outcome.score;
         this.combo = outcome.combo;

@@ -8,6 +8,7 @@ import {
   storeNewAchievements,
 } from '../logic/progression';
 import { isTelegramGame, shareTelegramGame } from '../platform/telegramGame';
+import { submitCompetitiveRound } from '../platform/competitiveScores';
 
 const FONT = '"Courier New", monospace';
 export function addResultsExtras(
@@ -52,6 +53,26 @@ export function addResultsExtras(
       .setDepth(91);
     scene.tweens.add({ targets: txt, scale: 1.04, duration: 650, yoyo: true, repeat: 1 });
   }
+  // Only server-accepted rounds appear in D1's weekly ranking.
+  const report = scene.add
+    .text(portrait ? 270 : 640, portrait ? 826 : 420, 'SAVING ROUND...', {
+      fontFamily: FONT, fontSize: portrait ? '15px' : '14px',
+      color: '#b4eacc', stroke: '#161e34', strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(92);
+  const top = scene.add
+    .text(portrait ? 270 : 640, portrait ? 855 : 444, '', {
+      fontFamily: FONT, fontSize: portrait ? '13px' : '13px',
+      color: '#e6cbfc', stroke: '#161e34', strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(92);
+  void submitCompetitiveRound(score).then((result) => {
+    if (!report.active || !top.active) return;
+    report.setText(result.state === 'saved'
+      ? (result.telegramSynced ? '✓ TELEGRAM SCORE REGISTERED' : '✓ WEEKLY SCORE SAVED')
+      : result.state === 'local' ? 'PRACTICE · LOCAL SCORE' : 'SCORE SERVER UNAVAILABLE');
+    if (result.board?.players?.length) {
+      top.setText('WEEKLY #1: ' + result.board.players[0].name.slice(0, 18) + ' · ' + result.board.players[0].score);
+    }
+  });
   addShareButton(
     scene,
     portrait ? 270 : 239,
