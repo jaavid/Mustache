@@ -17,8 +17,10 @@ type Trace = {
   lip: Aim;
   variant: Variant;
   comboBefore: number;
+  goldenShot?: boolean;
 };
-export type Leader = { rank: number; name: string; score: number };
+type GoldenPickup = { index: number; tMs: number; aim: Aim };
+export type Leader = { rank: number; name: string; score: number; goldenPerfect?: number };
 export type Period = 'day' | 'week' | 'month' | 'all';
 export type Board = {
   period: Period;
@@ -106,7 +108,7 @@ async function api(path: string, payload: unknown) {
   }
 }
 
-let active: { started: Promise<string>; shots: Trace[] } | null = null;
+let active: { started: Promise<string>; shots: Trace[]; goldenPickups: GoldenPickup[] } | null = null;
 
 export function startCompetitiveRound(portrait: boolean): void {
   if (!sessionToken) {
@@ -116,6 +118,7 @@ export function startCompetitiveRound(portrait: boolean): void {
   active = {
     started: api('/api/round/start', { portrait }).then((data) => String(data.roundId)),
     shots: [],
+    goldenPickups: [],
   };
   // The result screen awaits this promise; silence abandoned scenes/rejections.
   void active.started.catch(() => undefined);
@@ -126,13 +129,19 @@ export function recordCompetitiveShot(shot: Trace): void {
   active.shots.push(shot);
 }
 
+/** Separate collectible interactions never increase the ordinary shot count. */
+export function recordCompetitiveGoldenPickup(pickup: GoldenPickup): void {
+  if (!active || active.goldenPickups.length >= 3) return;
+  active.goldenPickups.push(pickup);
+}
+
 export async function submitCompetitiveRound(score: number): Promise<Submission> {
   const current = active;
   active = null;
   if (!sessionToken || !current) return { state: 'local' };
   try {
     const roundId = await current.started;
-    const result = await api('/api/round/finish', { roundId, score, shots: current.shots });
+    const result = await api('/api/round/finish', { roundId, score, shots: current.shots, goldenPickups: current.goldenPickups });
     return {
       state: 'saved',
       telegramSynced: !!result.telegramSynced,
