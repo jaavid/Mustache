@@ -21,3 +21,5 @@
 - v0.9.8.1: Use evaluateAim for true-aim elliptical lip scoring. GOOD/PERFECT must visually land at the pointer location via the rotated local sticker anchor (no snap to lip center). Tree misses require bark collision; all other misses fall. Keep desktop/mobile parity.
 
 - v0.9.8.2: Ramin facial expressions must use only complete sprite frames from `ramin-face-atlas-v2`; never draw facial eyes/eyebrows as scene foreground textures. Build wink from blink eye pixels and serious from the existing eyebrow artwork, do not shift the 210x362 lip calibration. `RaminMomentController` cancels stale resets on impact or next spawn.
+
+- v0.9.9: Share scoring transactions in `src/logic/shotResolution.ts`. Keep presentation-specific Phaser layout code in mobile/desktop scenes until a separately reviewed view refactor. README must describe only current mechanics; put old release history in CHANGELOG. New assets must update `assets/manifest.json`, and CI should validate dimensions. Screenshots are artifacts for human review, not pixel-diff snapshots.
