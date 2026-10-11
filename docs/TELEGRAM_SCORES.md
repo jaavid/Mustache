@@ -129,3 +129,49 @@ or chat-specific command scopes. No extra secret or webhook is required.
 
 The native Telegram Game Card high scores remain per-card/all-time;
 the command displays the global D1 scoreboards instead.
+
+## Score submission troubleshooting
+
+The results screen now distinguishes **network/CORS errors** from server
+**validation errors**. It never claims a score was saved unless the Worker
+accepted and stored it.
+
+The first-run tutorial and the pause overlay are **not** part of the 45-second
+active round. The browser counts only active Phaser scene updates and opens its
+authenticated round after the tutorial closes. This prevents a paused game
+from sending an impact timestamp over the server's 46-second limit or
+expiring the round before the user starts playing.
+
+The Worker accepts HTTPS browser origins from `GAME_ORIGIN` (the official
+custom game domain) and `GAME_ORIGINS` (explicit first-party GitHub Pages
+origin); it still requires the Telegram callback-issued bearer session.
+
+A public **aggregate-only** health endpoint is provided for debugging:
+
+```text
+GET https://mustache.zedai.ir/api/status
+```
+
+Example response:
+
+```json
+{"service":"mustache-scores","database":"connected","roundsStarted":8,"roundsScored":5}
+```
+
+- `roundsStarted > 0` but `roundsScored = 0`: the bot created D1 rounds,
+  but no completed submission passed validation.
+- `INVALID_TIMELINE`: the impact clock exceeded its allowed 46 seconds or
+  regressed. Opening the guide or pausing must not advance the clock.
+- `INVALID_ROUND_DURATION`: the server round is too short or expired.
+- `INVALID_COMBO`, `INVALID_TARGET`, `SCORE_MISMATCH`: the server
+  rejected the submitted trajectory or scoring data.
+- `UNAUTHORIZED`: missing or expired Telegram session; relaunch from the
+  original game card in Telegram.
+- `NETWORK_OR_CORS`: connection, TLS, DNS or explicit Origin allowlist failure.
+- `SERVER_ERROR`: unexpected Worker or D1 failure. Check Cloudflare Workers
+  logs; validation failures now log **only the route and error code**, never
+  session tokens, user IDs or shot coordinates.
+
+**Do not infer a score was accepted just because `game_rounds` contains rows.**
+Those rows are created at the start of each round; accepted scores have
+`score IS NOT NULL`. Historical invalid or aborted rounds are preserved.

@@ -104,6 +104,30 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: node bot/scripts/sync-commands.mjs
 
+      - name: Verify live D1 score API after Worker deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if curl --silent --show-error --fail --max-time 12 \
+              https://mustache.zedai.ir/api/status -o /tmp/mustache-score-status.json; then
+              node -e "
+                const fs = require('fs');
+                const data = JSON.parse(fs.readFileSync('/tmp/mustache-score-status.json', 'utf8'));
+                if (data.service !== 'mustache-scores' || data.database !== 'connected' ||
+                  !Number.isInteger(data.roundsStarted) || !Number.isInteger(data.roundsScored)) {
+                  throw new Error('Production score status has no connected D1 database');
+                }
+                console.log('Production D1 reachable; started rounds:', data.roundsStarted,
+                  'accepted scores:', data.roundsScored);
+              "
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error title=Production score API unavailable::Worker deployment succeeded but D1 score endpoint did not respond."
+          exit 1
+
       - name: Deployment summary
         env:
           DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
