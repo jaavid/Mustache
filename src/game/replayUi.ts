@@ -85,7 +85,7 @@ export function addResultsExtras(
             : '✓ D1 SAVED · TELEGRAM PENDING'
         : result.state === 'local'
           ? 'PRACTICE · LOCAL SCORE'
-          : 'SCORE SERVER UNAVAILABLE';
+          : 'SCORE NOT SAVED · ' + (result.error || 'UNKNOWN_ERROR');
     statusText.setText(missionLine + '\n' + status + ' · VIEW TOP 10');
     displayBoard = () =>
       showLeaderboardOverlay(scene, portrait, {
@@ -94,7 +94,7 @@ export function addResultsExtras(
         initialBoard: board,
       });
     // For official Telegram rounds, show the scoreboard without requiring an extra tap.
-    if (result.state === 'saved') displayBoard();
+    if (result.state !== 'local') displayBoard();
   });
   addShareButton(
     scene,

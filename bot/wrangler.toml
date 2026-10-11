@@ -7,6 +7,8 @@ BOT_USERNAME = "rjttobot"
 GAME_SHORT_NAME = "mustache"
 GAME_URL = "https://mustache.alexa.ir/"
 GAME_ORIGIN = "https://mustache.alexa.ir"
+# Github Pages preview/origin is owned by the same game repository.
+GAME_ORIGINS = "https://jaavid.github.io"
 
 # Automatically replaced by GitHub Actions using CLOUDFLARE_D1_DATABASE_ID.
 # Never deploy this placeholder; create D1 and supply its UUID first.

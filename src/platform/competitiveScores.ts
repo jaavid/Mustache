@@ -29,6 +29,7 @@ export type Board = {
 };
 export type Submission = {
   state: 'local' | 'saved' | 'unavailable';
+  error?: string;
   telegramSynced?: boolean;
   telegramState?: 'updated' | 'previous_best' | 'retry' | 'pending';
   telegramScores?: Leader[];
@@ -50,15 +51,39 @@ const sessionToken = (() => {
   return value;
 })();
 
+export class ScoreApiError extends Error {
+  constructor(readonly code: string) {
+    super(code);
+    this.name = 'ScoreApiError';
+  }
+}
+
+/** Server status is not synonymous with the server being offline. */
 async function api(path: string, payload: unknown) {
-  const response = await fetch(API + path, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + sessionToken },
-    body: JSON.stringify(payload),
-    cache: 'no-store',
-  });
-  if (!response.ok) throw new Error('Score service error ' + response.status);
-  return response.json();
+  let response: Response;
+  try {
+    response = await fetch(API + path, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + sessionToken },
+      body: JSON.stringify(payload),
+      cache: 'no-store',
+    });
+  } catch {
+    throw new ScoreApiError('NETWORK_OR_CORS');
+  }
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    const serverCode = body && typeof body.error === 'string' ? body.error : '';
+    const safeCode = /^[A-Z][A-Z0-9_]{2,60}$/.test(serverCode)
+      ? serverCode
+      : 'HTTP_' + response.status;
+    throw new ScoreApiError(safeCode);
+  }
+  try {
+    return await response.json();
+  } catch {
+    throw new ScoreApiError('INVALID_RESPONSE');
+  }
 }
 
 let active: { started: Promise<string>; shots: Trace[] } | null = null;
@@ -95,9 +120,11 @@ export async function submitCompetitiveRound(score: number): Promise<Submission>
       telegramScores: result.telegramScores as Leader[],
       board: result.leaderboard as Board,
     };
-  } catch {
-    // Never present local-only results as official scores.
-    return { state: 'unavailable' };
+  } catch (error) {
+    // The server may be reachable but reject validation. Never disguise that
+    // as a connectivity failure or claim the local score was registered.
+    const reason = error instanceof ScoreApiError ? error.code : 'UNKNOWN_CLIENT_ERROR';
+    return { state: 'unavailable', error: reason };
   }
 }
 

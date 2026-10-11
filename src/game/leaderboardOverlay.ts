@@ -113,7 +113,9 @@ export function showLeaderboardOverlay(
   const stateLine =
     args.submission.state === 'saved'
       ? telegramMessage(args.submission.telegramState)
-      : 'PRACTICE SCORE · NOT UPLOADED';
+      : args.submission.state === 'unavailable'
+        ? 'NOT SAVED · ' + (args.submission.error || 'UNKNOWN_ERROR')
+        : 'PRACTICE SCORE · NOT UPLOADED';
   addText(w / 2, portrait ? 203 : 116, stateLine, portrait ? 16 : 15, '#a9f5d5');
   const tabs: Array<{ key: Tab; label: string }> = [
     { key: 'day', label: 'DAY' },
