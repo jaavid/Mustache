@@ -155,7 +155,9 @@ export function showLeaderboardOverlay(
       return;
     }
     if (!current) {
-      periodLine.setText(loading ? 'LOADING TEHRAN SCOREBOARD...' : 'SCOREBOARD TEMPORARILY UNAVAILABLE');
+      periodLine.setText(
+        loading ? 'LOADING TEHRAN SCOREBOARD...' : 'SCOREBOARD TEMPORARILY UNAVAILABLE',
+      );
       listText.setText('');
       ownLine.setText('');
       infoLine.setText('');
