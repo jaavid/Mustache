@@ -1,15 +1,21 @@
 import { test, expect } from '@playwright/test';
 
-test('loads pixel-art scene and enters play in desktop and portrait layouts', async ({ page }, info) => {
+test('loads pixel-art scene and enters play in desktop and portrait layouts', async ({
+  page,
+}, info) => {
   const errors: string[] = [];
-  page.on('pageerror', error => errors.push(error.message));
+  page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/');
   const canvas = page.locator('#game canvas');
   await expect(canvas).toBeVisible();
-  await expect.poll(() => canvas.evaluate(el => {
-    const c = el as HTMLCanvasElement;
-    return [c.width,c.height].join('x');
-  })).toBe(info.project.name === 'desktop' ? '960x540' : '540x960');
+  await expect
+    .poll(() =>
+      canvas.evaluate((el) => {
+        const c = el as HTMLCanvasElement;
+        return [c.width, c.height].join('x');
+      }),
+    )
+    .toBe(info.project.name === 'desktop' ? '960x540' : '540x960');
 
   await page.waitForTimeout(1300);
   await canvas.screenshot({ path: info.outputPath('menu.png') });
@@ -19,8 +25,10 @@ test('loads pixel-art scene and enters play in desktop and portrait layouts', as
   expect(box).not.toBeNull();
   if (!box) return;
   const isMobile = info.project.name !== 'desktop';
-  await page.mouse.click(box.x+box.width*(isMobile?.5:305/960),
-    box.y+box.height*(isMobile?792/960:385/540));
+  await page.mouse.click(
+    box.x + box.width * (isMobile ? 0.5 : 305 / 960),
+    box.y + box.height * (isMobile ? 792 / 960 : 385 / 540),
+  );
 
   await page.waitForTimeout(900);
   await expect(canvas).toBeVisible();

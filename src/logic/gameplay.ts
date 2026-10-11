@@ -23,14 +23,18 @@ export function nextSlot(previous: number, count: number, random: number): numbe
   if (!Number.isInteger(count) || count < 1) throw new RangeError('count must be positive');
   if (count === 1) return 0;
   const draw = Math.floor(clamp(random, 0, 0.99999999) * (count - 1));
-  return previous < 0 || previous >= count ? Math.floor(clamp(random, 0, .99999999) * count) : draw >= previous ? draw + 1 : draw;
+  return previous < 0 || previous >= count
+    ? Math.floor(clamp(random, 0, 0.99999999) * count)
+    : draw >= previous
+      ? draw + 1
+      : draw;
 }
 
 /** Three legible motion patterns and a gradual pacing increase over a 45-second round. */
 export function popPlan(elapsedSeconds: number, random: number): PopPlan {
   const progress = clamp(elapsedSeconds / 45, 0, 1);
-  const roll = clamp(random, 0, .99999999);
-  const behavior: Behavior = roll < .36 ? 'peek' : roll < .72 ? 'hop' : 'dash';
+  const roll = clamp(random, 0, 0.99999999);
+  const behavior: Behavior = roll < 0.36 ? 'peek' : roll < 0.72 ? 'hop' : 'dash';
   const side: Side = Math.floor(roll * 997) % 2 ? -1 : 1;
   const base = behavior === 'peek' ? 1640 : behavior === 'hop' ? 1460 : 1320;
   return {
@@ -47,7 +51,8 @@ export function popPlan(elapsedSeconds: number, random: number): PopPlan {
 
 /** Quadratic Bezier flight with an upward bend; returns exact endpoints at t=0/1. */
 export function projectilePoint(start: Point, end: Point, t: number, arcHeight: number): Point {
-  const p = clamp(t, 0, 1), inv = 1 - p;
+  const p = clamp(t, 0, 1),
+    inv = 1 - p;
   const midX = (start.x + end.x) / 2;
   const midY = (start.y + end.y) / 2 - Math.max(0, arcHeight);
   return {
@@ -58,5 +63,5 @@ export function projectilePoint(start: Point, end: Point, t: number, arcHeight: 
 
 export function projectileMs(start: Point, end: Point): number {
   const distance = Math.hypot(end.x - start.x, end.y - start.y);
-  return Math.round(clamp(165 + distance * .31, 200, 390));
+  return Math.round(clamp(165 + distance * 0.31, 200, 390));
 }

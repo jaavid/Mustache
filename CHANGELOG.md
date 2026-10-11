@@ -98,7 +98,6 @@ No accounts, on-chain interactions, payout eligibility, server, multiplayer, glo
 - Web Audio generated arcade effects for start, shoot, miss, good/perfect hit, and round completion; a persistent SFX toggle appears in menu, play and results on desktop and mobile.
 - Sound is initialized after a user interaction; no external audio files, libraries, or backend.
 
-
 ### Gameplay Animation & Feel v0.6
 
 - Ramin peeks, hops or darts sideways from behind a randomly selected tree. The same tree never appears twice in succession, and the leftmost mobile tree never spawns a clipped left-side pose.
@@ -114,7 +113,6 @@ No accounts, on-chain interactions, payout eligibility, server, multiplayer, glo
 - Spawn coordinates now reference the exact rendered trunk axis. The outer trees always peek inward, and the middle tree supports both sides.
 - Spaced mobile trees across the complete 540px portrait viewport; the face stays clear of the front bark when aiming and the body emerges from behind it.
 - Added deterministic geometry and edge-lane tests without changing scoring, audio, menus or backend scope.
-
 
 ### v0.7 — Character variety and special events
 
@@ -145,7 +143,6 @@ No accounts, on-chain interactions, payout eligibility, server, multiplayer, glo
 
 - Final v0.9.5 polish: all three live quest targets are visible during play, pointer events on the mustache selector do not bubble into shooting, and 5× Perfect streaks add a short tween-only slow-motion beat. An occasional triumphant Ramin pose rewards sustained precision.
 
-
 ### v0.9.6 — Three clearly visible stages (lighting + pacing fix)
 
 Previous phase tuning was too subtle: low-opacity lighting sat behind the character/trees, and dwell differences were often only a fraction of a second.
@@ -155,7 +152,6 @@ Previous phase tuning was too subtle: low-opacity lighting sat behind the charac
 - **30–45s NIGHT RUSH:** dark navy stage lighting, moon and bright stars, mobile/desktop face spotlight to keep the lip visible; aim windows 1.05–1.19s and 160 BPM music; more frequent double-pops until the last six seconds.
 - Prominent STAGE 2/3 and STAGE 3/3 transition banners, distinct phase HUD labels, colored mist, stage chimes. Hit detection and scoring thresholds are unchanged.
 - Dynamic night coloring now sits over **the whole playfield but beneath the HUD** (depth 41), rather than only coloring the distant background. The face light is purely visual and does not change targeting.
-
 
 ### v0.9.7–v0.9.8 — Impact polish and real Ramin moments
 
@@ -173,7 +169,6 @@ Previous phase tuning was too subtle: low-opacity lighting sat behind the charac
 - Missed throws stick to a tree only when the actual aim point collides with visible trunk bark; all other misses fall/fade without any nearest-tree attraction.
 - All three cosmetic mustache bounce patterns and original combo/point bonuses remain; stored personal best is unchanged.
 
-
 ### v0.9.8.2 — Complete-frame facial animation fix
 
 The old `ramin-emote-serious` and `ramin-emote-wink` transparent overlays were drawn over the original painted eyes and eyebrows, producing duplicates. Both effects now use **actual full-body sprite frames** from a six-frame, 210×362 canvas sprite sheet built at boot from the existing Ramin art:
@@ -184,4 +179,3 @@ The old `ramin-emote-serious` and `ramin-emote-wink` transparent overlays were d
 - These two new frames are composed once, not in every render tick. No additional eye/brow layers exist in gameplay. Other accessories and the mustache-touch hand remain separate scene objects.
 - Facial gestures return to idle after 540ms, unless an impact has already selected a different expression; pending resets are cancelled on spawn and hit.
 - Mouth anchor, canvas dimensions, hit detection and sticker coordinates stay unchanged.
-

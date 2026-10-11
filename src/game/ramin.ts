@@ -31,7 +31,11 @@ export function ensureRaminAnimations(scene: Phaser.Scene): void {
   if (!anims.exists('ramin-blink-loop')) {
     anims.create({
       key: 'ramin-blink-loop',
-      frames: [{ key: FACE_ATLAS_KEY, frame: FACE_FRAME_INDEX.idle }, { key: FACE_ATLAS_KEY, frame: FACE_FRAME_INDEX.blink }, { key: FACE_ATLAS_KEY, frame: FACE_FRAME_INDEX.idle }],
+      frames: [
+        { key: FACE_ATLAS_KEY, frame: FACE_FRAME_INDEX.idle },
+        { key: FACE_ATLAS_KEY, frame: FACE_FRAME_INDEX.blink },
+        { key: FACE_ATLAS_KEY, frame: FACE_FRAME_INDEX.idle },
+      ],
       frameRate: 5,
       repeat: -1,
       repeatDelay: 2800,
@@ -79,8 +83,17 @@ export function ensureRaminAnimations(scene: Phaser.Scene): void {
   }
 }
 
-export function makeRamin(scene: Phaser.Scene, x: number, y: number, scale: number, mood: RaminMood = 'idle'): Phaser.GameObjects.Sprite {
-  const hero = scene.add.sprite(x, y, FACE_ATLAS_KEY, FACE_FRAME_INDEX.idle).setScale(scale).setDepth(20);
+export function makeRamin(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  scale: number,
+  mood: RaminMood = 'idle',
+): Phaser.GameObjects.Sprite {
+  const hero = scene.add
+    .sprite(x, y, FACE_ATLAS_KEY, FACE_FRAME_INDEX.idle)
+    .setScale(scale)
+    .setDepth(20);
   applyRaminMood(hero, mood);
   return hero;
 }

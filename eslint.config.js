@@ -6,9 +6,9 @@ import tsParser from '@typescript-eslint/parser';
  * Broader stylistic rules belong in a separate, formatting-only PR.
  */
 export default [
-  { ignores: ['dist/**','coverage/**','playwright-report/**','test-results/**'] },
+  { ignores: ['dist/**', 'coverage/**', 'playwright-report/**', 'test-results/**'] },
   {
-    files: ['src/**/*.ts','vite.config.ts','playwright.config.ts','tests/**/*.ts'],
+    files: ['src/**/*.ts', 'vite.config.ts', 'playwright.config.ts', 'tests/**/*.ts'],
     languageOptions: { parser: tsParser, ecmaVersion: 'latest', sourceType: 'module' },
     rules: {
       'no-debugger': 'error',

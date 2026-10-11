@@ -25,7 +25,14 @@ function mountGame(): void {
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     input: { activePointers: 2 },
     scene: isPortrait
-      ? [BootScene, MobileMenuScene, MobilePlayScene, MobileResultsScene, GuideScene, PauseOverlayScene]
+      ? [
+          BootScene,
+          MobileMenuScene,
+          MobilePlayScene,
+          MobileResultsScene,
+          GuideScene,
+          PauseOverlayScene,
+        ]
       : [BootScene, MenuScene, PlayScene, ResultsScene, GuideScene, PauseOverlayScene],
   });
 }

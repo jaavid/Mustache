@@ -27,13 +27,7 @@ export type ResolvedShot = Readonly<{
 }>;
 
 export function resolveRoundShot(context: ShotContext): ResolvedShot {
-  const result = evaluateAim(
-    context.aim,
-    context.lip,
-    context.combo,
-    true,
-    context.portrait,
-  );
+  const result = evaluateAim(context.aim, context.lip, context.combo, true, context.portrait);
   const reward = variantReward(context.variant, result.grade);
   const gained = result.points + reward.bonus;
 

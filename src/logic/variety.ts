@@ -6,25 +6,30 @@ export type RaminVariant = (typeof RAMIN_VARIANTS)[number];
 export type SpawnEvent = 'normal' | 'fake-out' | 'double';
 
 export function chooseRaminVariant(random: number): RaminVariant {
-  const roll = Math.min(.999999999, Math.max(0, random));
-  if (roll < .55) return 'normal';
-  if (roll < .73) return 'sunglasses';
-  if (roll < .85) return 'round';
-  if (roll < .95) return 'headband';
+  const roll = Math.min(0.999999999, Math.max(0, random));
+  if (roll < 0.55) return 'normal';
+  if (roll < 0.73) return 'sunglasses';
+  if (roll < 0.85) return 'round';
+  if (roll < 0.95) return 'headband';
   return 'gold';
 }
 
 /** Special events become available six seconds in and stop six seconds before time-up.
  * The fake-out cannot penalize combos and never repeats immediately.
  */
-export function chooseSpawnEvent(elapsed: number, remaining: number, random: number, previous: SpawnEvent): SpawnEvent {
+export function chooseSpawnEvent(
+  elapsed: number,
+  remaining: number,
+  random: number,
+  previous: SpawnEvent,
+): SpawnEvent {
   // First stage is intentionally predictable. The surprise rate rises at night,
   // so the three phases change behavior rather than only their HUD labels.
   if (elapsed < 15 || remaining <= 6) return 'normal';
-  const roll = Math.min(.999999999, Math.max(0, random));
-  const finale=elapsed >= 30;
-  const fakeOutRate=finale ? .04 : .07;
-  const doubleRate=finale ? .27 : .19;
+  const roll = Math.min(0.999999999, Math.max(0, random));
+  const finale = elapsed >= 30;
+  const fakeOutRate = finale ? 0.04 : 0.07;
+  const doubleRate = finale ? 0.27 : 0.19;
   if (roll < fakeOutRate && previous !== 'fake-out') return 'fake-out';
   if (roll >= fakeOutRate && roll < doubleRate && previous !== 'double') return 'double';
   return 'normal';

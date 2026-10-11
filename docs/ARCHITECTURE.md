@@ -8,7 +8,7 @@ Mustache Mayhem is a client-only Phaser game. Vite bundles the code and one sour
 2. The boot scene preloads Ramin and registers procedural textures.
 3. A tree, pose and spawn event are selected; Ramin becomes scorable only after entering.
 4. A tap or click launches a projectile toward that **exact pixel**.
-5. At projectile impact, `resolveRoundShot` computes the grade, points, combo, character reward and round statistics *once*.
+5. At projectile impact, `resolveRoundShot` computes the grade, points, combo, character reward and round statistics _once_.
 6. The scene renders reaction/effects and queues the next spawn.
 7. After 45 seconds, the local result screen displays the score, medals and missions.
 
