@@ -6,3 +6,12 @@ compatibility_date = "2026-09-01"
 BOT_USERNAME = "rjttobot"
 GAME_SHORT_NAME = "mustache"
 GAME_URL = "https://mustache.alexa.ir/"
+GAME_ORIGIN = "https://mustache.alexa.ir"
+
+# Automatically replaced by GitHub Actions using CLOUDFLARE_D1_DATABASE_ID.
+# Never deploy this placeholder; create D1 and supply its UUID first.
+[[d1_databases]]
+binding = "DB"
+database_name = "n5-mustache-scores"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
