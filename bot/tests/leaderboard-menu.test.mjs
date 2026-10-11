@@ -29,6 +29,16 @@ async function dispatch(update, db = mockDB()) {
   return { calls, db };
 }
 
+test('all managed Telegram command descriptions carry the 〰️ moustache and fun copy', () => {
+  assert.equal(GAME_COMMANDS.length, 5);
+  const expected = new Set(['play', 'leaderboard', 'top', 'score', 'help']);
+  for (const item of GAME_COMMANDS) {
+    assert.ok(expected.has(item.command), item.command);
+    assert.match(item.description, /〰️/);
+    assert.ok(item.description.length >= 3 && item.description.length <= 256);
+  }
+});
+
 test('new slash command, bot username matching and aliases', () => {
   assert.equal(parseGameCommand('/leaderboard@RJTtobot'), 'leaderboard');
   assert.equal(parseGameCommand('/leaderboard@elsewhere'), null);

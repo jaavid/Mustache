@@ -29,14 +29,14 @@ export function leaderboardKeyboard(period = 'week', offset = 0) {
     if (offset > 0) move.push({ text: 'هفته بعد ▶️', callback_data: 'lb:w:' + (offset - 1) });
     if (move.length) keyboard.push(move);
   }
-  keyboard.push([{ text: '🎮 بازی سیبیل', url: 'https://t.me/RJTtobot?game=mustache' }]);
+  keyboard.push([{ text: '〰️🎮 بزن بریم سیبیل‌بازی!', url: 'https://t.me/RJTtobot?game=mustache' }]);
   return { inline_keyboard: keyboard };
 }
 
 export function formatLeaderboardMessage(board) {
   const title = TITLES[board.period] || TITLES.week;
   const lines = [
-    '🏆 رتبه‌بندی بازی سیبیل',
+    '〰️🏆 نبرد سیبیل‌سالارها',
     '📊 ' + title,
     board.startLabel || 'تمام دوران',
     '',
@@ -59,6 +59,6 @@ export function formatLeaderboardMessage(board) {
     lines.push('⏰ از شنبه ۰۰:۰۰ تا شنبه بعد ۰۰:۰۰ به وقت تهران');
     if (board.offset > 0) lines.push('📁 هفته‌های گذشته · ' + board.offset + ' هفته قبل');
   }
-  lines.push('', 'برای تغییر جدول، دکمه‌های زیر را بزنید.');
+  lines.push('', '〰️ جدول دیگه‌ای می‌خوای؟ روی دکمه‌ها بزن!');
   return { text: lines.join('\n'), reply_markup: leaderboardKeyboard(board.period, board.offset) };
 }

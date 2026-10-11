@@ -1,10 +1,10 @@
 /** Non-destructive merge of our bot menu commands with any existing commands. */
 export const GAME_COMMANDS = [
-  { command: 'play', description: 'شروع بازی سیبیل' },
-  { command: 'leaderboard', description: 'جدول روزانه، هفتگی، ماهانه و کل دوران' },
-  { command: 'top', description: 'ده نفر برتر و رتبه شما' },
-  { command: 'score', description: 'رتبه من و جدول مسابقات' },
-  { command: 'help', description: 'راهنمای بازی و جدول امتیازات' },
+  { command: 'play', description: '〰️🎯 آماده‌ای رامین رو سیبیلو کنی؟ بزن بریم!' },
+  { command: 'leaderboard', description: '〰️🏆 سیبیل‌سالار کیه؟ جدول روز، هفته، ماه و کل دوران!' },
+  { command: 'top', description: '〰️👑 ۱۰ سیبیل‌زن برتر جنگل رو بشناس!' },
+  { command: 'score', description: '〰️📈 سیبیلات چند امتیاز آوردن؟ رتبه‌تو ببین!' },
+  { command: 'help', description: '〰️🧭 سیبیل‌اولی؟ فوت‌وفن بازی اینجاست!' },
 ];
 
 export function mergeBotCommands(existing = []) {
