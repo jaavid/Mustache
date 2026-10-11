@@ -2,7 +2,13 @@
  * Official Game backend bridge. Standalone browser visitors keep local scores.
  * Telegram identities come ONLY from server-issued callback session tokens.
  */
-const API = 'https://mustache.zedai.ir';
+// Both endpoints route to the same Cloudflare Worker/D1. The stable workers.dev
+// hostname provides an emergency fallback if the custom domain loses its route.
+const API_HOSTS = [
+  'https://mustache.zedai.ir',
+  'https://n5-mustache-rjttobot.zed-ai.workers.dev',
+] as const;
+let preferredApiHost: string = API_HOSTS[0];
 type Aim = { x: number; y: number };
 type Variant = 'normal' | 'sunglasses' | 'round' | 'headband' | 'gold';
 type Trace = {
@@ -58,19 +64,33 @@ export class ScoreApiError extends Error {
   }
 }
 
+async function requestScoreApi(path: string, init: RequestInit): Promise<Response> {
+  const orderedHosts = [preferredApiHost, ...API_HOSTS.filter((host) => host !== preferredApiHost)];
+  let lastCode = 'NETWORK_OR_CORS';
+  for (const host of orderedHosts) {
+    try {
+      const response = await fetch(host + path, init);
+      if ([404, 502, 503, 504].includes(response.status)) {
+        lastCode = 'HTTP_' + response.status;
+        continue;
+      }
+      preferredApiHost = host;
+      return response;
+    } catch {
+      lastCode = 'NETWORK_OR_CORS';
+    }
+  }
+  throw new ScoreApiError(lastCode);
+}
+
 /** Server status is not synonymous with the server being offline. */
 async function api(path: string, payload: unknown) {
-  let response: Response;
-  try {
-    response = await fetch(API + path, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + sessionToken },
-      body: JSON.stringify(payload),
-      cache: 'no-store',
-    });
-  } catch {
-    throw new ScoreApiError('NETWORK_OR_CORS');
-  }
+  const response = await requestScoreApi(path, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + sessionToken },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  });
   if (!response.ok) {
     const body = await response.json().catch(() => null);
     const serverCode = body && typeof body.error === 'string' ? body.error : '';
@@ -136,10 +156,13 @@ export async function getLeaderboard(
   const query = new URLSearchParams({ period, offset: String(offset) });
   try {
     const headers = sessionToken ? { authorization: 'Bearer ' + sessionToken } : undefined;
-    let response = await fetch(API + '/api/leaderboard?' + query, { cache: 'no-store', headers });
+    let response = await requestScoreApi('/api/leaderboard?' + query, {
+      cache: 'no-store',
+      headers,
+    });
     // Expired sessions should still show public rankings.
     if (response.status === 401) {
-      response = await fetch(API + '/api/leaderboard?' + query, { cache: 'no-store' });
+      response = await requestScoreApi('/api/leaderboard?' + query, { cache: 'no-store' });
     }
     if (!response.ok) return undefined;
     return (await response.json()) as Board;
