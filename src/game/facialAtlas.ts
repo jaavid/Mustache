@@ -36,7 +36,7 @@ export function createFacialAtlas(scene:Phaser.Scene):void{
   /** Replace source pixels with no additional foreground layer. Use a tiny
    * 3px edge feather for mismatched lighting between the supplied poses.
    */
-  const replaceRegion=(sourceFrame:number,destFrame:number,patch:typeof FACE_PATCHES.wink)=>{
+  const replaceRegion=(sourceFrame:number,destFrame:number,patch:{x:number;y:number;width:number;height:number})=>{
     const frame=source.get(sourceFrame);
     const helper=document.createElement('canvas');
     helper.width=patch.width;helper.height=patch.height;
@@ -66,7 +66,11 @@ export function createFacialAtlas(scene:Phaser.Scene):void{
   replaceRegion(FACE_FRAME_INDEX.blink,FACE_FRAME_INDEX.wink,FACE_PATCHES.wink);
   replaceRegion(FACE_FRAME_INDEX.surprised,FACE_FRAME_INDEX.serious,FACE_PATCHES.serious);
 
-  scene.textures.addSpriteSheet(FACE_ATLAS_KEY,atlas,{
-    frameWidth:w,frameHeight:h,endFrame:FACE_FRAME_INDEX.serious,
-  });
+  // TextureManager.addSpriteSheet accepts an HTMLImageElement or Phaser Texture,
+  // not a raw HTMLCanvasElement in Phaser 3.90. Register the canvas itself
+  // then define six explicit frame rectangles on its CanvasTexture.
+  const texture=scene.textures.addCanvas(FACE_ATLAS_KEY,atlas);
+  if(!texture)throw new Error('Cannot register Ramin facial sprite sheet');
+  for(let frame=0;frame<=FACE_FRAME_INDEX.serious;frame++)
+    texture.add(frame,0,frame*w,0,w,h);
 }
