@@ -1,5 +1,8 @@
 name: Browser smoke and screenshots
 on:
+  push:
+    paths:
+      - '.github/workflows/browser-smoke.yml'
   workflow_dispatch:
   schedule:
     - cron: '0 5 * * 1'

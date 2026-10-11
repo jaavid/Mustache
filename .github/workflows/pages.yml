@@ -18,7 +18,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm install --no-audit --no-fund
+          cache: npm
+      - name: Install reproducible dependencies
+        run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run assets:check
+      - run: npm run docs:check
       - run: npm run typecheck
       - run: npm test
       - run: npm run build -- --mode pages
