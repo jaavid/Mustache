@@ -27,11 +27,6 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - name: Inspect required Prettier fixes
-        run: |
-          npx prettier --write docs/TELEGRAM_GAME.md
-          git diff -- docs/TELEGRAM_GAME.md
-          exit 1
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
