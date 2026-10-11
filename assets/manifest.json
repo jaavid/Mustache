@@ -9,6 +9,15 @@
       "frames": 4,
       "orientation": "horizontal",
       "purpose": "Four source expressions: idle, blink, surprised, victory"
+    },
+    {
+      "path": "src/assets/borhan-sheet.png",
+      "kind": "spritesheet",
+      "frameWidth": 210,
+      "frameHeight": 362,
+      "frames": 4,
+      "orientation": "horizontal",
+      "purpose": "Borhan: idle, wink, surprised and victory; upper-lip aligned with Ramin"
     }
   ],
   "generatedTextures": [
@@ -18,6 +27,13 @@
       "kind": "canvas-spritesheet",
       "frames": 6,
       "source": "src/assets/ramin-sheet.png"
+    },
+    {
+      "key": "borhan-face-atlas-v1",
+      "producer": "src/game/facialAtlas.ts",
+      "kind": "canvas-spritesheet",
+      "frames": 6,
+      "source": "src/assets/borhan-sheet.png"
     },
     {
       "key": "forest",
@@ -42,6 +58,16 @@
     {
       "key": "ramin-emote-hand",
       "producer": "src/game/art.ts"
+    },
+    {
+      "key": "borhan-stache-{0..2}",
+      "producer": "src/game/art.ts",
+      "count": 3
+    },
+    {
+      "key": "borhan-stache-gold",
+      "producer": "src/game/art.ts",
+      "count": 1
     },
     {
       "key": "stache-{0..2}",

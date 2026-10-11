@@ -6,12 +6,12 @@ Pixel-art arcade game built with **Phaser 3, TypeScript, and Vite**.
 
 ## Gameplay
 
-Throw a mustache at the precise upper-lip location while Ramin peeks from three trees.
+Choose **Ramin or Borhan** in a six-second pre-round selection (1/2 on desktop, tap either hero on mobile), then throw a mustache at the precise upper-lip location while the chosen hero peeks from three trees. The current selection carries into the result screen and can be changed before every replay. **Borhan has his own three mustache silhouettes** (chevron, handlebar and horseshoe), plus a matching golden special; these use the same scoring/hit zones as Ramin.
 
 - **45 seconds** with distinct sunset (0–15 s), twilight (15–30 s), and night (30–45 s) stages.
 - The projectile scores **at impact**; the sticker stays exactly where you aimed (no automatic correction).
 - Hit areas are **elliptical**. Desktop radii: PERFECT 17 × 12, GOOD 33 × 21. Mobile portrait radii: PERFECT 21 × 15, GOOD 38 × 26 logical pixels.
-- PERFECT = 100 points, GOOD = 50, MISS = 0; streak bonus +10 per extra hit, capped at +50. Gold Ramin adds +50; PERFECT on sunglasses adds +25.
+- PERFECT = 100 points, GOOD = 50, MISS = 0; streak bonus +10 per extra hit, capped at +50. Gold character variant adds +50; PERFECT on sunglasses adds +25.
 - Mustache style only changes animation; it cannot give a scoring advantage.
 - Misses stick to a tree **only** if the projectile actually hits its bark; otherwise they fall.
 - Local best scores, missions and badges are stored in your browser. No prize eligibility or verified leaderboard.
@@ -55,18 +55,19 @@ Run `npm run format` for documentation and config files. Formatting the whole le
 
 ## Architecture
 
-| Files                                                | Responsibility                                             |
-| ---------------------------------------------------- | ---------------------------------------------------------- |
-| `src/main.ts`                                        | Viewport/layout selection                                  |
-| `src/game/scenes.ts`, `src/game/mobile.ts`           | Desktop and mobile Phaser presentation                     |
-| `src/logic/shotResolution.ts`                        | Shared shot outcome: score, combo, bonuses and round stats |
-| `src/logic/scoring.ts`                               | Pure elliptical hit detection                              |
-| `src/logic/gameplay.ts`, `src/logic/arcadePhases.ts` | Timings and difficulty                                     |
-| `src/game/gameFeel.ts`, `src/game/impactFx.ts`       | Projectile and impact visuals                              |
-| `src/game/ramin.ts`, `src/game/raminMoments.ts`      | Character states, expressions and gestures                 |
-| `src/game/art.ts`                                    | Canvas-generated pixel art                                 |
-| `src/game/facialAtlas.ts`                            | Six-frame Ramin atlas derived from original four frames    |
-| `src/assets/ramin-sheet.png`                         | Original aligned Ramin image                               |
+| Files                                                        | Responsibility                                             |
+| ------------------------------------------------------------ | ---------------------------------------------------------- |
+| `src/main.ts`                                                | Viewport/layout selection                                  |
+| `src/game/scenes.ts`, `src/game/mobile.ts`                   | Desktop and mobile Phaser presentation                     |
+| `src/logic/shotResolution.ts`                                | Shared shot outcome: score, combo, bonuses and round stats |
+| `src/logic/scoring.ts`                                       | Pure elliptical hit detection                              |
+| `src/logic/gameplay.ts`, `src/logic/arcadePhases.ts`         | Timings and difficulty                                     |
+| `src/game/gameFeel.ts`, `src/game/impactFx.ts`               | Projectile and impact visuals                              |
+| `src/game/ramin.ts`, `src/game/raminMoments.ts`              | Both heroes' states, expressions and gestures              |
+| `src/game/characterSelect.ts`, `src/game/characterChoice.ts` | Six-second character selection shared by both layouts      |
+| `src/game/art.ts`                                            | Canvas-generated pixel art                                 |
+| `src/game/facialAtlas.ts`                                    | Six-frame Ramin atlas derived from original four frames    |
+| `src/assets/ramin-sheet.png`, `src/assets/borhan-sheet.png`  | Aligned four-frame character sprite sheets                 |
 
 See [Architecture](docs/ARCHITECTURE.md), [Art pipeline](assets/README.md), [Contributing](CONTRIBUTING.md), and [Changelog](CHANGELOG.md).
 

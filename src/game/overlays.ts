@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { hapticsEnabled, toggleHaptics } from './haptics';
 import { setMusicPaused, stopMusic } from './sound';
+import { getSelectedCharacter, mustacheTexture } from './characterChoice';
 
 const FONT = '"Courier New", monospace';
 const GUIDE_KEY = 'n5-tutorial-complete-v1';
@@ -148,7 +149,7 @@ export class GuideScene extends Phaser.Scene {
       '#e6f9df',
     );
     const visual = this.add
-      .image(x, y - (this.portrait ? 45 : 26), 'stache-1')
+      .image(x, y - (this.portrait ? 45 : 26), mustacheTexture(1))
       .setDisplaySize(135, 60);
     const hint = heading(
       this,
@@ -164,7 +165,7 @@ export class GuideScene extends Phaser.Scene {
       ['CHOOSE A MUSTACHE', 'Tap one of the 3 styles below.', '1  ·  2  ·  3'],
       [
         'AIM BELOW THE NOSE',
-        'Tap Ramin’s upper lip, not his eyes.',
+        'Tap the hero’s upper lip, not the eyes.',
         'The mustache flies to your target',
       ],
       [
@@ -178,7 +179,13 @@ export class GuideScene extends Phaser.Scene {
       description.setText(steps[index][1]);
       hint.setText(steps[index][2]);
       progress.setText('STEP ' + (index + 1) + ' / 3');
-      visual.setTexture(index === 1 ? 'ramin-sheet' : 'stache-' + (index === 0 ? '1' : '2'));
+      visual.setTexture(
+        index === 1
+          ? getSelectedCharacter() === 'borhan'
+            ? 'borhan-sheet'
+            : 'ramin-sheet'
+          : mustacheTexture(index === 0 ? 1 : 2),
+      );
       if (index === 1) visual.setFrame(0).setDisplaySize(105, 178);
       else visual.setDisplaySize(135, 60);
     };

@@ -341,6 +341,49 @@ function raminAccessory(c: Ctx, variant: RaminVariant) {
   rect(c, 146, 62, 12, 4, '#f7d58c');
 }
 
+/** Borhan's three exclusive 72×40 pixel masks: chevron, handlebar, horseshoe.
+ * Cosmetic only. Same physical image bounds and landing rules as Ramin.
+ */
+function borhanMustache(c: Ctx, style: number, golden = false): void {
+  const tones = golden ? ['#694214', '#bd801e', '#ffe38b'] : ['#160f13', '#402522', '#9c644a'];
+  for (let x = 2; x < 70; x++) {
+    const offset = Math.abs(x - 35.5);
+    const t = offset / 34;
+    let center = 15,
+      thick = 8;
+    if (style === 0) {
+      // Broad, pointed chevron with downward sweeping wings.
+      center = 12 + 11 * t;
+      thick = 8 + 3 * (1 - t) - 7 * Math.pow(t, 3);
+    } else if (style === 1) {
+      // Thin upward-twirled handlebar.
+      center = 15 - 8 * Math.pow(t, 3);
+      thick = 4 + 3 * (1 - t);
+    } else {
+      // Dense horseshoe with drooping ends.
+      center = 14 + 13 * Math.pow(t, 3);
+      thick = 8 + 3 * t - 5 * Math.pow(t, 4);
+    }
+    if (offset < 1.5) thick *= 0.55; // Natural central parting.
+    const top = Math.max(1, Math.round(center - thick / 2));
+    const bottom = Math.min(37, Math.round(center + thick / 2));
+    for (let y = top; y <= bottom; y++) {
+      const outline = y === top || y === bottom || x < 4 || x > 67;
+      const shine = !outline && y <= top + 2 && x % 11 !== 0;
+      rect(c, x, y, 1, 1, tones[outline ? 0 : shine ? 2 : 1]);
+    }
+  }
+  if (style === 1) {
+    // Boxy curled tips are deliberately different from Ramin's curled silhouette.
+    for (const side of [0, 1]) {
+      const sx = side ? 64 : 4;
+      rect(c, sx, 2, 4, 8, tones[0]);
+      rect(c, sx + (side ? -2 : 2), 3, 3, 5, tones[1]);
+      rect(c, sx, 2, 2, 3, tones[2]);
+    }
+  }
+}
+
 function mustache(c: Ctx, style: number, golden = false) {
   const pixels = decodeMustache(style);
   const shades = golden
@@ -448,6 +491,13 @@ export function createArt(scene: Phaser.Scene) {
     makeCanvas(scene, `stache-${style}`, MUSTACHE_WIDTH, MUSTACHE_HEIGHT, (ctx) =>
       mustache(ctx, style),
     );
+  for (let style = 0; style < 3; style++)
+    makeCanvas(scene, `borhan-stache-${style}`, MUSTACHE_WIDTH, MUSTACHE_HEIGHT, (ctx) =>
+      borhanMustache(ctx, style),
+    );
+  makeCanvas(scene, 'borhan-stache-gold', MUSTACHE_WIDTH, MUSTACHE_HEIGHT, (ctx) =>
+    borhanMustache(ctx, 1, true),
+  );
   makeCanvas(scene, 'stache-gold', MUSTACHE_WIDTH, MUSTACHE_HEIGHT, (ctx) =>
     mustache(ctx, 2, true),
   );

@@ -17,9 +17,13 @@ import {
  *
  * All 6 frames are 210x362 and retain the exact same upper-lip anchor.
  */
-export function createFacialAtlas(scene: Phaser.Scene): void {
-  if (scene.textures.exists(FACE_ATLAS_KEY)) return;
-  const source = scene.textures.get('ramin-sheet');
+export function createFacialAtlas(
+  scene: Phaser.Scene,
+  sourceKey = 'ramin-sheet',
+  atlasKey = FACE_ATLAS_KEY,
+): void {
+  if (scene.textures.exists(atlasKey)) return;
+  const source = scene.textures.get(sourceKey);
   const first = source.get(0);
   const image = first.source.image as CanvasImageSource;
   const w = FACIAL_FRAME_WIDTH,
@@ -35,7 +39,11 @@ export function createFacialAtlas(scene: Phaser.Scene): void {
     ctx.drawImage(image, frame.cutX, frame.cutY, w, h, destIndex * w, 0, w, h);
   };
   for (let frame = 0; frame < 4; frame++) drawOriginal(frame, frame);
-  drawOriginal(FACE_FRAME_INDEX.idle, FACE_FRAME_INDEX.wink);
+  // Borhan's supplied second pose is already a complete wink (no eye patch needed).
+  drawOriginal(
+    sourceKey === 'borhan-sheet' ? FACE_FRAME_INDEX.blink : FACE_FRAME_INDEX.idle,
+    FACE_FRAME_INDEX.wink,
+  );
   drawOriginal(FACE_FRAME_INDEX.idle, FACE_FRAME_INDEX.serious);
 
   /** Replace source pixels with no additional foreground layer. Use a tiny
@@ -82,13 +90,15 @@ export function createFacialAtlas(scene: Phaser.Scene): void {
     }
     ctx.putImageData(dst, dstX, patch.y);
   };
-  replaceRegion(FACE_FRAME_INDEX.blink, FACE_FRAME_INDEX.wink, FACE_PATCHES.wink);
-  replaceRegion(FACE_FRAME_INDEX.surprised, FACE_FRAME_INDEX.serious, FACE_PATCHES.serious);
+  if (sourceKey !== 'borhan-sheet')
+    replaceRegion(FACE_FRAME_INDEX.blink, FACE_FRAME_INDEX.wink, FACE_PATCHES.wink);
+  if (sourceKey !== 'borhan-sheet')
+    replaceRegion(FACE_FRAME_INDEX.surprised, FACE_FRAME_INDEX.serious, FACE_PATCHES.serious);
 
   // TextureManager.addSpriteSheet accepts an HTMLImageElement or Phaser Texture,
   // not a raw HTMLCanvasElement in Phaser 3.90. Register the canvas itself
   // then define six explicit frame rectangles on its CanvasTexture.
-  const texture = scene.textures.addCanvas(FACE_ATLAS_KEY, atlas);
+  const texture = scene.textures.addCanvas(atlasKey, atlas);
   if (!texture) throw new Error('Cannot register Ramin facial sprite sheet');
   for (let frame = 0; frame <= FACE_FRAME_INDEX.serious; frame++)
     texture.add(frame, 0, frame * w, 0, w, h);

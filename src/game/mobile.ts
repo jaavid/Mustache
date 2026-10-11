@@ -48,6 +48,7 @@ import { attachMustache, resolveMissImpact, showLandingPrecision } from './impac
 import { toHeroAnchor, fromHeroAnchor, type StickerAnchor } from '../logic/stickerAnchor';
 import { RaminMomentController } from './raminMoments';
 import { GoldenFlyer } from './goldenFlyer';
+import { characterName, mustacheTexture } from './characterChoice';
 import { armGoldenForSelection, shouldLaunchGolden } from '../logic/goldenSelection';
 
 /** Dedicated 540 × 960 portrait experience. Desktop scenes remain unchanged. */
@@ -180,7 +181,10 @@ export class MobileMenuScene extends Phaser.Scene {
     text(this, 270, 288, 'AIM · SHOOT · STACHE', 20, '#e1dac7');
     const hero = makeRamin(this, 270, 530, RAMIN_MOBILE_SCALE, 'blink').setDepth(43);
     const lip = raminLipPoint(hero);
-    const menuStache = this.add.image(lip.x, lip.y, 'stache-0').setDisplaySize(80, 44).setDepth(44);
+    const menuStache = this.add
+      .image(lip.x, lip.y, mustacheTexture(0))
+      .setDisplaySize(80, 44)
+      .setDepth(44);
     this.events.on(Phaser.Scenes.Events.UPDATE, () => {
       const target = raminLipPoint(hero);
       menuStache.setPosition(target.x, target.y).setRotation(hero.rotation);
@@ -194,12 +198,12 @@ export class MobileMenuScene extends Phaser.Scene {
       repeat: -1,
       ease: 'Sine.inOut',
     });
-    text(this, 270, 691, 'CATCH RAMIN IN THE FOREST!', 22, '#fbe8bc');
+    text(this, 270, 691, `CATCH ${characterName()} IN THE FOREST!`, 22, '#fbe8bc');
     addSoundToggle(this, 468, 38, 118);
     addMusicToggle(this, 72, 38, 118);
     const start = () => {
       playSfx('start');
-      this.scene.start('Play');
+      this.scene.start('CharacterSelect');
     };
     largeButton(this, 270, 792, '▶ PLAY NOW', start);
     text(this, 270, 871, '45 SEC  ·  3 MISSIONS  ·  COMBOS', 17, '#decbea');
@@ -279,7 +283,7 @@ export class MobilePlayScene extends Phaser.Scene {
     this.accessory = makeAccessory(this);
     this.moments = new RaminMomentController(this, this.hero, this.accessory, true);
     this.sticker = this.add
-      .image(-300, FACE_Y, 'stache-0')
+      .image(-300, FACE_Y, mustacheTexture(0))
       .setDisplaySize(82, 46)
       .setDepth(31)
       .setVisible(false);
@@ -368,7 +372,7 @@ export class MobilePlayScene extends Phaser.Scene {
         },
       );
       this.styleIcons.push(
-        this.add.image(x, 869, `stache-${i}`).setDisplaySize(115, 54).setDepth(80),
+        this.add.image(x, 869, mustacheTexture(i)).setDisplaySize(115, 54).setDepth(80),
       );
       this.styleLabels.push(text(this, x - 53, 833, String(i + 1), 19, '#fff2bb'));
       this.selector.push(hit);
@@ -387,7 +391,7 @@ export class MobilePlayScene extends Phaser.Scene {
     this.goldenArmed = false;
     const icon = this.styleIcons[1];
     this.tweens.killTweensOf(icon);
-    icon.setAlpha(1).setTexture(ready ? 'stache-gold' : 'stache-1');
+    icon.setAlpha(1).setTexture(mustacheTexture(1, ready));
     this.styleLabels[1].setText(ready ? 'GOLD' : '2').setColor(ready ? '#ffe291' : '#fff2bb');
     if (ready) {
       this.tweens.add({ targets: icon, alpha: 0.66, duration: 480, yoyo: true, repeat: -1 });
@@ -449,7 +453,8 @@ export class MobilePlayScene extends Phaser.Scene {
     else if (fromDouble) this.varietyNotice('AGAIN!', '#ffdd82');
     else if (event === 'double') this.varietyNotice('DOUBLE POP!', '#ffdd82');
     else if (this.currentVariant === 'gold') this.varietyNotice('GOLD +50!', '#ffd774');
-    else if (this.currentVariant === 'sunglasses') this.varietyNotice('COOL RAMIN', '#b6d5ff');
+    else if (this.currentVariant === 'sunglasses')
+      this.varietyNotice(`COOL ${characterName()}`, '#b6d5ff');
     enterFromTree(this, this.hero, { x, y }, RAMIN_MOBILE_SCALE, plan, () => {
       if (this.roundOver || serial !== this.spawnSerial) return;
       if (event === 'fake-out') {
@@ -527,7 +532,7 @@ export class MobilePlayScene extends Phaser.Scene {
     playSfx('shot');
     launchMustache(
       this,
-      shotIsGolden ? 'stache-gold' : 'stache-' + style,
+      mustacheTexture(style, shotIsGolden),
       { x: 270, y: 772 },
       aim,
       { width: 100, height: 49 },
@@ -567,7 +572,7 @@ export class MobilePlayScene extends Phaser.Scene {
           this.feedback(aim.x, aim.y, 'MISS!', '#ff8eaa');
           resolveMissImpact(
             this,
-            shotIsGolden ? 'stache-gold' : 'stache-' + style,
+            mustacheTexture(style, shotIsGolden),
             aim,
             { centers: MOBILE_TREE_CENTERS, centerY: 552, halfWidth: 23, top: 395, bottom: 738 },
             84,
@@ -582,7 +587,7 @@ export class MobilePlayScene extends Phaser.Scene {
           playSfx(result.grade === 'perfect' ? 'perfect' : 'good');
           applyRaminMood(this.hero, 'surprised');
           this.sticker
-            .setTexture(shotIsGolden ? 'stache-gold' : 'stache-' + style)
+            .setTexture(mustacheTexture(style, shotIsGolden))
             .setPosition(aim.x, aim.y)
             .setRotation(this.hero.rotation)
             .setVisible(true);
@@ -690,7 +695,7 @@ export class MobileResultsScene extends Phaser.Scene {
     const hero = makeRamin(this, 270, 382, RAMIN_MOBILE_SCALE * 1.06, 'victory').setDepth(55);
     const lip = raminLipPoint(hero);
     const resultsStache = this.add
-      .image(lip.x, lip.y, 'stache-0')
+      .image(lip.x, lip.y, mustacheTexture(0))
       .setDisplaySize(88, 48)
       .setDepth(56);
     this.tweens.add({
@@ -741,9 +746,9 @@ export class MobileResultsScene extends Phaser.Scene {
     addResultsExtras(this, true, this.score, this.summary);
     largeButton(this, 270, 839, '↻ PLAY AGAIN', () => {
       playSfx('start');
-      this.scene.start('Play');
+      this.scene.start('CharacterSelect');
     });
     text(this, 270, 951, 'PRACTICE MODE · NO REAL TOKENS', 13, '#dccae7');
-    this.input.keyboard?.once('keydown-ENTER', () => this.scene.start('Play'));
+    this.input.keyboard?.once('keydown-ENTER', () => this.scene.start('CharacterSelect'));
   }
 }

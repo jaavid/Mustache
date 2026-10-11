@@ -56,6 +56,7 @@ import { attachMustache, resolveMissImpact, showLandingPrecision } from './impac
 import { toHeroAnchor, fromHeroAnchor, type StickerAnchor } from '../logic/stickerAnchor';
 import { RaminMomentController } from './raminMoments';
 import { GoldenFlyer } from './goldenFlyer';
+import { characterName, mustacheTexture } from './characterChoice';
 import { armGoldenForSelection, shouldLaunchGolden } from '../logic/goldenSelection';
 
 const WIDTH = 960;
@@ -217,7 +218,7 @@ export class MenuScene extends Phaser.Scene {
     label(this, 310, 267, 'AIM  ·  SHOOT  ·  STACHE', 18, '#e4dbb7');
     const start = () => {
       playSfx('start');
-      this.scene.start('Play');
+      this.scene.start('CharacterSelect');
     };
     addSoundToggle(this, 895, 42);
     addMusicToggle(this, 895, 94, 106);
@@ -234,7 +235,7 @@ export class MenuScene extends Phaser.Scene {
       repeat: -1,
     });
     const menuStache = this.add
-      .image(775, 278, 'stache-0')
+      .image(775, 278, mustacheTexture(0))
       .setDisplaySize(68, 38)
       .setDepth(46)
       .setAngle(-5);
@@ -243,7 +244,7 @@ export class MenuScene extends Phaser.Scene {
       menuStache.setPosition(lip.x, lip.y).setRotation(hero.rotation);
     });
     this.add.image(745, 106, 'coin').setScale(1.6).setDepth(46);
-    label(this, 790, 481, 'MEET RAMIN!', 23, '#ffe19a');
+    label(this, 790, 481, `MEET ${characterName()}!`, 23, '#ffe19a');
     label(this, 310, 513, 'Click his upper lip, not his nose!', 14, '#c0efd8');
     this.input.keyboard?.once('keydown-ENTER', start);
     this.input.keyboard?.once('keydown-SPACE', start);
@@ -322,7 +323,7 @@ export class PlayScene extends Phaser.Scene {
     this.accessory = makeAccessory(this);
     this.moments = new RaminMomentController(this, this.hero, this.accessory, false);
     this.sticker = this.add
-      .image(-200, 320, 'stache-0')
+      .image(-200, 320, mustacheTexture(0))
       .setDisplaySize(66, 37)
       .setDepth(31)
       .setVisible(false);
@@ -427,7 +428,7 @@ export class PlayScene extends Phaser.Scene {
         },
       );
       this.styleIcons.push(
-        this.add.image(x, 498, `stache-${i}`).setDisplaySize(86, 40).setDepth(74),
+        this.add.image(x, 498, mustacheTexture(i)).setDisplaySize(86, 40).setDepth(74),
       );
       this.styleLabels.push(label(this, x - 43, 472, String(i + 1), 12, '#fbd88e'));
       this.styleMarkers.push(mark);
@@ -446,7 +447,7 @@ export class PlayScene extends Phaser.Scene {
     this.goldenArmed = false;
     const icon = this.styleIcons[1];
     this.tweens.killTweensOf(icon);
-    icon.setAlpha(1).setTexture(ready ? 'stache-gold' : 'stache-1');
+    icon.setAlpha(1).setTexture(mustacheTexture(1, ready));
     this.styleLabels[1].setText(ready ? 'GOLD' : '2').setColor(ready ? '#ffe291' : '#fbd88e');
     if (ready) {
       this.tweens.add({ targets: icon, alpha: 0.66, duration: 480, yoyo: true, repeat: -1 });
@@ -518,8 +519,10 @@ export class PlayScene extends Phaser.Scene {
     if (event === 'fake-out') this.varietyNotice('FAKE-OUT!', '#ffc3ab');
     else if (fromDouble) this.varietyNotice('AGAIN!', '#ffdd82');
     else if (event === 'double') this.varietyNotice('DOUBLE POP!', '#ffdd82');
-    else if (this.currentVariant === 'gold') this.varietyNotice('GOLD RAMIN · +50', '#ffd774');
-    else if (this.currentVariant === 'sunglasses') this.varietyNotice('COOL RAMIN', '#b6d5ff');
+    else if (this.currentVariant === 'gold')
+      this.varietyNotice(`GOLD ${characterName()} · +50`, '#ffd774');
+    else if (this.currentVariant === 'sunglasses')
+      this.varietyNotice(`COOL ${characterName()}`, '#b6d5ff');
     enterFromTree(this, this.hero, { x, y }, RAMIN_DESKTOP_SCALE, plan, () => {
       if (this.roundOver || serial !== this.spawnSerial) return;
       if (event === 'fake-out') {
@@ -597,7 +600,7 @@ export class PlayScene extends Phaser.Scene {
     playSfx('shot');
     launchMustache(
       this,
-      shotIsGolden ? 'stache-gold' : 'stache-' + chosenStyle,
+      mustacheTexture(chosenStyle, shotIsGolden),
       { x: 480, y: 459 },
       aim,
       { width: 75, height: 38 },
@@ -637,7 +640,7 @@ export class PlayScene extends Phaser.Scene {
           this.popFeedback(aim.x, aim.y, 'MISS!', '#ff848f');
           resolveMissImpact(
             this,
-            shotIsGolden ? 'stache-gold' : 'stache-' + chosenStyle,
+            mustacheTexture(chosenStyle, shotIsGolden),
             aim,
             { centers: DESKTOP_TREE_CENTERS, centerY: 300, halfWidth: 30, top: 143, bottom: 486 },
             66,
@@ -652,7 +655,7 @@ export class PlayScene extends Phaser.Scene {
           playSfx(result.grade === 'perfect' ? 'perfect' : 'good');
           applyRaminMood(this.hero, 'surprised');
           this.sticker
-            .setTexture(shotIsGolden ? 'stache-gold' : 'stache-' + chosenStyle)
+            .setTexture(mustacheTexture(chosenStyle, shotIsGolden))
             .setPosition(aim.x, aim.y)
             .setRotation(this.hero.rotation)
             .setVisible(true);
@@ -769,7 +772,7 @@ export class ResultsScene extends Phaser.Scene {
     const resultsHero = makeRamin(this, 220, 318, RAMIN_DESKTOP_SCALE, 'victory').setDepth(53);
     const resultsLip = raminLipPoint(resultsHero);
     const resultStache = this.add
-      .image(resultsLip.x, resultsLip.y, 'stache-0')
+      .image(resultsLip.x, resultsLip.y, mustacheTexture(0))
       .setDisplaySize(70, 40)
       .setDepth(54);
     this.tweens.add({
@@ -820,7 +823,7 @@ export class ResultsScene extends Phaser.Scene {
     addResultsExtras(this, false, this.finalScore, this.summary);
     const again = () => {
       playSfx('start');
-      this.scene.start('Play');
+      this.scene.start('CharacterSelect');
     };
     button(this, 642, 452, 324, 67, '↻  PLAY AGAIN', again);
     label(this, 493, 511, 'NO REAL TOKENS · PRACTICE MODE', 16, '#d1bbdb');
