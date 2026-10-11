@@ -48,6 +48,7 @@ import { attachMustache, resolveMissImpact, showLandingPrecision } from './impac
 import { toHeroAnchor, fromHeroAnchor, type StickerAnchor } from '../logic/stickerAnchor';
 import { RaminMomentController } from './raminMoments';
 import { GoldenFlyer } from './goldenFlyer';
+import { armGoldenForSelection, shouldLaunchGolden } from '../logic/goldenSelection';
 
 /** Dedicated 540 × 960 portrait experience. Desktop scenes remain unchanged. */
 const W = 540;
@@ -377,7 +378,7 @@ export class MobilePlayScene extends Phaser.Scene {
     this.selectedStyle = i;
     // Only a deliberate selection AFTER charging equips the special shot.
     // Completing the third pickup never changes an existing style selection.
-    this.goldenArmed = i === 1 && this.golden.ready;
+    this.goldenArmed = armGoldenForSelection(i, this.golden.ready);
     this.refreshSelector();
   }
   private updateGoldenSelector(ready: boolean) {
@@ -506,7 +507,7 @@ export class MobilePlayScene extends Phaser.Scene {
     if (this.roundOver || this.shooting) return;
     if (this.golden.tryCollect(aim.x, aim.y, this.roundElapsedMs)) return;
     if (!this.activeTarget || aim.y < HUD_BOTTOM || aim.y > SELECTOR_TOP) return;
-    const shotIsGolden = this.goldenArmed && this.golden.consume();
+    const shotIsGolden = shouldLaunchGolden(this.selectedStyle, this.goldenArmed, this.golden.ready) && this.golden.consume();
     this.goldenArmed = false;
     this.shooting = true;
     this.activeTarget = false;
