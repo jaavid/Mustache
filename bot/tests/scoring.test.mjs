@@ -157,6 +157,32 @@ test('abnormally short rounds are rejected', async () => {
   await assert.rejects(finishRound(db,session,{roundId:started.roundId,score:0,shots:[]},2000),/INVALID_ROUND_DURATION/);
 });
 
+test('charge survives regular shots until a manually equipped golden perfect', () => {
+  for (const portrait of [false, true]) {
+    const pickups = [0, 1, 2].map(index => {
+      const tMs = GOLDEN_SPAWN_MS[index] + 1250;
+      return { index, tMs, aim: goldenPosition(index, tMs, portrait) };
+    });
+    const lip = portrait ? { x: 270, y: 545 } : { x: 480, y: 285 };
+    const normal = { tMs: 23100, aim: lip, lip, variant: 'normal', comboBefore: 0, goldenShot: false };
+    const another = { ...normal, tMs: 25100, comboBefore: 1 }; // +110 normal
+    const gold = { ...normal, tMs: 27200, comboBefore: 2, goldenShot: true }; // +120 + 350
+    const later = { ...normal, tMs: 30000, comboBefore: 3 }; // +130 normal
+    const result = verifyRoundShots([normal, another, gold, later], portrait, 810, pickups);
+    assert.equal(result.score, 810);
+    assert.equal(result.goldenPerfect, 1);
+    assert.equal(verifyRoundShots([normal, another, later], portrait, 330, pickups).goldenPerfect, 0);
+    assert.throws(
+      () => verifyRoundShots([normal, another, gold, { ...gold, tMs: 30500, comboBefore: 3 }], portrait, 1130, pickups),
+      /INVALID_GOLDEN_SHOT/,
+    );
+    assert.throws(
+      () => verifyRoundShots([{ ...gold, tMs: 20000, comboBefore: 0 }], portrait, 450, pickups),
+      /INVALID_GOLDEN_SHOT/,
+    );
+  }
+});
+
 test('three legitimate pickups authorize exactly one +350 PERFECT and golden badge', () => {
   for (const portrait of [false, true]) {
     const pickups = [0, 1, 2].map(index => {
