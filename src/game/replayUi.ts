@@ -25,7 +25,7 @@ export function addResultsExtras(
   const y = portrait ? 781 : 392;
   const missionLine = 'MISSIONS: ' + completed + '/3  ·  BADGES: ' + total + '/5';
   const missionText = scene.add
-    .text(x, y, missionLine + '\\nSAVING ROUND...', {
+    .text(x, y, missionLine + '\nSAVING ROUND...', {
       fontFamily: FONT,
       fontSize: '15px',
       fontStyle: 'bold',
@@ -70,7 +70,7 @@ export function addResultsExtras(
     }).setOrigin(0.5);
     const scores = board.players.length
       ? board.players.map((r) => '#' + String(r.rank).padStart(2, '0') + '  ' +
-          r.name.slice(0, 16).padEnd(16) + ' ' + r.score).join('\\n')
+          r.name.slice(0, 16).padEnd(16) + ' ' + r.score).join('\n')
       : 'NO SCORES THIS WEEK';
     const names = scene.add.text(w / 2, portrait ? 325 : 135, scores, {
       fontFamily: FONT, fontSize: portrait ? '20px' : '20px',
@@ -96,7 +96,7 @@ export function addResultsExtras(
       ? (result.telegramSynced ? '✓ TELEGRAM SCORE SAVED' : '✓ WEEKLY SCORE SAVED')
       : result.state === 'local' ? 'PRACTICE · LOCAL SCORE' : 'SCORE SERVER UNAVAILABLE';
     const top = board?.players?.[0];
-    missionText.setText(missionLine + '\\n' + message +
+    missionText.setText(missionLine + '\n' + message +
       (board ? (top ? ' · TOP: ' + top.name.slice(0, 12) + ' ' + top.score : ' · TOP 10') : '') +
       (board ? ' · TAP' : ''));
   });
