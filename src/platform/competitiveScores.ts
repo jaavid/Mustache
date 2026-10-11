@@ -13,7 +13,7 @@ type Trace = {
   comboBefore: number;
 };
 type Leader = { rank: number; name: string; score: number };
-type Board = { weekStart: string; weekEnds: string; players: Leader[] };
+export type Board = { weekStart: string; weekEnds: string; players: Leader[] };
 export type Submission = {
   state: 'local' | 'saved' | 'unavailable';
   telegramSynced?: boolean;
@@ -70,5 +70,16 @@ export async function submitCompetitiveRound(score: number): Promise<Submission>
   } catch {
     // Never present local-only results as official scores.
     return { state: 'unavailable' };
+  }
+}
+
+/** Public weekly board for browser visitors and for retries after submission. */
+export async function getWeeklyLeaderboard(): Promise<Board | undefined> {
+  try {
+    const response = await fetch(API + '/api/leaderboard', { cache: 'no-store' });
+    if (!response.ok) return undefined;
+    return (await response.json()) as Board;
+  } catch {
+    return undefined;
   }
 }

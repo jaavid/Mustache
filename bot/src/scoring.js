@@ -14,8 +14,8 @@ export function verifyRoundShots(shots, portrait, clientScore) {
     throw new Error('INVALID_ROUND');
   }
   const width = portrait ? 540 : 960;
-  const low = portrait ? 369 : 125;
-  const high = portrait ? 770 : 450;
+  const low = portrait ? 164 : 125;
+  const high = portrait ? 768 : 450;
   const lipYMin = portrait ? 365 : 175;
   const lipYMax = portrait ? 720 : 360;
   const radii = portrait ? [21, 15, 38, 26] : [17, 12, 33, 21];

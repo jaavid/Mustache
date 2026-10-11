@@ -8,7 +8,7 @@ import {
   storeNewAchievements,
 } from '../logic/progression';
 import { isTelegramGame, shareTelegramGame } from '../platform/telegramGame';
-import { submitCompetitiveRound } from '../platform/competitiveScores';
+import { submitCompetitiveRound, getWeeklyLeaderboard, type Board } from '../platform/competitiveScores';
 
 const FONT = '"Courier New", monospace';
 export function addResultsExtras(
@@ -23,14 +23,16 @@ export function addResultsExtras(
   const total = readAchievements().length;
   const x = portrait ? 270 : 640;
   const y = portrait ? 781 : 392;
-  scene.add
-    .text(x, y, 'MISSIONS: ' + completed + '/3  ·  BADGES: ' + total + '/5', {
+  const missionLine = 'MISSIONS: ' + completed + '/3  ·  BADGES: ' + total + '/5';
+  const missionText = scene.add
+    .text(x, y, missionLine + '\\nSAVING ROUND...', {
       fontFamily: FONT,
-      fontSize: portrait ? '17px' : '17px',
+      fontSize: '15px',
       fontStyle: 'bold',
       color: '#e6cbfc',
       stroke: '#1e2135',
       strokeThickness: 3,
+      align: 'center',
     })
     .setOrigin(0.5)
     .setDepth(91);
@@ -53,25 +55,50 @@ export function addResultsExtras(
       .setDepth(91);
     scene.tweens.add({ targets: txt, scale: 1.04, duration: 650, yoyo: true, repeat: 1 });
   }
-  // Only server-accepted rounds appear in D1's weekly ranking.
-  const report = scene.add
-    .text(portrait ? 270 : 640, portrait ? 826 : 420, 'SAVING ROUND...', {
-      fontFamily: FONT, fontSize: portrait ? '15px' : '14px',
-      color: '#b4eacc', stroke: '#161e34', strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(92);
-  const top = scene.add
-    .text(portrait ? 270 : 640, portrait ? 855 : 444, '', {
-      fontFamily: FONT, fontSize: portrait ? '13px' : '13px',
-      color: '#e6cbfc', stroke: '#161e34', strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(92);
-  void submitCompetitiveRound(score).then((result) => {
-    if (!report.active || !top.active) return;
-    report.setText(result.state === 'saved'
-      ? (result.telegramSynced ? '✓ TELEGRAM SCORE REGISTERED' : '✓ WEEKLY SCORE SAVED')
-      : result.state === 'local' ? 'PRACTICE · LOCAL SCORE' : 'SCORE SERVER UNAVAILABLE');
-    if (result.board?.players?.length) {
-      top.setText('WEEKLY #1: ' + result.board.players[0].name.slice(0, 18) + ' · ' + result.board.players[0].score);
-    }
+  // Native Telegram ranks are all-time per Game Card. D1 resets every Monday UTC.
+  let board: Board | undefined;
+  const openBoard = () => {
+    if (!board || !missionText.active) return;
+    const w = portrait ? 540 : 960;
+    const h = portrait ? 960 : 540;
+    const layer = scene.add.container(0, 0).setDepth(250);
+    const shade = scene.add.rectangle(w / 2, h / 2, w, h, 0x081525, 0.96).setInteractive();
+    const panel = scene.add.rectangle(w / 2, h / 2, w - 45, portrait ? 700 : 445, 0x202a45)
+      .setStrokeStyle(4, 0xc8a26e);
+    const title = scene.add.text(w / 2, portrait ? 260 : 83, 'WEEKLY TOP 10 · UTC', {
+      fontFamily: FONT, fontSize: portrait ? '25px' : '24px', color: '#ffdd92',
+    }).setOrigin(0.5);
+    const scores = board.players.length
+      ? board.players.map((r) => '#' + String(r.rank).padStart(2, '0') + '  ' +
+          r.name.slice(0, 16).padEnd(16) + ' ' + r.score).join('\\n')
+      : 'NO SCORES THIS WEEK';
+    const names = scene.add.text(w / 2, portrait ? 325 : 135, scores, {
+      fontFamily: FONT, fontSize: portrait ? '20px' : '20px',
+      color: '#ebf7e9', lineSpacing: portrait ? 22 : 10, align: 'left',
+    }).setOrigin(0.5, 0);
+    const close = scene.add.text(w / 2, portrait ? 745 : 465, '✕  CLOSE', {
+      fontFamily: FONT, fontSize: '24px', color: '#9cf5d9',
+      backgroundColor: '#32465d', padding: { x: 20, y: 11 },
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    close.on('pointerdown', (
+      _pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData,
+    ) => { event.stopPropagation(); layer.destroy(); });
+    layer.add([shade, panel, title, names, close]);
+  };
+  missionText.setInteractive({ useHandCursor: true }).on('pointerdown', (
+    _pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData,
+  ) => { event.stopPropagation(); openBoard(); });
+  void submitCompetitiveRound(score).then(async (result) => {
+    if (!missionText.active) return;
+    board = result.board ?? await getWeeklyLeaderboard();
+    if (!missionText.active) return;
+    const message = result.state === 'saved'
+      ? (result.telegramSynced ? '✓ TELEGRAM SCORE SAVED' : '✓ WEEKLY SCORE SAVED')
+      : result.state === 'local' ? 'PRACTICE · LOCAL SCORE' : 'SCORE SERVER UNAVAILABLE';
+    const top = board?.players?.[0];
+    missionText.setText(missionLine + '\\n' + message +
+      (board ? (top ? ' · TOP: ' + top.name.slice(0, 12) + ' ' + top.score : ' · TOP 10') : '') +
+      (board ? ' · TAP' : ''));
   });
   addShareButton(
     scene,
