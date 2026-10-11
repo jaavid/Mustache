@@ -29,7 +29,7 @@ official native **Game Card / Play** experience.
 ## 2. Deploy the webhook Worker
 
 Cloudflare Workers is used instead of deploying another bot with the Telegram
-Serverless CLI because the existing static game uses Telegram's *Games API*,
+Serverless CLI because the existing static game uses Telegram's _Games API_,
 not Mini App Serverless endpoints.
 
 Install or use Wrangler with your Cloudflare account:
@@ -96,5 +96,6 @@ before posting server-approved scores with `setGameScore`. Do not accept an
 arbitrary score from the browser or offer real N5 rewards yet.
 
 Official documentation:
+
 - https://core.telegram.org/bots/games
 - https://core.telegram.org/bots/api#games
