@@ -64,10 +64,10 @@ export async function finishRound(db, session, data, now = Date.now()) {
   if (round.score !== null) return { score: round.score, weekStart: round.week_start, duplicate: true };
   const duration = now - round.started_at;
   if (duration < 35000 || now > round.expires_at) throw new Error('INVALID_ROUND_DURATION');
-  const { score } = verifyRoundShots(data.shots, !!round.portrait, data.score);
+  const { score, goldenPerfect } = verifyRoundShots(data.shots, !!round.portrait, data.score, data.goldenPickups ?? []);
   const weekStart = tehranWeekStart(now);
-  const result = await db.prepare('UPDATE game_rounds SET score=?, week_start=?, finished_at=? WHERE id=? AND token_hash=? AND score IS NULL AND expires_at>=?').bind(
-    score, weekStart, now, round.id, session.token_hash, now,
+  const result = await db.prepare('UPDATE game_rounds SET score=?, week_start=?, finished_at=?, golden_perfect=? WHERE id=? AND token_hash=? AND score IS NULL AND expires_at>=?').bind(
+    score, weekStart, now, goldenPerfect, round.id, session.token_hash, now,
   ).run();
   if (result.meta.changes !== 1) {
     const saved = await db.prepare('SELECT score, week_start FROM game_rounds WHERE id=?').bind(round.id).first();
@@ -87,17 +87,19 @@ export async function leaderboard(db, now = Date.now(), options = {}) {
   const viewer = Number.isSafeInteger(options.userId) && options.userId > 0 ? options.userId : 0;
   const range = bounds.start === null ? '' : ' AND finished_at >= ? AND finished_at < ?';
   const sql = [
-    'WITH highs AS (',
-    ' SELECT user_id, MAX(score) AS score FROM game_rounds',
-    ' WHERE score IS NOT NULL' + range,
-    ' GROUP BY user_id',
+    'WITH per_round AS (',
+    ' SELECT user_id, score, golden_perfect, finished_at, id,',
+    ' ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY score DESC, golden_perfect DESC, finished_at ASC, id ASC) AS own_rank',
+    ' FROM game_rounds WHERE score IS NOT NULL' + range,
+    '), highs AS (',
+    ' SELECT user_id, score, golden_perfect FROM per_round WHERE own_rank=1',
     '), ranked AS (',
-    ' SELECT h.user_id, u.display_name, h.score,',
-    ' ROW_NUMBER() OVER (ORDER BY h.score DESC, h.user_id ASC) AS rank,',
+    ' SELECT h.user_id, u.display_name, h.score, h.golden_perfect,',
+    ' ROW_NUMBER() OVER (ORDER BY h.score DESC, h.golden_perfect DESC, h.user_id ASC) AS rank,',
     ' COUNT(*) OVER () AS player_count',
     ' FROM highs h JOIN game_users u ON u.user_id=h.user_id',
     ')',
-    'SELECT user_id, display_name, score, rank, player_count FROM ranked',
+    'SELECT user_id, display_name, score, golden_perfect, rank, player_count FROM ranked',
     'WHERE rank <= 10 OR user_id = ? ORDER BY rank',
   ].join(' ');
   const bindings = bounds.start === null ? [viewer] : [bounds.start, bounds.end, viewer];
@@ -105,6 +107,7 @@ export async function leaderboard(db, now = Date.now(), options = {}) {
   const rows = list.results || [];
   const mapEntry = row => ({
     rank: Number(row.rank), name: row.display_name, score: Number(row.score),
+    goldenPerfect: Number(row.golden_perfect || 0),
   });
   const result = {
     ...bounds, playerCount: rows.length ? Number(rows[0].player_count) : 0,
