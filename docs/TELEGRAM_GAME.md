@@ -39,11 +39,11 @@ Environments** (optional approval rules), then add these four encrypted
 secrets to its Environment secrets. Repository-level Actions secrets are
 also supported if the environment has no overrides.
 
-| GitHub secret | Value |
-| --- | --- |
-| `CLOUDFLARE_API_TOKEN` | Cloudflare API token authorized to deploy this Worker |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID (not zone ID) |
-| `TELEGRAM_BOT_TOKEN` | Standard BotFather HTTP API token for **@RJTtobot** |
+| GitHub secret             | Value                                                                     |
+| ------------------------- | ------------------------------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`    | Cloudflare API token authorized to deploy this Worker                     |
+| `CLOUDFLARE_ACCOUNT_ID`   | Cloudflare account ID (not zone ID)                                       |
+| `TELEGRAM_BOT_TOKEN`      | Standard BotFather HTTP API token for **@RJTtobot**                       |
 | `TELEGRAM_WEBHOOK_SECRET` | Separate, random 32+ character secret; use `openssl rand -hex 32` locally |
 
 Create the Cloudflare token under **Cloudflare > Account API tokens** and
