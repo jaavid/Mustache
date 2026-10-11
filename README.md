@@ -21,9 +21,12 @@ Throw a mustache at the precise upper-lip location while Ramin peeks from three 
 
 ## Golden Mustache (score bonus)
 
-Five golden mustaches fly across each 45-second round. Catch three to charge one golden shot.
-Only a PERFECT hit with that projectile earns **+350 points**, in addition to normal scoring.
-Pickup taps do not consume a Ramin shot or break a combo. This is an in-game score bonus,
+Five golden mustaches fly across each 45-second round. Catch three to turn the **middle mustache in the selector** golden. Tap/click that middle slot
+(or press 2) to equip the special shot; ordinary shots with slots 1 and 3 preserve it.
+Even if slot 2 was already selected, you must actively select it again after charging.
+Only a PERFECT hit with the equipped golden projectile earns **+350 points**, in addition to
+normal scoring. GOOD/MISS consume it without the golden bonus. Pickup taps do not consume
+a Ramin shot or break a combo. This is an in-game score bonus,
 **not** a NFIVE token or a financial prize. Telegram's leaderboard validates the pickup
 trace and displays a golden badge for verified golden-perfect records.
 

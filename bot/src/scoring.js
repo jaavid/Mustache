@@ -61,10 +61,12 @@ export function verifyRoundShots(shots, portrait, clientScore, goldenPickups = [
     }
     const charged = pickupCursor >= GOLDEN_REQUIRED && !goldenUsed;
     if ((goldenShot !== undefined && typeof goldenShot !== 'boolean') ||
-        Boolean(goldenShot) !== charged) {
+        (goldenShot === true && !charged)) {
       throw new Error('INVALID_GOLDEN_SHOT');
     }
-    if (charged) goldenUsed = true;
+    // The charge can be held across any number of ordinary shots. Spend it only
+    // when the player explicitly chooses the middle golden selector.
+    if (goldenShot === true) goldenUsed = true;
     const dx = aim.x - lip.x, dy = aim.y - lip.y;
     const perfect = (dx / radii[0]) ** 2 + (dy / radii[1]) ** 2 <= 1;
     const good = (dx / radii[2]) ** 2 + (dy / radii[3]) ** 2 <= 1;
@@ -73,7 +75,7 @@ export function verifyRoundShots(shots, portrait, clientScore, goldenPickups = [
       score += (perfect ? 100 : 50) + Math.min(50, Math.max(0, combo - 1) * 10);
       if (variant === 'gold') score += 50;
       if (variant === 'sunglasses' && perfect) score += 25;
-      if (charged && perfect) {
+      if (goldenShot === true && perfect) {
         score += GOLDEN_PERFECT_BONUS;
         goldenPerfect = 1;
       }

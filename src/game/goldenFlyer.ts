@@ -12,6 +12,7 @@ export class GoldenFlyer {
   private readonly scene: Phaser.Scene;
   private readonly portrait: boolean;
   private readonly notice: (message: string, color: string) => void;
+  private readonly onChargeChange: (ready: boolean) => void;
   private readonly sprite: Phaser.GameObjects.Image;
   private readonly glow: Phaser.GameObjects.Arc;
   private readonly hud: Phaser.GameObjects.Text;
@@ -22,10 +23,12 @@ export class GoldenFlyer {
     scene: Phaser.Scene,
     portrait: boolean,
     notice: (message: string, color: string) => void,
+    onChargeChange: (ready: boolean) => void,
   ) {
     this.scene = scene;
     this.portrait = portrait;
     this.notice = notice;
+    this.onChargeChange = onChargeChange;
     this.glow = scene.add
       .circle(-100, -100, portrait ? 48 : 41, 0xffd84e, 0.2)
       .setDepth(63)
@@ -96,10 +99,11 @@ export class GoldenFlyer {
       });
       this.sprite.setVisible(false);
       this.glow.setVisible(false);
-      this.hud.setText(this.ready ? 'GOLD READY!' : 'GOLD ' + this.collected.size + '/3');
+      this.hud.setText(this.ready ? 'GOLD READY · SLOT 2' : 'GOLD ' + this.collected.size + '/3');
+      if (this.ready) this.onChargeChange(true);
       this.scene.tweens.add({ targets: this.hud, scale: 1.25, duration: 140, yoyo: true });
       this.notice(
-        this.ready ? 'GOLDEN SHOT READY!' : 'GOLD COLLECTED! ' + this.collected.size + '/3',
+        this.ready ? 'GOLD READY! SELECT 2' : 'GOLD COLLECTED! ' + this.collected.size + '/3',
         '#ffe58b',
       );
       return true;
@@ -107,11 +111,12 @@ export class GoldenFlyer {
     return false;
   }
 
-  /** Called on launch, not on scoring; even a GOOD or MISS consumes the one charge. */
+  /** Only called for a deliberately equipped golden slot. GOOD/MISS still spend it. */
   consume(): boolean {
     if (!this.ready) return false;
     this.spent = true;
     this.hud.setText('GOLD USED');
+    this.onChargeChange(false);
     return true;
   }
 }
