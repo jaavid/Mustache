@@ -102,7 +102,10 @@ export async function submitCompetitiveRound(score: number): Promise<Submission>
 }
 
 /** Public standings, plus authenticated personal rank when launched from Telegram. */
-export async function getLeaderboard(period: Period = 'week', offset = 0): Promise<Board | undefined> {
+export async function getLeaderboard(
+  period: Period = 'week',
+  offset = 0,
+): Promise<Board | undefined> {
   const query = new URLSearchParams({ period, offset: String(offset) });
   try {
     const headers = sessionToken ? { authorization: 'Bearer ' + sessionToken } : undefined;

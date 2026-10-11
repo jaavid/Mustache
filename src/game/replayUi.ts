@@ -38,16 +38,21 @@ export function addResultsExtras(
     .setOrigin(0.5)
     .setDepth(91)
     .setInteractive({ useHandCursor: true });
-  let displayBoard = () => { /* registered when the API responds */ };
-  statusText.on('pointerdown', (
-    _pointer: Phaser.Input.Pointer,
-    _x: number,
-    _y: number,
-    event: Phaser.Types.Input.EventData,
-  ) => {
-    event.stopPropagation();
-    displayBoard();
-  });
+  let displayBoard = () => {
+    /* registered when the API responds */
+  };
+  statusText.on(
+    'pointerdown',
+    (
+      _pointer: Phaser.Input.Pointer,
+      _x: number,
+      _y: number,
+      event: Phaser.Types.Input.EventData,
+    ) => {
+      event.stopPropagation();
+      displayBoard();
+    },
+  );
   const achievement = newBadges[0];
   if (achievement) {
     const ax = portrait ? 270 : 245,
@@ -71,19 +76,23 @@ export function addResultsExtras(
     if (!statusText.active) return;
     const board = result.board ?? (await getLeaderboard('week'));
     if (!statusText.active) return;
-    const status = result.state === 'saved'
-      ? result.telegramState === 'updated'
-        ? '✓ TELEGRAM SCORE REGISTERED'
-        : result.telegramState === 'previous_best'
-          ? '✓ SAVED · PREVIOUS TG HIGH KEPT'
-          : '✓ D1 SAVED · TELEGRAM PENDING'
-      : result.state === 'local'
-        ? 'PRACTICE · LOCAL SCORE'
-        : 'SCORE SERVER UNAVAILABLE';
+    const status =
+      result.state === 'saved'
+        ? result.telegramState === 'updated'
+          ? '✓ TELEGRAM SCORE REGISTERED'
+          : result.telegramState === 'previous_best'
+            ? '✓ SAVED · PREVIOUS TG HIGH KEPT'
+            : '✓ D1 SAVED · TELEGRAM PENDING'
+        : result.state === 'local'
+          ? 'PRACTICE · LOCAL SCORE'
+          : 'SCORE SERVER UNAVAILABLE';
     statusText.setText(missionLine + '\n' + status + ' · VIEW TOP 10');
-    displayBoard = () => showLeaderboardOverlay(scene, portrait, {
-      score, submission: result, initialBoard: board,
-    });
+    displayBoard = () =>
+      showLeaderboardOverlay(scene, portrait, {
+        score,
+        submission: result,
+        initialBoard: board,
+      });
     // For official Telegram rounds, show the scoreboard without requiring an extra tap.
     if (result.state === 'saved') displayBoard();
   });

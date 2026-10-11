@@ -11,12 +11,12 @@ scores are correctly placed into Tehran contest windows without overwriting data
 
 ## Competition periods
 
-| Tab | Time window | Ranking rule |
-| --- | --- | --- |
-| DAY | Calendar day, midnight-to-midnight Tehran | Each player's best round |
-| WEEK | Saturday 00:00 until next Saturday 00:00 Tehran | Each player's best round |
-| MONTH | **Persian (Solar Hijri) calendar month**, Tehran | Each player's best round |
-| ALL | Entire game history | Each player's best round |
+| Tab     | Time window                                         | Ranking rule                |
+| ------- | --------------------------------------------------- | --------------------------- |
+| DAY     | Calendar day, midnight-to-midnight Tehran           | Each player's best round    |
+| WEEK    | Saturday 00:00 until next Saturday 00:00 Tehran     | Each player's best round    |
+| MONTH   | **Persian (Solar Hijri) calendar month**, Tehran    | Each player's best round    |
+| ALL     | Entire game history                                 | Each player's best round    |
 | TG CHAT | Telegram Game Card scoreboard; chat-local, all-time | Native Telegram high scores |
 
 The weekly leaderboard supports browsing the preceding 12 completed
