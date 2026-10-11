@@ -46,9 +46,16 @@ Empty archived periods remain empty and do not use scores from adjacent weeks.
 6. The game's result scene **automatically opens** the D1 weekly
    leaderboard after a successful save. The player can switch tabs or close
    the panel. The \`MISSIONS / BADGES\` status line also reopens the panel.
-7. The bot's **/top** or **/score** commands display the current Tehran
-   weekly top ten and the requesting user's personal rank in the Telegram
-   chat, without spamming a new message after every game.
+7. The bot's **/leaderboard** command opens a navigable Telegram inline-keyboard
+   scoreboard (Day, Saturday-to-Saturday Week, Solar Hijri Month, All-time,
+   and up to 12 preceding weeks). It shows the top ten, participant count,
+   and the requesting user's personal rank even outside the top ten.
+   **/top** and **/score** are aliases for the same menu.
+   Switching tabs edits the existing bot message; it does not spam chats.
+8. The keyboard includes a native link back to the official Telegram Game.
+   The bot's **/help** lists all commands. A production deployment calls
+   `getMyCommands` and `setMyCommands` to expose these commands in the
+   Telegram / command picker while retaining any unrelated bot commands.
 
 The D1 rankings are global across all players and Game Cards.
 The native Telegram scoreboard is limited to its chat/message and uses
@@ -95,3 +102,30 @@ Do not log bearer tokens, Cloudflare API tokens or Telegram Bot Tokens.
 The public leaderboard currently exposes first names supplied in
 Telegram callbacks; consider optional public nicknames before a public
 prize tournament.
+
+## Using the bot command menu
+
+Open **@RJTtobot** and send `/leaderboard`, or select **leaderboard**
+in Telegram's `/` command menu after deploying this PR. The bot sends a
+single message containing the current Tehran week ranking and inline buttons:
+
+- **Today:** midnight-to-midnight `Asia/Tehran`.
+- **Week:** Saturday 00:00 to the following Saturday 00:00 Tehran. Use
+  the previous/next buttons to browse at most 12 older weeks.
+- **Solar Hijri month:** current Iranian calendar month.
+- **All-time:** highest score of each player across recorded history.
+- **Play Mustache:** launches the official game.
+
+All ranking data is read from the existing D1 queries. The requesting
+Telegram user ID is obtained from Telegram's trusted `message.from` or
+`callback_query.from`, never from user-provided callback data.
+The public scoreboard is shared if displayed in a group; each person
+pressing a tab button sees their own rank in that updated message.
+
+The deployment workflow registers the command picker **after** a successful
+Worker deploy. The registration script preserves existing default-scope
+commands not owned by Mustache; it does not overwrite language-specific
+or chat-specific command scopes. No extra secret or webhook is required.
+
+The native Telegram Game Card high scores remain per-card/all-time;
+the command displays the global D1 scoreboards instead.

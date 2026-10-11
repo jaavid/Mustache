@@ -79,16 +79,16 @@ This is an official `/newgame` HTML5 Game, **not** a Telegram Mini App.
   the official game; browser sharing still works on the public website.
 
 See [Telegram Game setup](docs/TELEGRAM_GAME.md) for the BotFather configuration,
-four GitHub production secrets, automatic Cloudflare Worker deployment and
+GitHub production secrets, automatic Cloudflare Worker deployment and
 one-time Telegram webhook registration. Merges that change `bot/**` deploy
 through `cloudflare/wrangler-action@v4`; GitHub Pages remains independent.
 No credentials are committed, and the workflow never replaces an existing
 Telegram webhook.
 
-**Important:** Telegram's `setGameScore` / `getGameHighScores` are intentionally
-**not enabled yet**: today's local scores are client-controlled. They must not be
-published as verified scores or used for prizes until server-side round
-validation and anti-cheat are implemented.
+**Important:** Telegram `setGameScore` / `getGameHighScores` are enabled for
+Telegram-authenticated rounds. The server recalculates shot arithmetic, but
+client-controlled target positions are not proof of honest play. Do not award
+real tokens or prizes until server-authoritative anti-cheat is implemented.
 
 ## Weekly score service (Cloudflare D1)
 
@@ -118,5 +118,7 @@ After a native Telegram round is accepted, the game automatically displays
 the weekly top ten, personal rank and Telegram sync status. A new personal
 high is sent through \`setGameScore\`, updating the original Telegram
 Game Card. Telegram chat scores remain all-time and chat-local, distinct
-from global weekly D1 rankings. Chat commands \`/top\` and \`/score\`
-show the Tehran competition results.
+from global weekly D1 rankings. Bot command `/leaderboard` opens interactive Day / Tehran Week / Persian Month /
+All-time rankings and previous weeks, with `/top` and `/score` as aliases.
+The GitHub Worker deployment registers these commands in Telegram's slash
+menu without overwriting unrelated default-scope commands.
