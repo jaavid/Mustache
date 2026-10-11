@@ -6,7 +6,7 @@ Pixel-art arcade game built with **Phaser 3, TypeScript, and Vite**.
 
 ## Gameplay
 
-Throw a mustache at the precise upper-lip location while Ramin peeks from three trees.
+Choose **Ramin or Borhan** in a six-second pre-round selection (1/2 on desktop, tap either hero on mobile), then throw a mustache at the precise upper-lip location while the chosen hero peeks from three trees. The current selection carries into the result screen and can be changed before every replay.
 
 - **45 seconds** with distinct sunset (0–15 s), twilight (15–30 s), and night (30–45 s) stages.
 - The projectile scores **at impact**; the sticker stays exactly where you aimed (no automatic correction).
@@ -63,10 +63,11 @@ Run `npm run format` for documentation and config files. Formatting the whole le
 | `src/logic/scoring.ts`                               | Pure elliptical hit detection                              |
 | `src/logic/gameplay.ts`, `src/logic/arcadePhases.ts` | Timings and difficulty                                     |
 | `src/game/gameFeel.ts`, `src/game/impactFx.ts`       | Projectile and impact visuals                              |
-| `src/game/ramin.ts`, `src/game/raminMoments.ts`      | Character states, expressions and gestures                 |
+| `src/game/ramin.ts`, `src/game/raminMoments.ts`      | Both heroes' states, expressions and gestures             |
+| `src/game/characterSelect.ts`, `src/game/characterChoice.ts` | Six-second character selection shared by both layouts |
 | `src/game/art.ts`                                    | Canvas-generated pixel art                                 |
 | `src/game/facialAtlas.ts`                            | Six-frame Ramin atlas derived from original four frames    |
-| `src/assets/ramin-sheet.png`                         | Original aligned Ramin image                               |
+| `src/assets/ramin-sheet.png`, `src/assets/borhan-sheet.png` | Aligned four-frame character sprite sheets            |
 
 See [Architecture](docs/ARCHITECTURE.md), [Art pipeline](assets/README.md), [Contributing](CONTRIBUTING.md), and [Changelog](CHANGELOG.md).
 

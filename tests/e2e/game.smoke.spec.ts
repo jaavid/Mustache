@@ -30,6 +30,11 @@ test('loads pixel-art scene and enters play in desktop and portrait layouts', as
     box.y + box.height * (isMobile ? 792 / 960 : 385 / 540),
   );
 
+  // Select Borhan via the same keyboard controls in both layouts, then launch.
+  await page.waitForTimeout(150);
+  await canvas.screenshot({ path: info.outputPath('character-select.png') });
+  await page.keyboard.press('2');
+  await page.keyboard.press('Enter');
   await page.waitForTimeout(900);
   await expect(canvas).toBeVisible();
   await canvas.screenshot({ path: info.outputPath('started.png') });

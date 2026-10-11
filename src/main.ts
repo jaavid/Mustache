@@ -4,6 +4,7 @@ import { BootScene, MenuScene, PlayScene, ResultsScene } from './game/scenes';
 import { MobileMenuScene, MobilePlayScene, MobileResultsScene } from './game/mobile';
 import { GuideScene, PauseOverlayScene } from './game/overlays';
 import { stopMusic } from './game/sound';
+import { CharacterSelectScene } from './game/characterSelect';
 
 const portraitMedia = window.matchMedia('(max-width: 700px) and (orientation: portrait)');
 let game: Phaser.Game | undefined;
@@ -28,12 +29,13 @@ function mountGame(): void {
       ? [
           BootScene,
           MobileMenuScene,
+          CharacterSelectScene,
           MobilePlayScene,
           MobileResultsScene,
           GuideScene,
           PauseOverlayScene,
         ]
-      : [BootScene, MenuScene, PlayScene, ResultsScene, GuideScene, PauseOverlayScene],
+      : [BootScene, MenuScene, CharacterSelectScene, PlayScene, ResultsScene, GuideScene, PauseOverlayScene],
   });
 }
 

@@ -48,6 +48,7 @@ import { attachMustache, resolveMissImpact, showLandingPrecision } from './impac
 import { toHeroAnchor, fromHeroAnchor, type StickerAnchor } from '../logic/stickerAnchor';
 import { RaminMomentController } from './raminMoments';
 import { GoldenFlyer } from './goldenFlyer';
+import { characterName } from './characterChoice';
 import { armGoldenForSelection, shouldLaunchGolden } from '../logic/goldenSelection';
 
 /** Dedicated 540 × 960 portrait experience. Desktop scenes remain unchanged. */
@@ -194,12 +195,12 @@ export class MobileMenuScene extends Phaser.Scene {
       repeat: -1,
       ease: 'Sine.inOut',
     });
-    text(this, 270, 691, 'CATCH RAMIN IN THE FOREST!', 22, '#fbe8bc');
+    text(this, 270, 691, `CATCH ${characterName()} IN THE FOREST!`, 22, '#fbe8bc');
     addSoundToggle(this, 468, 38, 118);
     addMusicToggle(this, 72, 38, 118);
     const start = () => {
       playSfx('start');
-      this.scene.start('Play');
+      this.scene.start('CharacterSelect');
     };
     largeButton(this, 270, 792, '▶ PLAY NOW', start);
     text(this, 270, 871, '45 SEC  ·  3 MISSIONS  ·  COMBOS', 17, '#decbea');
@@ -449,7 +450,7 @@ export class MobilePlayScene extends Phaser.Scene {
     else if (fromDouble) this.varietyNotice('AGAIN!', '#ffdd82');
     else if (event === 'double') this.varietyNotice('DOUBLE POP!', '#ffdd82');
     else if (this.currentVariant === 'gold') this.varietyNotice('GOLD +50!', '#ffd774');
-    else if (this.currentVariant === 'sunglasses') this.varietyNotice('COOL RAMIN', '#b6d5ff');
+    else if (this.currentVariant === 'sunglasses') this.varietyNotice(`COOL ${characterName()}`, '#b6d5ff');
     enterFromTree(this, this.hero, { x, y }, RAMIN_MOBILE_SCALE, plan, () => {
       if (this.roundOver || serial !== this.spawnSerial) return;
       if (event === 'fake-out') {
@@ -741,7 +742,7 @@ export class MobileResultsScene extends Phaser.Scene {
     addResultsExtras(this, true, this.score, this.summary);
     largeButton(this, 270, 839, '↻ PLAY AGAIN', () => {
       playSfx('start');
-      this.scene.start('Play');
+      this.scene.start('CharacterSelect');
     });
     text(this, 270, 951, 'PRACTICE MODE · NO REAL TOKENS', 13, '#dccae7');
     this.input.keyboard?.once('keydown-ENTER', () => this.scene.start('Play'));

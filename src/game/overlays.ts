@@ -164,7 +164,7 @@ export class GuideScene extends Phaser.Scene {
       ['CHOOSE A MUSTACHE', 'Tap one of the 3 styles below.', '1  ·  2  ·  3'],
       [
         'AIM BELOW THE NOSE',
-        'Tap Ramin’s upper lip, not his eyes.',
+        'Tap the hero’s upper lip, not the eyes.',
         'The mustache flies to your target',
       ],
       [

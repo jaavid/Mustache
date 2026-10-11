@@ -56,6 +56,7 @@ import { attachMustache, resolveMissImpact, showLandingPrecision } from './impac
 import { toHeroAnchor, fromHeroAnchor, type StickerAnchor } from '../logic/stickerAnchor';
 import { RaminMomentController } from './raminMoments';
 import { GoldenFlyer } from './goldenFlyer';
+import { characterName } from './characterChoice';
 import { armGoldenForSelection, shouldLaunchGolden } from '../logic/goldenSelection';
 
 const WIDTH = 960;
@@ -217,7 +218,7 @@ export class MenuScene extends Phaser.Scene {
     label(this, 310, 267, 'AIM  ·  SHOOT  ·  STACHE', 18, '#e4dbb7');
     const start = () => {
       playSfx('start');
-      this.scene.start('Play');
+      this.scene.start('CharacterSelect');
     };
     addSoundToggle(this, 895, 42);
     addMusicToggle(this, 895, 94, 106);
@@ -243,7 +244,7 @@ export class MenuScene extends Phaser.Scene {
       menuStache.setPosition(lip.x, lip.y).setRotation(hero.rotation);
     });
     this.add.image(745, 106, 'coin').setScale(1.6).setDepth(46);
-    label(this, 790, 481, 'MEET RAMIN!', 23, '#ffe19a');
+    label(this, 790, 481, `MEET ${characterName()}!`, 23, '#ffe19a');
     label(this, 310, 513, 'Click his upper lip, not his nose!', 14, '#c0efd8');
     this.input.keyboard?.once('keydown-ENTER', start);
     this.input.keyboard?.once('keydown-SPACE', start);
@@ -518,8 +519,8 @@ export class PlayScene extends Phaser.Scene {
     if (event === 'fake-out') this.varietyNotice('FAKE-OUT!', '#ffc3ab');
     else if (fromDouble) this.varietyNotice('AGAIN!', '#ffdd82');
     else if (event === 'double') this.varietyNotice('DOUBLE POP!', '#ffdd82');
-    else if (this.currentVariant === 'gold') this.varietyNotice('GOLD RAMIN · +50', '#ffd774');
-    else if (this.currentVariant === 'sunglasses') this.varietyNotice('COOL RAMIN', '#b6d5ff');
+    else if (this.currentVariant === 'gold') this.varietyNotice(`GOLD ${characterName()} · +50`, '#ffd774');
+    else if (this.currentVariant === 'sunglasses') this.varietyNotice(`COOL ${characterName()}`, '#b6d5ff');
     enterFromTree(this, this.hero, { x, y }, RAMIN_DESKTOP_SCALE, plan, () => {
       if (this.roundOver || serial !== this.spawnSerial) return;
       if (event === 'fake-out') {
@@ -820,7 +821,7 @@ export class ResultsScene extends Phaser.Scene {
     addResultsExtras(this, false, this.finalScore, this.summary);
     const again = () => {
       playSfx('start');
-      this.scene.start('Play');
+      this.scene.start('CharacterSelect');
     };
     button(this, 642, 452, 324, 67, '↻  PLAY AGAIN', again);
     label(this, 493, 511, 'NO REAL TOKENS · PRACTICE MODE', 16, '#d1bbdb');
