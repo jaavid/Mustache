@@ -14,7 +14,8 @@
     "format:check": "prettier --check eslint.config.js scripts/ *.json",
     "assets:check": "node scripts/check-assets.mjs",
     "docs:check": "node scripts/check-docs.mjs",
-    "check": "npm run lint && npm run assets:check && npm run docs:check && npm run typecheck && npm test && npm run build"
+    "check": "npm run lint && npm run assets:check && npm run docs:check && npm run typecheck && npm test && npm run build",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "phaser": "^3.90.0"
@@ -25,6 +26,7 @@
     "vitest": "^3.2.4",
     "@typescript-eslint/parser": "^8.46.0",
     "eslint": "^9.38.0",
-    "prettier": "^3.6.2"
+    "prettier": "^3.6.2",
+    "@playwright/test": "^1.56.1"
   }
 }

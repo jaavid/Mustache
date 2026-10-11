@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - '.github/workflows/bootstrap-lock.yml'
+      - 'package.json'
   workflow_dispatch:
 permissions:
   contents: write
@@ -16,14 +17,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Generate package-lock from actual npm resolution
+      - name: Regenerate lockfile from npm resolution
         run: npm install --package-lock-only --no-audit --no-fund
-      - name: Commit deterministic resolution
+      - name: Commit resolved lockfile
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add package-lock.json
           if ! git diff --cached --quiet; then
-            git commit -m 'build: commit reproducible npm dependency resolution'
+            git commit -m 'build: update locked dependencies'
             git push origin HEAD:main
           fi
