@@ -126,6 +126,7 @@ export function showLeaderboardOverlay(
   let offset = 0;
   let requestNumber = 0;
   let current: Board | undefined = args.initialBoard;
+  let loading = false;
   const periodLine = addText(w / 2, portrait ? 323 : 175, '', portrait ? 15 : 15, '#edd6ad');
   const listText = addText(
     w / 2,
@@ -154,7 +155,7 @@ export function showLeaderboardOverlay(
       return;
     }
     if (!current) {
-      periodLine.setText('LOADING TEHRAN SCOREBOARD...');
+      periodLine.setText(loading ? 'LOADING TEHRAN SCOREBOARD...' : 'SCOREBOARD TEMPORARILY UNAVAILABLE');
       listText.setText('');
       ownLine.setText('');
       infoLine.setText('');
@@ -195,11 +196,12 @@ export function showLeaderboardOverlay(
     }
     if (tab !== 'week' || offset !== 0 || !args.initialBoard) current = undefined;
     else current = args.initialBoard;
+    loading = !current;
     render();
     const board = current || (await getLeaderboard(tab, offset));
     if (seq !== requestNumber || !sheet.active) return;
     current = board;
-    if (!board) periodLine.setText('SCOREBOARD TEMPORARILY UNAVAILABLE');
+    loading = false;
     render();
   }
   tabs.forEach((tab, i) => {
