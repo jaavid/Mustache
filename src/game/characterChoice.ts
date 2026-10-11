@@ -19,3 +19,13 @@ export function setSelectedCharacter(character: CharacterId): void {
 export function characterName(character: CharacterId = currentCharacter): string {
   return character === 'borhan' ? 'BORHAN' : 'RAMIN';
 }
+
+/** Visual-only projectile mapping; scoring keeps the same three style indices. */
+export const BORHAN_MUSTACHE_NAMES = ['CHEVRON', 'HANDLEBAR', 'HORSESHOE'] as const;
+export function mustacheTexture(style: number, gold = false): string {
+  if (!Number.isInteger(style) || style < 0 || style > 2) {
+    throw new RangeError('Unknown mustache style');
+  }
+  const prefix = currentCharacter === 'borhan' ? 'borhan-stache-' : 'stache-';
+  return prefix + (gold ? 'gold' : String(style));
+}

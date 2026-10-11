@@ -89,7 +89,8 @@ export function createFacialAtlas(
   };
   if (sourceKey !== 'borhan-sheet')
     replaceRegion(FACE_FRAME_INDEX.blink, FACE_FRAME_INDEX.wink, FACE_PATCHES.wink);
-  replaceRegion(FACE_FRAME_INDEX.surprised, FACE_FRAME_INDEX.serious, FACE_PATCHES.serious);
+  if (sourceKey !== 'borhan-sheet')
+    replaceRegion(FACE_FRAME_INDEX.surprised, FACE_FRAME_INDEX.serious, FACE_PATCHES.serious);
 
   // TextureManager.addSpriteSheet accepts an HTMLImageElement or Phaser Texture,
   // not a raw HTMLCanvasElement in Phaser 3.90. Register the canvas itself

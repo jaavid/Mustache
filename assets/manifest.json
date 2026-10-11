@@ -60,6 +60,16 @@
       "producer": "src/game/art.ts"
     },
     {
+      "key": "borhan-stache-{0..2}",
+      "producer": "src/game/art.ts",
+      "count": 3
+    },
+    {
+      "key": "borhan-stache-gold",
+      "producer": "src/game/art.ts",
+      "count": 1
+    },
+    {
       "key": "stache-{0..2}",
       "producer": "src/game/art.ts",
       "count": 3

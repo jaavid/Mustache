@@ -6,12 +6,12 @@ Pixel-art arcade game built with **Phaser 3, TypeScript, and Vite**.
 
 ## Gameplay
 
-Choose **Ramin or Borhan** in a six-second pre-round selection (1/2 on desktop, tap either hero on mobile), then throw a mustache at the precise upper-lip location while the chosen hero peeks from three trees. The current selection carries into the result screen and can be changed before every replay.
+Choose **Ramin or Borhan** in a six-second pre-round selection (1/2 on desktop, tap either hero on mobile), then throw a mustache at the precise upper-lip location while the chosen hero peeks from three trees. The current selection carries into the result screen and can be changed before every replay. **Borhan has his own three mustache silhouettes** (chevron, handlebar and horseshoe), plus a matching golden special; these use the same scoring/hit zones as Ramin.
 
 - **45 seconds** with distinct sunset (0–15 s), twilight (15–30 s), and night (30–45 s) stages.
 - The projectile scores **at impact**; the sticker stays exactly where you aimed (no automatic correction).
 - Hit areas are **elliptical**. Desktop radii: PERFECT 17 × 12, GOOD 33 × 21. Mobile portrait radii: PERFECT 21 × 15, GOOD 38 × 26 logical pixels.
-- PERFECT = 100 points, GOOD = 50, MISS = 0; streak bonus +10 per extra hit, capped at +50. Gold Ramin adds +50; PERFECT on sunglasses adds +25.
+- PERFECT = 100 points, GOOD = 50, MISS = 0; streak bonus +10 per extra hit, capped at +50. Gold character variant adds +50; PERFECT on sunglasses adds +25.
 - Mustache style only changes animation; it cannot give a scoring advantage.
 - Misses stick to a tree **only** if the projectile actually hits its bark; otherwise they fall.
 - Local best scores, missions and badges are stored in your browser. No prize eligibility or verified leaderboard.
