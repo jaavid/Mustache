@@ -27,7 +27,11 @@ const sessionToken = (() => {
   params.delete('tg_session');
   const query = params.toString();
   // Remove the bearer token from browser history and future Referer headers.
-  window.history.replaceState(null, '', window.location.pathname + (query ? '?' + query : '') + window.location.hash);
+  window.history.replaceState(
+    null,
+    '',
+    window.location.pathname + (query ? '?' + query : '') + window.location.hash,
+  );
   return value;
 })();
 
@@ -45,9 +49,12 @@ async function api(path: string, payload: unknown) {
 let active: { started: Promise<string>; shots: Trace[] } | null = null;
 
 export function startCompetitiveRound(portrait: boolean): void {
-  if (!sessionToken) { active = null; return; }
+  if (!sessionToken) {
+    active = null;
+    return;
+  }
   active = {
-    started: api('/api/round/start', { portrait }).then(data => String(data.roundId)),
+    started: api('/api/round/start', { portrait }).then((data) => String(data.roundId)),
     shots: [],
   };
   // The result screen awaits this promise; silence abandoned scenes/rejections.
@@ -66,7 +73,11 @@ export async function submitCompetitiveRound(score: number): Promise<Submission>
   try {
     const roundId = await current.started;
     const result = await api('/api/round/finish', { roundId, score, shots: current.shots });
-    return { state: 'saved', telegramSynced: !!result.telegramSynced, board: result.leaderboard as Board };
+    return {
+      state: 'saved',
+      telegramSynced: !!result.telegramSynced,
+      board: result.leaderboard as Board,
+    };
   } catch {
     // Never present local-only results as official scores.
     return { state: 'unavailable' };
