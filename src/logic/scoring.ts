@@ -1,22 +1,6 @@
 export type Grade = 'perfect' | 'good' | 'miss';
 export type ShotResult = { grade: Grade; points: number; combo: number; distance: number };
 
-/** Screen-space evaluation; coordinates must use Phaser's logical 960x540 canvas. */
-export function evaluateShot(
-  distance: number,
-  currentCombo: number,
-  isTargetVisible: boolean,
-): ShotResult {
-  if (!isTargetVisible || !Number.isFinite(distance) || distance > 43) {
-    return { grade: 'miss', points: 0, combo: 0, distance };
-  }
-  const combo = currentCombo + 1;
-  const base = distance <= 19 ? 100 : 50;
-  // Capped streak bonus: neither spam nor clicking an inactive target earns points.
-  const bonus = Math.min(50, Math.max(0, combo - 1) * 10);
-  return { grade: base === 100 ? 'perfect' : 'good', points: base + bonus, combo, distance };
-}
-
 /** The lip is a horizontal target, not a generous circle around the face.
  * These physical pixel radii are shared by visual feedback and scoring.
  * Mobile gets a deliberately modest allowance for finger occlusion.

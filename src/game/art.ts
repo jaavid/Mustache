@@ -341,83 +341,6 @@ function raminAccessory(c: Ctx, variant: RaminVariant) {
   rect(c, 146, 62, 12, 4, '#f7d58c');
 }
 
-function hero(c: Ctx, expression: 'normal' | 'blink' | 'surprised' = 'normal') {
-  // 64×88 heroic portrait sprite; original pixel character inspired by Ramin's short dark hair and black hoodie.
-  // feet/body and hood
-  rect(c, 16, 76, 12, 12, '#101b24');
-  rect(c, 38, 76, 12, 12, '#101b24');
-  rect(c, 17, 84, 15, 4, '#efefed');
-  rect(c, 38, 84, 15, 4, '#efefed');
-  ellipse(c, 32, 71, 27, 22, '#0b161e');
-  rect(c, 10, 57, 44, 30, '#131a26');
-  rect(c, 16, 62, 31, 24, '#171d27');
-  rect(c, 21, 55, 23, 12, '#27303b');
-  // dark hood collar
-  ellipse(c, 32, 56, 22, 13, '#090f17');
-  ellipse(c, 32, 52, 16, 10, '#28303b');
-  // arms, sleeve shading, hands
-  rect(c, 6, 60, 10, 19, '#0b141d');
-  rect(c, 48, 60, 11, 19, '#0b141d');
-  rect(c, 9, 65, 4, 9, '#30323a');
-  rect(c, 50, 64, 3, 9, '#30323a');
-  rect(c, 12, 76, 9, 7, '#e6a47b');
-  rect(c, 44, 76, 9, 7, '#e6a47b');
-  // ears
-  rect(c, 14, 34, 5, 10, '#d08b66');
-  rect(c, 46, 34, 5, 10, '#d08b66');
-  rect(c, 16, 36, 3, 8, '#f2bd96');
-  rect(c, 46, 36, 3, 8, '#f2bd96');
-  // face with square jagged silhouette at pixel edges
-  rect(c, 20, 14, 24, 35, '#dc9d77');
-  rect(c, 17, 23, 30, 22, '#e7a985');
-  rect(c, 19, 19, 27, 26, '#f0bc96');
-  rect(c, 21, 25, 24, 22, '#f6c8a1');
-  rect(c, 24, 46, 17, 6, '#e5a37f');
-  // forehead and fringe
-  rect(c, 18, 18, 29, 6, '#272127');
-  rect(c, 19, 13, 25, 9, '#29252a');
-  rect(c, 24, 9, 20, 8, '#26272c');
-  rect(c, 30, 6, 12, 5, '#27252b');
-  rect(c, 36, 9, 8, 4, '#171a20');
-  rect(c, 17, 22, 5, 5, '#2d2729');
-  rect(c, 43, 21, 4, 6, '#2d2729');
-  rect(c, 20, 15, 9, 3, '#403035');
-  // soft eyebrows and lively dark eyes
-  rect(c, 22, 28, 8, 2, '#65453b');
-  rect(c, 36, 28, 8, 2, '#65453b');
-  rect(c, 24, 32, 4, 3, '#271f29');
-  rect(c, 38, 32, 4, 3, '#271f29');
-  rect(c, 25, 32, 1, 1, '#faf4de');
-  rect(c, 39, 32, 1, 1, '#faf4de');
-  // nose and smiling bare lip (target at y=42)
-  rect(c, 31, 36, 3, 5, '#dc9a78');
-  rect(c, 29, 40, 7, 2, '#ce8b6d');
-  rect(c, 26, 47, 14, 1, '#925b57');
-  rect(c, 28, 48, 10, 1, '#ae7470');
-  // hoodie highlights and tiny embroidered N5 pixels
-  rect(c, 25, 64, 2, 13, '#747783');
-  rect(c, 41, 64, 2, 13, '#747783');
-  rect(c, 29, 72, 8, 2, '#9678db');
-  rect(c, 29, 76, 3, 3, '#d8bc6f');
-  rect(c, 34, 76, 3, 3, '#d8bc6f');
-  rect(c, 18, 81, 30, 5, '#111521');
-  // The expression frames have identical geometry and mouth anchors.
-  if (expression === 'blink') {
-    rect(c, 22, 32, 8, 4, '#f6c8a1');
-    rect(c, 36, 32, 8, 4, '#f6c8a1');
-    rect(c, 23, 34, 6, 1, '#62423a');
-    rect(c, 37, 34, 6, 1, '#62423a');
-  } else if (expression === 'surprised') {
-    rect(c, 21, 28, 10, 2, '#49323a');
-    rect(c, 35, 28, 10, 2, '#49323a');
-    rect(c, 23, 32, 5, 5, '#24202b');
-    rect(c, 38, 32, 5, 5, '#24202b');
-    rect(c, 25, 32, 1, 2, '#ffffff');
-    rect(c, 40, 32, 1, 2, '#ffffff');
-    rect(c, 28, 47, 10, 4, '#a76061');
-    rect(c, 30, 48, 6, 2, '#4e2d39');
-  }
-}
 function mustache(c: Ctx, style: number) {
   const pixels = decodeMustache(style);
   const shades = ['', '#1c1921', '#54494e', '#807476'];
@@ -513,9 +436,6 @@ export function createArt(scene: Phaser.Scene) {
   for (const variant of RAMIN_VARIANTS)
     makeCanvas(scene, `ramin-acc-${variant}`, 210, 362, (ctx) => raminAccessory(ctx, variant));
   makeCanvas(scene, 'ramin-emote-hand', 35, 40, raminEmoteHand);
-  makeCanvas(scene, 'ramin', 64, 88, (ctx) => hero(ctx));
-  makeCanvas(scene, 'ramin-blink', 64, 88, (ctx) => hero(ctx, 'blink'));
-  makeCanvas(scene, 'ramin-surprised', 64, 88, (ctx) => hero(ctx, 'surprised'));
   makeCanvas(scene, 'mist', 480, 90, mist);
   makeCanvas(scene, 'forest-front', 480, 80, forestFront);
   makeCanvas(scene, 'spark', 8, 8, spark);

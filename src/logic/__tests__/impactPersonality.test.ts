@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { impactCharacter, impactPlan, closestTree } from '../impactPersonality';
+import { impactCharacter, impactPlan } from '../impactPersonality';
 describe('visual-only mustache style impact', () => {
   it('gives three recognizable impact patterns, independent of points', () => {
     expect([0, 1, 2].map(impactCharacter)).toEqual(['snap', 'twirl', 'heavy']);
@@ -14,11 +14,7 @@ describe('visual-only mustache style impact', () => {
         impactPlan(style, 'perfect').peakScale,
       );
   });
-  it('selects visually nearest trunk for missed stickers', () => {
-    expect(closestTree(195, [100, 300, 500])).toBe(100);
-    expect(closestTree(480, [100, 300, 500])).toBe(500);
-    expect(() => closestTree(1, [])).toThrow(RangeError);
-  });
+
 });
 
 import { treeAtImpact } from '../impactPersonality';

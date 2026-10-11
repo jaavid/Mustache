@@ -57,10 +57,3 @@ export function treeAtImpact(aim: { x: number; y: number }, bounds: TrunkBounds)
     if (Math.abs(aim.x - center) <= bounds.halfWidth) return center;
   return null;
 }
-export function closestTree(x: number, centers: readonly number[]): number {
-  if (!centers.length) throw new RangeError('At least one tree required');
-  return centers.reduce(
-    (best, next) => (Math.abs(next - x) < Math.abs(best - x) ? next : best),
-    centers[0],
-  );
-}

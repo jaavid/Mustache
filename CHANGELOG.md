@@ -7,6 +7,8 @@
 - Introduced conservative linting, asset checks and optional browser smoke tests.
 - Kept the game's mechanics and visuals unchanged.
 
+- Removed old procedural 64×88 Ramin placeholder textures, obsolete circular hit-scoring helper, nearest-tree magnet function and unused touch-distance scaler. Their current, tested replacements remain the only active implementations.
+
 ## Historical notes (v0.1 through v0.9.8.2)
 
 The previous README is preserved below for history. **Some sections describe superseded mechanics**; the main README is authoritative for current behavior.
