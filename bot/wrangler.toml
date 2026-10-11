@@ -1,6 +1,14 @@
 name = "n5-mustache-rjttobot"
 main = "src/index.js"
 compatibility_date = "2026-09-01"
+workers_dev = true
+
+# The Telegram webhook and score API must use the SAME deployed Worker.
+# Without this binding Wrangler only updates workers.dev while the game calls
+# mustache.zedai.ir, which previously served 404 for /api/status.
+[[routes]]
+pattern = "mustache.zedai.ir"
+custom_domain = true
 
 [vars]
 BOT_USERNAME = "rjttobot"
