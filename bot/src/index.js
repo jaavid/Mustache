@@ -20,7 +20,7 @@ export function isSameSecret(actual, expected) {
 
 export function parseGameCommand(input, botUsername = DEFAULT_BOT_USERNAME) {
   const first = String(input ?? '').trim().split(/\s+/)[0];
-  const match = /^\/(start|play|help)(?:@([a-zA-Z0-9_]+))?$/i.exec(first);
+  const match = /^\/(start|play|help|top|score)(?:@([a-zA-Z0-9_]+))?$/i.exec(first);
   if (!match) return null;
   if (match[2] && match[2].toLowerCase() !== botUsername.toLowerCase()) return null;
   return match[1].toLowerCase();
@@ -48,8 +48,20 @@ export async function handleTelegramUpdate(update, env, send) {
     } else if (command === 'help') {
       await send('sendMessage', {
         chat_id: message.chat.id,
-        text: 'N5 Mustache Mayhem: send /play to launch. Weekly scores appear in the game; no token prizes until anti-cheat is complete.',
+        text: 'N5 Mustache Mayhem: /play to launch, /top for the Tehran Saturday-to-Saturday leaderboard, /score for your ranking. No real token prizes.',
       });
+    } else if (command === 'top' || command === 'score') {
+      if (!env.DB) throw new Error('D1_NOT_CONFIGURED');
+      const board = await leaderboard(env.DB, Date.now(), { userId: message.from?.id });
+      const lines = ['🏆 MUSTACHE · TEHRAN WEEKLY TOP 10', board.startLabel || '', ''];
+      if (board.players.length === 0) lines.push('No scored rounds this week yet.');
+      for (const player of board.players) {
+        lines.push('#' + player.rank + '  ' + player.name + ' — ' + player.score);
+      }
+      lines.push('', 'Players: ' + board.playerCount);
+      if (board.me) lines.push('Your rank: #' + board.me.rank + ' · ' + board.me.score);
+      lines.push('Play: https://t.me/RJTtobot?game=mustache');
+      await send('sendMessage', { chat_id: message.chat.id, text: lines.join('\n') });
     }
     return;
   }
@@ -92,6 +104,11 @@ export async function callTelegram(token, method, payload) {
   });
   const body = await response.json();
   if (!response.ok || body.ok !== true) {
+    const description = String(body?.description || '');
+    if (method === 'setGameScore' &&
+        /BOT_SCORE_NOT_MODIFIED|score.*not (greater|modified)|not greater/i.test(description)) {
+      throw new Error('TELEGRAM_SCORE_NOT_HIGHER');
+    }
     throw new Error('Telegram Bot API failed for ' + method);
   }
   return body.result;
@@ -130,7 +147,15 @@ async function gameApi(request, env, url) {
 
   try {
     if (api === '/api/leaderboard' && request.method === 'GET') {
-      return jsonReply(await leaderboard(env.DB), 200, cors);
+      const period = url.searchParams.get('period') || 'week';
+      const offset = Number(url.searchParams.get('offset') || 0);
+      const session = request.headers.has('authorization') ? await authenticate(env.DB, request) : null;
+      if (request.headers.has('authorization') && !session) {
+        return jsonReply({ error: 'UNAUTHORIZED' }, 401, cors);
+      }
+      return jsonReply(await leaderboard(env.DB, Date.now(), {
+        period, offset, userId: session?.user_id,
+      }), 200, cors);
     }
     if ((api === '/api/round/start' || api === '/api/round/finish') && request.method === 'POST') {
       const session = await authenticate(env.DB, request);
@@ -143,30 +168,51 @@ async function gameApi(request, env, url) {
         return jsonReply(await startRound(env.DB, session, body.portrait), 200, cors);
       }
       const result = await finishRound(env.DB, session, body);
-      let telegramSynced = false;
-      if (result.score > 0) {
-        // Telegram native high scores are all-time, while D1 resets every Monday UTC.
-        // For duplicate submissions we retry an unsynced score, never mutate stored points.
-        const stored = await env.DB.prepare('SELECT telegram_synced FROM game_rounds WHERE id=?').bind(body.roundId).first();
-        telegramSynced = stored?.telegram_synced === 1;
-        if (!telegramSynced) {
-          const payload = { user_id: session.user_id, score: result.score };
-          if (session.inline_message_id) payload.inline_message_id = session.inline_message_id;
-          else {
-            payload.chat_id = session.chat_id;
-            payload.message_id = session.message_id;
-          }
-          try {
-            await callTelegram(env.BOT_TOKEN, 'setGameScore', payload);
-            await env.DB.prepare('UPDATE game_rounds SET telegram_synced=1 WHERE id=?').bind(body.roundId).run();
-            telegramSynced = true;
-          } catch {
-            // A previous higher score returns a non-increasing-score Telegram error;
-            // do not force-decrease the official record. D1 weekly score still counts.
-          }
+      // Always preserve the accepted D1 score. Telegram's Game Card scoreboard
+      // uses a per-chat/all-time personal high, not our Tehran weekly rankings.
+      const stored = await env.DB.prepare(
+        'SELECT telegram_state FROM game_rounds WHERE id=? AND user_id=?'
+      ).bind(body.roundId, session.user_id).first();
+      let telegramState = stored?.telegram_state || 'pending';
+      const gameContext = { user_id: session.user_id };
+      if (session.inline_message_id) gameContext.inline_message_id = session.inline_message_id;
+      else {
+        gameContext.chat_id = session.chat_id;
+        gameContext.message_id = session.message_id;
+      }
+      if (result.score > 0 && !['updated', 'previous_best'].includes(telegramState)) {
+        try {
+          // Telegram updates the native Game Card text when this succeeds.
+          await callTelegram(env.BOT_TOKEN, 'setGameScore', {
+            ...gameContext, score: result.score, disable_edit_message: false,
+          });
+          telegramState = 'updated';
+        } catch (error) {
+          telegramState = error instanceof Error && error.message === 'TELEGRAM_SCORE_NOT_HIGHER'
+            ? 'previous_best' : 'retry';
+        }
+        await env.DB.prepare(
+          'UPDATE game_rounds SET telegram_state=?, telegram_synced=? WHERE id=? AND user_id=?'
+        ).bind(telegramState, telegramState === 'updated' ? 1 : 0, body.roundId, session.user_id).run();
+      }
+      let telegramScores = [];
+      if (['updated', 'previous_best'].includes(telegramState)) {
+        try {
+          const highs = await callTelegram(env.BOT_TOKEN, 'getGameHighScores', gameContext);
+          telegramScores = highs.map(row => ({
+            rank: row.position,
+            name: [row.user?.first_name, row.user?.last_name].filter(Boolean).join(' ').slice(0, 48) || 'Player',
+            score: row.score,
+          }));
+        } catch {
+          // Telegram's neighbor-based ranking is supplementary, not D1 authority.
         }
       }
-      return jsonReply({ ...result, telegramSynced, leaderboard: await leaderboard(env.DB) }, 200, cors);
+      return jsonReply({
+        ...result, telegramSynced: telegramState === 'updated',
+        telegramState, telegramScores,
+        leaderboard: await leaderboard(env.DB, Date.now(), { userId: session.user_id }),
+      }, 200, cors);
     }
     return jsonReply({ error: 'NOT_FOUND' }, 404, cors);
   } catch (error) {
