@@ -1,0 +1,8 @@
+name = "n5-mustache-rjtrobot"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+BOT_USERNAME = "rjtrobot"
+GAME_SHORT_NAME = "mustache_mayhem"
+GAME_URL = "https://mustache.alexa.ir/"

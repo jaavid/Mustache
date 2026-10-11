@@ -7,6 +7,7 @@ import {
   scoreShareText,
   storeNewAchievements,
 } from '../logic/progression';
+import { isTelegramGame, shareTelegramGame } from '../platform/telegramGame';
 
 const FONT = '"Courier New", monospace';
 export function addResultsExtras(
@@ -75,7 +76,7 @@ function addShareButton(
     .setDepth(100)
     .setInteractive({ useHandCursor: true });
   const txt = scene.add
-    .text(x, y, '↗ SHARE RESULT', {
+    .text(x, y, isTelegramGame() ? '↗ SHARE GAME' : '↗ SHARE RESULT', {
       fontFamily: FONT,
       fontSize: '17px',
       fontStyle: 'bold',
@@ -100,6 +101,10 @@ function addShareButton(
         txt.setText(title);
         busy = false;
       };
+      if (shareTelegramGame()) {
+        update('↗ SHARE GAME');
+        return;
+      }
       const fallback = async () => {
         try {
           if (navigator.clipboard?.writeText) {

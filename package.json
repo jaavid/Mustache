@@ -15,7 +15,8 @@
     "assets:check": "node scripts/check-assets.mjs",
     "docs:check": "node scripts/check-docs.mjs",
     "check": "npm run format:check && npm run lint && npm run assets:check && npm run docs:check && npm run typecheck && npm test && npm run build",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:bot": "node --test bot/tests/*.test.mjs"
   },
   "dependencies": {
     "phaser": "^3.90.0"
