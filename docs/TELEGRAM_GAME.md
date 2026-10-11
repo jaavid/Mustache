@@ -1,4 +1,4 @@
-# Official Telegram Game deployment — @rjtrobot
+# Official Telegram Game deployment — @RJTtobot
 
 This is **Telegram Games API**, not Telegram Mini Apps. The existing static
 frontend stays on GitHub Pages; Cloudflare Worker handles the bot webhook.
@@ -7,21 +7,21 @@ The bot is **not deployed or connected** merely by merging this PR.
 ## 1. Create the Game in @BotFather
 
 1. Send `/newgame` to [@BotFather](https://t.me/BotFather).
-2. Select the existing bot **@rjtrobot**.
+2. Select the existing bot **@RJTtobot**.
 3. Title: **N5 Mustache Mayhem**.
 4. Description: **Catch Ramin in the forest and land your mustache precisely! 45 seconds, three stages, big combos.**
 5. Upload a landscape gameplay cover PNG/JPG (optional animation is supported).
-6. Short name: **mustache_mayhem** (use the exact final short name in `bot/wrangler.toml`).
+6. Short name: **mustache** (use the exact final short name in `bot/wrangler.toml`).
 7. Agree to the Telegram gaming terms and complete any prompts.
 8. If prompted to configure a game URL or game domain, use
    **https://mustache.alexa.ir/**. The Worker returns this exact HTTPS URL
    in `answerCallbackQuery`.
 
 Game link after registration:
-https://t.me/rjtrobot?game=mustache_mayhem
+https://t.me/RJTtobot?game=mustache
 
-To allow `@rjtrobot mustache` to insert Game Cards into chats, enable inline
-mode via `/setinline` for **@rjtrobot**. Inline mode is optional.
+To allow `@RJTtobot mustache` to insert Game Cards into chats, enable inline
+mode via `/setinline` for **@RJTtobot**. Inline mode is optional.
 
 Do not configure the **Main Mini App** for this purpose: `/newgame` creates the
 official native **Game Card / Play** experience.
@@ -42,13 +42,13 @@ npx wrangler@4 secret put WEBHOOK_SECRET
 npx wrangler@4 deploy
 ```
 
-- `BOT_TOKEN`: BotFather's standard **HTTP API token** for **@rjtrobot**.
+- `BOT_TOKEN`: BotFather's standard **HTTP API token** for **@RJTtobot**.
 - `WEBHOOK_SECRET`: a separate random 32+ character string. Generate it
   privately (e.g. `openssl rand -hex 32`). It is **not** the bot token.
 - Never commit either token or paste them into issues, PRs or chat.
 - Copy the actual `https://....workers.dev` URL printed by deployment.
 
-**IMPORTANT:** `setWebhook` replaces any current webhook on **@rjtrobot**.
+**IMPORTANT:** `setWebhook` replaces any current webhook on **@RJTtobot**.
 Check `getWebhookInfo` and back up existing handlers before changing it.
 If this bot currently runs other features, merge their routing into this
 Worker (or send the game callbacks through the existing bot backend) rather
@@ -76,12 +76,12 @@ The worker only accepts POSTs to `/telegram/webhook` carrying
 
 ## 3. Play and check
 
-- Open [@rjtrobot](https://t.me/rjtrobot) and send `/play`.
+- Open [@RJTtobot](https://t.me/RJTtobot) and send `/play`.
 - Expect a native Game Card with **Play N5 Mustache Mayhem**.
 - Tap Play, which triggers `game_short_name` and `answerCallbackQuery(url)`.
 - Finish a round, tap **SHARE GAME** to use the Telegram gaming share dialog.
 - Test the standalone web version; it must still use Web Share/clipboard.
-- Optionally try inline mode by typing `@rjtrobot mustache` in another chat.
+- Optionally try inline mode by typing `@RJTtobot mustache` in another chat.
 
 ## 4. Scores and prizes: intentionally out of scope
 

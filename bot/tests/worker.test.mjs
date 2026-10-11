@@ -8,8 +8,8 @@ import worker, {
 
 const config = {
   GAME_URL: 'https://mustache.alexa.ir/',
-  GAME_SHORT_NAME: 'mustache_mayhem',
-  BOT_USERNAME: 'rjtrobot',
+  GAME_SHORT_NAME: 'mustache',
+  BOT_USERNAME: 'rjttobot',
 };
 
 async function dispatch(update) {
@@ -20,8 +20,8 @@ async function dispatch(update) {
   return calls;
 }
 
-test('commands only target rjtrobot and ignore ordinary messages', () => {
-  assert.equal(parseGameCommand('/play@rjtrobot'), 'play');
+test('commands only target rjttobot and ignore ordinary messages', () => {
+  assert.equal(parseGameCommand('/play@rjttobot'), 'play');
   assert.equal(parseGameCommand('/start payload'), 'start');
   assert.equal(parseGameCommand('/play@another_bot'), null);
   assert.equal(parseGameCommand('hello'), null);
@@ -30,13 +30,13 @@ test('commands only target rjtrobot and ignore ordinary messages', () => {
 test('start and play send native Game Cards', async () => {
   const calls = await dispatch({ message: { text: '/play', chat: { id: 123 } } });
   assert.deepEqual(calls, [
-    { method: 'sendGame', payload: { chat_id: 123, game_short_name: 'mustache_mayhem' } },
+    { method: 'sendGame', payload: { chat_id: 123, game_short_name: 'mustache' } },
   ]);
 });
 
 test('the Game Play callback opens the approved HTTPS game URL', async () => {
   const calls = await dispatch({
-    callback_query: { id: 'cb-1', game_short_name: 'mustache_mayhem' },
+    callback_query: { id: 'cb-1', game_short_name: 'mustache' },
   });
   assert.deepEqual(calls, [
     { method: 'answerCallbackQuery', payload: {
@@ -59,7 +59,7 @@ test('inline mode responds with InlineQueryResultGame', async () => {
   const calls = await dispatch({ inline_query: { id: 'iq-1' } });
   assert.equal(calls[0].method, 'answerInlineQuery');
   assert.deepEqual(calls[0].payload.results, [
-    { type: 'game', id: 'n5-mustache', game_short_name: 'mustache_mayhem' },
+    { type: 'game', id: 'n5-mustache', game_short_name: 'mustache' },
   ]);
 });
 
@@ -78,7 +78,7 @@ test('webhook requires the Telegram secret and never leaks token', async () => {
 
 test('rejects unsafe game URLs before answering a callback', async () => {
   await assert.rejects(
-    handleTelegramUpdate({ callback_query: { id: 'cb', game_short_name: 'mustache_mayhem' } },
+    handleTelegramUpdate({ callback_query: { id: 'cb', game_short_name: 'mustache' } },
       { ...config, GAME_URL: 'http://unsafe.invalid/' },
       async () => { throw new Error('should not send'); }),
     /HTTPS/,

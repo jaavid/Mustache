@@ -1,11 +1,11 @@
-/** Telegram Games API webhook for @rjtrobot.
+/** Telegram Games API webhook for @rjttobot.
  *
  * This Worker only creates native Game Cards and opens the static HTML5 game.
  * It NEVER accepts browser scores or calls setGameScore.
  */
 export const DEFAULT_GAME_URL = 'https://mustache.alexa.ir/';
-export const DEFAULT_GAME_SHORT_NAME = 'mustache_mayhem';
-export const DEFAULT_BOT_USERNAME = 'rjtrobot';
+export const DEFAULT_GAME_SHORT_NAME = 'mustache';
+export const DEFAULT_BOT_USERNAME = 'rjttobot';
 
 export function isSameSecret(actual, expected) {
   if (typeof actual !== 'string' || typeof expected !== 'string' || !expected) return false;

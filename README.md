@@ -64,14 +64,14 @@ See [Architecture](docs/ARCHITECTURE.md), [Art pipeline](assets/README.md), [Con
 - Every push to `main` builds and deploys to GitHub Pages using relative Vite asset paths.
 - This is a **static practice game**. It has no accounts, backend, authoritative ranking, blockchain integration, or token awards; browser scores are untrusted.
 
-## Official Telegram Game (@rjtrobot)
+## Official Telegram Game (@RJTtobot)
 
 The **Telegram Games API** integration uses the existing static Phaser game on
 https://mustache.alexa.ir/ and a separate Cloudflare Worker for Bot API updates.
 This is an official `/newgame` HTML5 Game, **not** a Telegram Mini App.
 
-- Bot: `@rjtrobot`
-- BotFather game short name: `mustache_mayhem`
+- Bot: `@RJTtobot`
+- BotFather game short name: `mustache`
 - `/start` and `/play` send Telegram's native Game Card using `sendGame`.
 - Pressing **Play** is handled through `answerCallbackQuery(url)`.
 - Inline sharing is available after `/setinline` is enabled in BotFather.
