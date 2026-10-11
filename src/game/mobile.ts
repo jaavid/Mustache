@@ -226,6 +226,9 @@ export class MobilePlayScene extends Phaser.Scene {
   private comboText!: Phaser.GameObjects.Text;
   private timeText!: Phaser.GameObjects.Text;
   private selector: Phaser.GameObjects.Rectangle[] = [];
+  private styleIcons: Phaser.GameObjects.Image[] = [];
+  private styleLabels: Phaser.GameObjects.Text[] = [];
+  private goldenArmed = false;
   private currentPlan!: PopPlan;
   private accessory!: Phaser.GameObjects.Image;
   private moments!: RaminMomentController;
@@ -248,6 +251,7 @@ export class MobilePlayScene extends Phaser.Scene {
     this.combo = 0;
     this.remaining = ROUND_LENGTH_SECONDS;
     this.selectedStyle = 0;
+    this.goldenArmed = false;
     this.activeTarget = false;
     this.shooting = false;
     this.roundOver = false;
@@ -279,8 +283,11 @@ export class MobilePlayScene extends Phaser.Scene {
       .setDepth(31)
       .setVisible(false);
     this.hud();
-    this.golden = new GoldenFlyer(this, true, (message, color) =>
-      this.varietyNotice(message, color),
+    this.golden = new GoldenFlyer(
+      this,
+      true,
+      (message, color) => this.varietyNotice(message, color),
+      (ready) => this.updateGoldenSelector(ready),
     );
     addSoundToggle(this, 469, 27, 112);
     addMusicToggle(this, 70, 27, 112);
@@ -341,6 +348,8 @@ export class MobilePlayScene extends Phaser.Scene {
     panel(this, 270, 859, 526, 190, 0x111c2e, 0.98, 75);
     text(this, 270, 793, 'CHOOSE YOUR MUSTACHE', 21, '#ffe3a4');
     this.selector = [];
+    this.styleIcons = [];
+    this.styleLabels = [];
     for (let i = 0; i < 3; i++) {
       const x = 101 + i * 169;
       const hit = this.add
@@ -357,8 +366,8 @@ export class MobilePlayScene extends Phaser.Scene {
           haptic('select');
         },
       );
-      this.add.image(x, 869, `stache-${i}`).setDisplaySize(115, 54).setDepth(80);
-      text(this, x - 53, 833, String(i + 1), 19, '#fff2bb');
+      this.styleIcons.push(this.add.image(x, 869, `stache-${i}`).setDisplaySize(115, 54).setDepth(80));
+      this.styleLabels.push(text(this, x - 53, 833, String(i + 1), 19, '#fff2bb'));
       this.selector.push(hit);
     }
     this.chooseStyle(0);
@@ -366,11 +375,30 @@ export class MobilePlayScene extends Phaser.Scene {
   }
   private chooseStyle(i: number) {
     this.selectedStyle = i;
-    this.selector.forEach((box, index) =>
+    // Only a deliberate selection AFTER charging equips the special shot.
+    // Completing the third pickup never changes an existing style selection.
+    this.goldenArmed = i === 1 && this.golden.ready;
+    this.refreshSelector();
+  }
+  private updateGoldenSelector(ready: boolean) {
+    this.goldenArmed = false;
+    const icon = this.styleIcons[1];
+    this.tweens.killTweensOf(icon);
+    icon.setAlpha(1).setTexture(ready ? 'stache-gold' : 'stache-1');
+    this.styleLabels[1].setText(ready ? 'GOLD' : '2').setColor(ready ? '#ffe291' : '#fff2bb');
+    if (ready) {
+      this.tweens.add({ targets: icon, alpha: 0.66, duration: 480, yoyo: true, repeat: -1 });
+    }
+    this.refreshSelector();
+  }
+  private refreshSelector() {
+    this.selector.forEach((box, index) => {
+      const chosen = index === this.selectedStyle;
+      const goldSlot = index === 1 && this.golden.ready;
       box
-        .setFillStyle(index === i ? 0x594171 : 0x302b48)
-        .setStrokeStyle(5, index === i ? 0xffd374 : 0x6c6282),
-    );
+        .setFillStyle(goldSlot ? (this.goldenArmed ? 0x705331 : 0x3d3041) : chosen ? 0x594171 : 0x302b48)
+        .setStrokeStyle(5, goldSlot ? (this.goldenArmed ? 0xfff3b7 : 0xe7b747) : chosen ? 0xffd374 : 0x6c6282);
+    });
   }
   private pop() {
     if (this.roundOver) return;
@@ -478,7 +506,8 @@ export class MobilePlayScene extends Phaser.Scene {
     if (this.roundOver || this.shooting) return;
     if (this.golden.tryCollect(aim.x, aim.y, this.roundElapsedMs)) return;
     if (!this.activeTarget || aim.y < HUD_BOTTOM || aim.y > SELECTOR_TOP) return;
-    const shotIsGolden = this.golden.consume();
+    const shotIsGolden = this.goldenArmed && this.golden.consume();
+    this.goldenArmed = false;
     this.shooting = true;
     this.activeTarget = false;
     this.spawnSerial++;
@@ -528,7 +557,7 @@ export class MobilePlayScene extends Phaser.Scene {
           this.feedback(aim.x, aim.y, 'MISS!', '#ff8eaa');
           resolveMissImpact(
             this,
-            'stache-' + style,
+            shotIsGolden ? 'stache-gold' : 'stache-' + style,
             aim,
             { centers: MOBILE_TREE_CENTERS, centerY: 552, halfWidth: 23, top: 395, bottom: 738 },
             84,
