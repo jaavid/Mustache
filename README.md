@@ -63,3 +63,29 @@ See [Architecture](docs/ARCHITECTURE.md), [Art pipeline](assets/README.md), [Con
 - The optional browser workflow runs smoke checks and collects mobile and desktop screenshots. Screenshots are **review artifacts**, not automated pixel-perfect baselines.
 - Every push to `main` builds and deploys to GitHub Pages using relative Vite asset paths.
 - This is a **static practice game**. It has no accounts, backend, authoritative ranking, blockchain integration, or token awards; browser scores are untrusted.
+
+## Official Telegram Game (@RJTtobot)
+
+The **Telegram Games API** integration uses the existing static Phaser game on
+https://mustache.alexa.ir/ and a separate Cloudflare Worker for Bot API updates.
+This is an official `/newgame` HTML5 Game, **not** a Telegram Mini App.
+
+- Bot: `@RJTtobot`
+- BotFather game short name: `mustache`
+- `/start` and `/play` send Telegram's native Game Card using `sendGame`.
+- Pressing **Play** is handled through `answerCallbackQuery(url)`.
+- Inline sharing is available after `/setinline` is enabled in BotFather.
+- The results screen offers Telegram's native game sharing when opened through
+  the official game; browser sharing still works on the public website.
+
+See [Telegram Game setup](docs/TELEGRAM_GAME.md) for the BotFather configuration,
+four GitHub production secrets, automatic Cloudflare Worker deployment and
+one-time Telegram webhook registration. Merges that change `bot/**` deploy
+through `cloudflare/wrangler-action@v4`; GitHub Pages remains independent.
+No credentials are committed, and the workflow never replaces an existing
+Telegram webhook.
+
+**Important:** Telegram's `setGameScore` / `getGameHighScores` are intentionally
+**not enabled yet**: today's local scores are client-controlled. They must not be
+published as verified scores or used for prizes until server-side round
+validation and anti-cheat are implemented.

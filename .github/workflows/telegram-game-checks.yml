@@ -1,0 +1,35 @@
+name: Telegram Game integration checks
+
+on:
+  pull_request:
+    paths:
+      - 'bot/**'
+      - 'src/platform/**'
+      - 'src/game/replayUi.ts'
+      - 'docs/TELEGRAM_GAME.md'
+      - 'index.html'
+      - 'package.json'
+      - 'README.md'
+      - '.github/workflows/telegram-game-checks.yml'
+      - '.github/workflows/deploy-cloudflare-worker.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:bot
+      - run: npm run build

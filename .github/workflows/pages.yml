@@ -27,6 +27,7 @@ jobs:
       - run: npm run docs:check
       - run: npm run typecheck
       - run: npm test
+      - run: npm run test:bot
       - run: npm run build -- --mode pages
       - uses: actions/upload-pages-artifact@v3
         with:
