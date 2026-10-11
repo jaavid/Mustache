@@ -14,7 +14,6 @@ describe('visual-only mustache style impact', () => {
         impactPlan(style, 'perfect').peakScale,
       );
   });
-
 });
 
 import { treeAtImpact } from '../impactPersonality';
