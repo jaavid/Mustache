@@ -263,6 +263,9 @@ export class PlayScene extends Phaser.Scene {
   private timerText!: Phaser.GameObjects.Text;
   private comboText!: Phaser.GameObjects.Text;
   private styleMarkers: Phaser.GameObjects.Rectangle[] = [];
+  private styleIcons: Phaser.GameObjects.Image[] = [];
+  private styleLabels: Phaser.GameObjects.Text[] = [];
+  private goldenArmed = false;
   private active = false;
   private roundOver = false;
   private shooting = false;
@@ -291,6 +294,7 @@ export class PlayScene extends Phaser.Scene {
     this.combo = 0;
     this.remaining = ROUND_LENGTH_SECONDS;
     this.selectedStyle = 0;
+    this.goldenArmed = false;
     this.active = false;
     this.roundOver = false;
     this.shooting = false;
@@ -322,8 +326,11 @@ export class PlayScene extends Phaser.Scene {
       .setDepth(31)
       .setVisible(false);
     this.createHud();
-    this.golden = new GoldenFlyer(this, false, (message, color) =>
-      this.varietyNotice(message, color),
+    this.golden = new GoldenFlyer(
+      this,
+      false,
+      (message, color) => this.varietyNotice(message, color),
+      (ready) => this.updateGoldenSelector(ready),
     );
     addSoundToggle(this, 895, 36);
     addMusicToggle(this, 896, 105, 106);
@@ -400,6 +407,8 @@ export class PlayScene extends Phaser.Scene {
     label(this, 116, 499, 'MUSTACHE', 19, '#ffce7c');
     label(this, 118, 523, '1 · 2 · 3', 12, '#a9c5b6');
     this.styleMarkers = [];
+    this.styleIcons = [];
+    this.styleLabels = [];
     for (let i = 0; i < 3; i++) {
       const x = 355 + i * 124;
       const mark = this.add
@@ -416,8 +425,8 @@ export class PlayScene extends Phaser.Scene {
           haptic('select');
         },
       );
-      this.add.image(x, 498, `stache-${i}`).setDisplaySize(86, 40).setDepth(74);
-      label(this, x - 43, 472, String(i + 1), 12, '#fbd88e');
+      this.styleIcons.push(this.add.image(x, 498, `stache-${i}`).setDisplaySize(86, 40).setDepth(74));
+      this.styleLabels.push(label(this, x - 43, 472, String(i + 1), 12, '#fbd88e'));
       this.styleMarkers.push(mark);
     }
     this.selectStyle(0);
@@ -426,11 +435,29 @@ export class PlayScene extends Phaser.Scene {
   }
   private selectStyle(style: number) {
     this.selectedStyle = style;
-    this.styleMarkers.forEach((m, i) =>
-      m
-        .setStrokeStyle(4, i === style ? 0xffcd62 : 0x68627c)
-        .setFillStyle(i === style ? 0x55436d : 0x2c2d49),
-    );
+    // Reselect slot 2 after charging to arm the special shot; never auto-arm.
+    this.goldenArmed = style === 1 && this.golden.ready;
+    this.refreshSelector();
+  }
+  private updateGoldenSelector(ready: boolean) {
+    this.goldenArmed = false;
+    const icon = this.styleIcons[1];
+    this.tweens.killTweensOf(icon);
+    icon.setAlpha(1).setTexture(ready ? 'stache-gold' : 'stache-1');
+    this.styleLabels[1].setText(ready ? 'GOLD' : '2').setColor(ready ? '#ffe291' : '#fbd88e');
+    if (ready) {
+      this.tweens.add({ targets: icon, alpha: 0.66, duration: 480, yoyo: true, repeat: -1 });
+    }
+    this.refreshSelector();
+  }
+  private refreshSelector() {
+    this.styleMarkers.forEach((mark, index) => {
+      const chosen = index === this.selectedStyle;
+      const goldSlot = index === 1 && this.golden.ready;
+      mark
+        .setStrokeStyle(4, goldSlot ? (this.goldenArmed ? 0xfff3b7 : 0xe7b747) : chosen ? 0xffcd62 : 0x68627c)
+        .setFillStyle(goldSlot ? (this.goldenArmed ? 0x705331 : 0x3d3041) : chosen ? 0x55436d : 0x2c2d49);
+    });
   }
   private drawCursor(x: number, y: number) {
     this.cursor.clear();
@@ -549,7 +576,8 @@ export class PlayScene extends Phaser.Scene {
     if (this.golden.tryCollect(pointer.x, pointer.y, this.roundElapsedMs)) return;
     if (!this.active || pointer.y < 125 || pointer.y > 450) return;
     const aim = { x: pointer.x, y: pointer.y };
-    const shotIsGolden = this.golden.consume();
+    const shotIsGolden = this.goldenArmed && this.golden.consume();
+    this.goldenArmed = false;
     this.shooting = true;
     this.active = false;
     this.spawnSerial++;
@@ -599,7 +627,7 @@ export class PlayScene extends Phaser.Scene {
           this.popFeedback(aim.x, aim.y, 'MISS!', '#ff848f');
           resolveMissImpact(
             this,
-            'stache-' + chosenStyle,
+            shotIsGolden ? 'stache-gold' : 'stache-' + chosenStyle,
             aim,
             { centers: DESKTOP_TREE_CENTERS, centerY: 300, halfWidth: 30, top: 143, bottom: 486 },
             66,
