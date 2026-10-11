@@ -100,7 +100,7 @@ export class CharacterSelectScene extends Phaser.Scene {
     let started = false;
     const counter = uiText(
       cx,
-      portrait ? 748 : 478,
+      portrait ? 748 : 457,
       `STARTING IN ${remaining}`,
       portrait ? 24 : 21,
       '#c4f8d7',
@@ -121,7 +121,7 @@ export class CharacterSelectScene extends Phaser.Scene {
         if (remaining === 0) launch();
       },
     });
-    const readyY = portrait ? 851 : 520;
+    const readyY = portrait ? 851 : 504;
     const buttonWidth = portrait ? 342 : 235;
     const ready = this.add
       .rectangle(cx, readyY, buttonWidth, portrait ? 75 : 40, 0xb084ec)

@@ -38,5 +38,13 @@ test('loads pixel-art scene and enters play in desktop and portrait layouts', as
   await page.waitForTimeout(900);
   await expect(canvas).toBeVisible();
   await canvas.screenshot({ path: info.outputPath('started.png') });
+  // The introductory guide pauses the game on a clean profile; dismiss it
+  // so we also exercise the live, selected hero scene in both viewports.
+  await page.mouse.click(
+    box.x + box.width * (isMobile ? 125 / 540 : 300 / 960),
+    box.y + box.height * (isMobile ? 769 / 960 : 451 / 540),
+  );
+  await page.waitForTimeout(1200);
+  await canvas.screenshot({ path: info.outputPath('borhan-active-round.png') });
   expect(errors).toEqual([]);
 });
