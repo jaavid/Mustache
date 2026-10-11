@@ -12,6 +12,18 @@ export function impactPlan(style:number,grade:Grade):ImpactPlan{
   if(character==='heavy')return {startScale:.82,peakScale:perfect?1.12:1.07,durationMs:perfect?165:142,rotation:.07};
   return {startScale:.38,peakScale:perfect?1.28:1.14,durationMs:perfect?170:145,rotation:0};
 }
+/** Actual tree bark occupies a narrow part of the tree sprite.
+ * A missed shot only sticks when its AIM point intersects the drawn trunk,
+ * not merely because a tree exists nearby.
+ */
+export type TrunkBounds = Readonly<{centers:readonly number[];centerY:number;halfWidth:number;top:number;bottom:number}>;
+export function treeAtImpact(aim:{x:number;y:number},bounds:TrunkBounds):number|null {
+  if(!Number.isFinite(aim.x)||!Number.isFinite(aim.y)||
+    aim.y<bounds.top||aim.y>bounds.bottom)return null;
+  for(const center of bounds.centers)
+    if(Math.abs(aim.x-center)<=bounds.halfWidth)return center;
+  return null;
+}
 export function closestTree(x:number,centers:readonly number[]):number{
   if(!centers.length)throw new RangeError('At least one tree required');
   return centers.reduce((best,next)=>Math.abs(next-x)<Math.abs(best-x)?next:best,centers[0]);

@@ -17,3 +17,19 @@ describe('visual-only mustache style impact',()=>{
   expect(()=>closestTree(1,[])).toThrow(RangeError);
  });
 });
+
+
+import {treeAtImpact} from '../impactPersonality';
+describe('tree sticker contact is collision-driven',()=>{
+ const desktop={centers:[193,473,748],centerY:300,halfWidth:30,top:143,bottom:486};
+ const mobile={centers:[78,270,462],centerY:552,halfWidth:23,top:395,bottom:738};
+ it('sticks only to actual bark coordinates, no nearest-tree magnetism',()=>{
+  expect(treeAtImpact({x:193,y:300},desktop)).toBe(193);
+  expect(treeAtImpact({x:220,y:450},desktop)).toBe(193);
+  expect(treeAtImpact({x:248,y:300},desktop)).toBeNull();
+  expect(treeAtImpact({x:480,y:127},desktop)).toBeNull();
+  expect(treeAtImpact({x:NaN,y:300},desktop)).toBeNull();
+  expect(treeAtImpact({x:270,y:550},mobile)).toBe(270);
+  expect(treeAtImpact({x:305,y:550},mobile)).toBeNull();
+ });
+});
