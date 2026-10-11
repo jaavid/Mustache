@@ -62,7 +62,7 @@ See [Architecture](docs/ARCHITECTURE.md), [Art pipeline](assets/README.md), [Con
 - Vitest tests pure game logic. ESLint and TypeScript `strict` cover code quality.
 - The optional browser workflow runs smoke checks and collects mobile and desktop screenshots. Screenshots are **review artifacts**, not automated pixel-perfect baselines.
 - Every push to `main` builds and deploys to GitHub Pages using relative Vite asset paths.
-- This is a **static practice game**. It has no accounts, backend, authoritative ranking, blockchain integration, or token awards; browser scores are untrusted.
+- Standalone browser play stays local-only. Official Telegram Game sessions use a separate Cloudflare Worker and D1 weekly board; no blockchain integration or token awards are enabled, and submitted impact traces are not prize-grade proof.
 
 ## Official Telegram Game (@RJTtobot)
 

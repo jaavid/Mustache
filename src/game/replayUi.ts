@@ -95,7 +95,7 @@ export function addResultsExtras(
         fontFamily: FONT,
         fontSize: portrait ? '20px' : '20px',
         color: '#ebf7e9',
-        lineSpacing: portrait ? 22 : 10,
+        lineSpacing: portrait ? 12 : 10,
         align: 'left',
       })
       .setOrigin(0.5, 0);
