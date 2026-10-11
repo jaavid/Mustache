@@ -155,7 +155,7 @@ GET https://mustache.zedai.ir/api/status
 Example response:
 
 ```json
-{"service":"mustache-scores","database":"connected","roundsStarted":8,"roundsScored":5}
+{ "service": "mustache-scores", "database": "connected", "roundsStarted": 8, "roundsScored": 5 }
 ```
 
 - `roundsStarted > 0` but `roundsScored = 0`: the bot created D1 rounds,

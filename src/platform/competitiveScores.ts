@@ -74,7 +74,9 @@ async function api(path: string, payload: unknown) {
   if (!response.ok) {
     const body = await response.json().catch(() => null);
     const serverCode = body && typeof body.error === 'string' ? body.error : '';
-    const safeCode = /^[A-Z][A-Z0-9_]{2,60}$/.test(serverCode) ? serverCode : 'HTTP_' + response.status;
+    const safeCode = /^[A-Z][A-Z0-9_]{2,60}$/.test(serverCode)
+      ? serverCode
+      : 'HTTP_' + response.status;
     throw new ScoreApiError(safeCode);
   }
   try {
