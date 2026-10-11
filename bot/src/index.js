@@ -49,7 +49,7 @@ export async function handleTelegramUpdate(update, env, send) {
     } else if (command === 'help') {
       await send('sendMessage', {
         chat_id: message.chat.id,
-        text: '🎮 /play برای شروع بازی\n🏆 /leaderboard برای جدول‌های امروز، هفته، ماه شمسی و کل دوران\n📊 /top و /score هم جدول تعاملی را باز می‌کنند.\n\nهفته مسابقه: شنبه تا شنبه به وقت تهران.\nفعلاً جایزه توکنی فعال نیست.',
+        text: '〰️ به جنگل سیبیل خوش اومدی! 🎩\n\n🎯 /play — بزن سیبیل رو بنشون سر جاش!\n🏆 /leaderboard — سیبیل‌سالارها رو پیدا کن\n👑 /top — ده نفر برتر جنگل\n📈 /score — ببین سیبیلات چند امتیاز آوردن\n🧭 /help — همین راهنمای سیبیلی\n\n🗓 رقابت هفتگی: شنبه تا شنبه به وقت تهران\n⚠️ جایزه توکنی هنوز فعال نیست.',
       });
     } else if (command === 'top' || command === 'score' || command === 'leaderboard') {
       if (!env.DB) throw new Error('D1_NOT_CONFIGURED');
