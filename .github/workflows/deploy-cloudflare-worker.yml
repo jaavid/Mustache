@@ -34,6 +34,9 @@ jobs:
       - name: Check Worker syntax and bot tests
         run: |
           node --check bot/src/index.js
+          node --check bot/src/leaderboardMenu.js
+          node --check bot/src/commandSync.js
+          node --check bot/scripts/sync-commands.mjs
           node --check bot/src/scoring.js
           node --check bot/src/sessions.js
           npm run test:bot
@@ -95,6 +98,11 @@ jobs:
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+
+      - name: Register bot command menu without overwriting unrelated commands
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: node bot/scripts/sync-commands.mjs
 
       - name: Deployment summary
         env:
