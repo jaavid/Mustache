@@ -3,7 +3,7 @@ import { createArt } from './art';
 import {addSoundToggle,playSfx} from './sound';
 import { addMusicToggle, startMusic, stopMusic } from './sound';
 import { addPauseButton, beginTutorial, registerRoundVisibility } from './overlays';
-import { emptyStats, recordShot, summarizeRound, type RoundStats, type RoundSummary } from '../logic/roundStats';
+import { emptyStats, summarizeRound, type RoundStats, type RoundSummary } from '../logic/roundStats';
 import { haptic } from './haptics';
 import {addArcadeAccents,addLivingForest,addPhaseHud,addMissionStrip,announcePhase,celebrateCombo,impactRing,raminMoment,rarePerfectSlowMo} from './arcadeVisuals';
 import {tunePopPlan} from '../logic/arcadePhases';
@@ -11,11 +11,12 @@ import { setMusicPhase } from './sound';
 import {addResultsExtras} from './replayUi';
 import { addForestLife, burstLeaves, burstStars } from './ambience';
 import { applyRaminMood, ensureRaminAnimations, makeRamin, preloadRamin, RAMIN_DESKTOP_SCALE, raminLipPoint } from './ramin';
-import { evaluateAim, readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
+import { readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
+import { resolveRoundShot } from '../logic/shotResolution';
 import { nextSlot, popPlan, type PopPlan } from '../logic/gameplay';
 import { DESKTOP_TREE_CENTERS, DESKTOP_PEEK_DISTANCE, chooseSpawnSide, peekPosition } from '../logic/treeGeometry';
 import { enterFromTree, exitBehindTreeWithSlip, hitReaction, launchMustache } from './gameFeel';
-import { chooseRaminVariant, chooseSpawnEvent, variantReward, type RaminVariant, type SpawnEvent } from '../logic/variety';
+import { chooseRaminVariant, chooseSpawnEvent, type RaminVariant, type SpawnEvent } from '../logic/variety';
 import { makeAccessory, selectAccessory, syncAccessory } from './accessories';
 import {attachMustache,resolveMissImpact,showLandingPrecision} from './impactFx';
 import {toHeroAnchor,fromHeroAnchor,type StickerAnchor} from '../logic/stickerAnchor';
@@ -328,9 +329,15 @@ export class PlayScene extends Phaser.Scene {
       if(this.roundOver)return;
       this.shooting=false;
       const mouth=raminLipPoint(this.hero);
-      const result=evaluateAim(aim,mouth,this.combo,true,false);
+      const outcome=resolveRoundShot({
+        aim,lip:mouth,score:this.score,combo:this.combo,stats:this.stats,
+        variant,portrait:false,
+      });
+      const {result,reward,gained}=outcome;
+      this.stats=outcome.stats;
+      this.score=outcome.score;
+      this.combo=outcome.combo;
       showLandingPrecision(this,aim,mouth,result.grade);
-      this.stats=recordShot(this.stats,result.grade,result.combo);
       haptic(result.grade);
       if(result.grade==='miss'){
         this.combo=0;
@@ -340,10 +347,6 @@ export class PlayScene extends Phaser.Scene {
         resolveMissImpact(this,'stache-'+chosenStyle,aim,{centers:DESKTOP_TREE_CENTERS,centerY:300,halfWidth:30,top:143,bottom:486},66,34);
         burstLeaves(this,aim.x,aim.y,3);
       }else{
-        const reward=variantReward(variant,result.grade);
-        const gained=result.points+reward.bonus;
-        this.score+=gained;
-        this.combo=result.combo;
         this.scoreText.setText(String(this.score).padStart(5,'0'));
         this.comboText.setText('× '+this.combo);
         this.tweens.add({targets:this.comboText,scale:1.22,duration:115,yoyo:true});
