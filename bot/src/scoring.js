@@ -1,3 +1,5 @@
+import { goldenHit, GOLDEN_REQUIRED, GOLDEN_PERFECT_BONUS, GOLDEN_SPAWN_MS } from '../../shared/goldenRules.js';
+
 /**
  * Recalculates points from individual impact geometry, never from client totals.
  * The browser still controls its visual target, so these checks are NOT sufficient
@@ -9,9 +11,26 @@ export function mondayUtc(ms) {
   return midnight - ((day.getUTCDay() + 6) % 7) * 86400000;
 }
 
-export function verifyRoundShots(shots, portrait, clientScore) {
+export function verifyRoundShots(shots, portrait, clientScore, goldenPickups = []) {
   if (!Array.isArray(shots) || shots.length > 80 || !Number.isInteger(clientScore) || clientScore < 0) {
     throw new Error('INVALID_ROUND');
+  }
+  // Pickups have their own trace, are limited to three unique scheduled opportunities,
+  // and cannot be asserted merely by setting a flag on a normal shot.
+  if (!Array.isArray(goldenPickups) || goldenPickups.length > GOLDEN_REQUIRED) {
+    throw new Error('INVALID_GOLDEN_PICKUPS');
+  }
+  const seen = new Set();
+  let prevPickupTime = -1;
+  for (const pickup of goldenPickups) {
+    if (!pickup || !Number.isInteger(pickup.index) || pickup.index < 0 ||
+        pickup.index >= GOLDEN_SPAWN_MS.length || seen.has(pickup.index) ||
+        !Number.isInteger(pickup.tMs) || pickup.tMs < prevPickupTime ||
+        pickup.tMs > 46000 || !goldenHit(pickup.index, pickup.tMs, pickup.aim, portrait)) {
+      throw new Error('INVALID_GOLDEN_PICKUP');
+    }
+    seen.add(pickup.index);
+    prevPickupTime = pickup.tMs;
   }
   const width = portrait ? 540 : 960;
   const low = portrait ? 164 : 125;
@@ -23,9 +42,12 @@ export function verifyRoundShots(shots, portrait, clientScore) {
   let score = 0;
   let combo = 0;
   let prevTime = -1;
+  let pickupCursor = 0;
+  let goldenUsed = false;
+  let goldenPerfect = 0;
   for (const shot of shots) {
     if (!shot || typeof shot !== 'object') throw new Error('INVALID_SHOT');
-    const { tMs, aim, lip, variant, comboBefore } = shot;
+    const { tMs, aim, lip, variant, comboBefore, goldenShot } = shot;
     if (!Number.isInteger(tMs) || tMs < 0 || tMs > 46000 || tMs < prevTime) throw new Error('INVALID_TIMELINE');
     if (!aim || !lip || !variants.includes(variant)) throw new Error('INVALID_SHOT');
     const nums = [aim.x, aim.y, lip.x, lip.y];
@@ -34,6 +56,15 @@ export function verifyRoundShots(shots, portrait, clientScore) {
     if (lip.x < 0 || lip.x > width || lip.y < lipYMin || lip.y > lipYMax) throw new Error('INVALID_TARGET');
     if (!Number.isInteger(comboBefore) || comboBefore < 0 || comboBefore > combo) throw new Error('INVALID_COMBO');
     if (prevTime >= 0 && tMs - prevTime < 180) throw new Error('IMPOSSIBLE_SHOT_RATE');
+    while (pickupCursor < goldenPickups.length && goldenPickups[pickupCursor].tMs <= tMs) {
+      pickupCursor++;
+    }
+    const charged = pickupCursor >= GOLDEN_REQUIRED && !goldenUsed;
+    if ((goldenShot !== undefined && typeof goldenShot !== 'boolean') ||
+        Boolean(goldenShot) !== charged) {
+      throw new Error('INVALID_GOLDEN_SHOT');
+    }
+    if (charged) goldenUsed = true;
     const dx = aim.x - lip.x, dy = aim.y - lip.y;
     const perfect = (dx / radii[0]) ** 2 + (dy / radii[1]) ** 2 <= 1;
     const good = (dx / radii[2]) ** 2 + (dy / radii[3]) ** 2 <= 1;
@@ -42,9 +73,13 @@ export function verifyRoundShots(shots, portrait, clientScore) {
       score += (perfect ? 100 : 50) + Math.min(50, Math.max(0, combo - 1) * 10);
       if (variant === 'gold') score += 50;
       if (variant === 'sunglasses' && perfect) score += 25;
+      if (charged && perfect) {
+        score += GOLDEN_PERFECT_BONUS;
+        goldenPerfect = 1;
+      }
     }
     prevTime = tMs;
   }
   if (score !== clientScore || score > 15000) throw new Error('SCORE_MISMATCH');
-  return { score, count: shots.length };
+  return { score, count: shots.length, goldenPerfect };
 }
