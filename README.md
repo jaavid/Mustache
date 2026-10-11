@@ -78,9 +78,12 @@ This is an official `/newgame` HTML5 Game, **not** a Telegram Mini App.
 - The results screen offers Telegram's native game sharing when opened through
   the official game; browser sharing still works on the public website.
 
-See [Telegram Game setup](docs/TELEGRAM_GAME.md) to create the BotFather Game,
-deploy the Worker, configure secrets and register its webhook. This repository
-does **not** contain the bot token or configure a live webhook.
+See [Telegram Game setup](docs/TELEGRAM_GAME.md) for the BotFather configuration,
+four GitHub production secrets, automatic Cloudflare Worker deployment and
+one-time Telegram webhook registration. Merges that change `bot/**` deploy
+through `cloudflare/wrangler-action@v4`; GitHub Pages remains independent.
+No credentials are committed, and the workflow never replaces an existing
+Telegram webhook.
 
 **Important:** Telegram's `setGameScore` / `getGameHighScores` are intentionally
 **not enabled yet**: today's local scores are client-controlled. They must not be

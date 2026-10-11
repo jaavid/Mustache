@@ -26,43 +26,69 @@ mode via `/setinline` for **@RJTtobot**. Inline mode is optional.
 Do not configure the **Main Mini App** for this purpose: `/newgame` creates the
 official native **Game Card / Play** experience.
 
-## 2. Deploy the webhook Worker
+## 2. Automatic Cloudflare Worker deployment
 
-Cloudflare Workers is used instead of deploying another bot with the Telegram
-Serverless CLI because the existing static game uses Telegram's _Games API_,
-not Mini App Serverless endpoints.
+The bot webhook runs on Cloudflare Workers, independently of GitHub Pages.
+The workflow [deploy-cloudflare-worker.yml](../.github/workflows/deploy-cloudflare-worker.yml)
+deploys the Worker **after a merge to `main` changes `bot/**` or the workflow**.
+You can also run it from GitHub Actions using **Run workflow**.
+Pull requests only run checks; they never deploy or receive production secrets.
 
-Install or use Wrangler with your Cloudflare account:
+Create a GitHub environment named **`production`** under **Settings >
+Environments** (optional approval rules), then add these four encrypted
+secrets to its Environment secrets. Repository-level Actions secrets are
+also supported if the environment has no overrides.
+
+| GitHub secret | Value |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API token authorized to deploy this Worker |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID (not zone ID) |
+| `TELEGRAM_BOT_TOKEN` | Standard BotFather HTTP API token for **@RJTtobot** |
+| `TELEGRAM_WEBHOOK_SECRET` | Separate, random 32+ character secret; use `openssl rand -hex 32` locally |
+
+Create the Cloudflare token under **Cloudflare > Account API tokens** and
+scope it to the correct account. An existing Worker needs **Workers Editor**
+access; creating a Worker for the first time requires product-level **Workers
+Admin**. Prefer first creating the named Worker `n5-mustache-rjttobot` in
+Cloudflare and granting the CI token access to just that Worker.
+
+The production workflow:
+
+1. Checks out the merged commit and runs the isolated bot syntax and unit tests.
+2. Fails before deployment if any of the four secrets is missing.
+3. Uses the official `cloudflare/wrangler-action@v4` from the `bot/`
+   directory to deploy `bot/wrangler.toml`.
+4. Writes `BOT_TOKEN` and `WEBHOOK_SECRET` into Cloudflare Worker **encrypted
+   secrets**, directly from the two `TELEGRAM_*` GitHub secrets.
+5. Reports the deployment URL in the GitHub Actions run.
+
+The workflow does **not** commit credentials, deploy on pull requests, change
+the GitHub Pages site, or run `setWebhook`. Do not paste credentials into
+workflow logs or source files. Cloudflare secret updates can trigger Worker
+releases, so changes to these secrets should go through the same controlled
+production configuration.
+
+## 3. One-time Telegram webhook registration
+
+Once a **successful** deployment shows its public `https://...workers.dev`
+URL, check if that Worker is reachable at `/health`. The webhook endpoint
+is `/telegram/webhook`.
+
+**IMPORTANT:** `setWebhook` replaces any existing webhook on **@RJTtobot**.
+Check `getWebhookInfo` first and preserve any existing bot functionality.
+If the bot has another webhook, integrate the game routes into that existing
+backend rather than overwriting the webhook. A new Worker deployment does
+not automatically change the active Telegram webhook.
+
+Register the webhook just **once** after confirming it is safe to change:
 
 ```bash
-cd bot
-npx wrangler@4 login
-npx wrangler@4 secret put BOT_TOKEN
-npx wrangler@4 secret put WEBHOOK_SECRET
-npx wrangler@4 deploy
-```
-
-- `BOT_TOKEN`: BotFather's standard **HTTP API token** for **@RJTtobot**.
-- `WEBHOOK_SECRET`: a separate random 32+ character string. Generate it
-  privately (e.g. `openssl rand -hex 32`). It is **not** the bot token.
-- Never commit either token or paste them into issues, PRs or chat.
-- Copy the actual `https://....workers.dev` URL printed by deployment.
-
-**IMPORTANT:** `setWebhook` replaces any current webhook on **@RJTtobot**.
-Check `getWebhookInfo` and back up existing handlers before changing it.
-If this bot currently runs other features, merge their routing into this
-Worker (or send the game callbacks through the existing bot backend) rather
-than replacing the webhook.
-
-Register the Worker endpoint through the Bot API:
-
-```bash
-# Work locally; do not print or log the real token/secret.
 read -rsp "Bot token: " BOT_TOKEN; echo
 read -rsp "Webhook secret: " WEBHOOK_SECRET; echo
 read -rp "Worker base URL: " WORKER_URL
 
 curl -fsS "https://api.telegram.org/bot${BOT_TOKEN}/getWebhookInfo"
+# Only proceed if the current webhook is empty or intentionally being replaced:
 curl -fsS -X POST "https://api.telegram.org/bot${BOT_TOKEN}/setWebhook" \
   --data-urlencode "url=${WORKER_URL}/telegram/webhook" \
   --data-urlencode "secret_token=${WEBHOOK_SECRET}" \
@@ -71,10 +97,17 @@ curl -fsS -X POST "https://api.telegram.org/bot${BOT_TOKEN}/setWebhook" \
 unset BOT_TOKEN WEBHOOK_SECRET
 ```
 
-The worker only accepts POSTs to `/telegram/webhook` carrying
-`X-Telegram-Bot-Api-Secret-Token`. Its public `/health` endpoint is safe.
+Use the **same** `TELEGRAM_WEBHOOK_SECRET` value configured in GitHub
+(for the Worker secret). A subsequent merge will update Worker code and keep
+the existing webhook URL, so no repeat registration is needed. When rotating
+the webhook secret, coordinate an update to the Telegram `setWebhook` secret
+to avoid breaking delivery.
 
-## 3. Play and check
+The Worker only accepts POSTs to `/telegram/webhook` with the matching
+`X-Telegram-Bot-Api-Secret-Token`; `/health` is public and contains no
+sensitive data.
+
+## 4. Play and check
 
 - Open [@RJTtobot](https://t.me/RJTtobot) and send `/play`.
 - Expect a native Game Card with **Play N5 Mustache Mayhem**.
@@ -83,7 +116,7 @@ The worker only accepts POSTs to `/telegram/webhook` carrying
 - Test the standalone web version; it must still use Web Share/clipboard.
 - Optionally try inline mode by typing `@RJTtobot mustache` in another chat.
 
-## 4. Scores and prizes: intentionally out of scope
+## 5. Scores and prizes: intentionally out of scope
 
 Current `localStorage` scores are **practice-only**. No `setGameScore`,
 `getGameHighScores`, wallet integration or prize issuance is enabled. Telegram

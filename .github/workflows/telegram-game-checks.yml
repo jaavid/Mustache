@@ -11,6 +11,7 @@ on:
       - 'package.json'
       - 'README.md'
       - '.github/workflows/telegram-game-checks.yml'
+      - '.github/workflows/deploy-cloudflare-worker.yml'
   workflow_dispatch:
 
 permissions:
