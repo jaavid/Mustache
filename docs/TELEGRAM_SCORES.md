@@ -175,3 +175,39 @@ Example response:
 **Do not infer a score was accepted just because `game_rounds` contains rows.**
 Those rows are created at the start of each round; accepted scores have
 `score IS NOT NULL`. Historical invalid or aborted rounds are preserved.
+
+## Custom domain deployment incident
+
+On 2026-10-11 the GitHub Actions deployment confirmed Wrangler uploaded
+`n5-mustache-rjttobot` to
+`https://n5-mustache-rjttobot.zed-ai.workers.dev`, but a production probe of
+`https://mustache.zedai.ir/api/status` returned **HTTP 404**. The Worker
+was deployed, but **the hostname used by the game was not connected to the
+current Worker deployment through `wrangler.toml`**.
+
+The Worker deployment now declares a first-class Cloudflare Custom Domain:
+
+```toml
+workers_dev = true
+
+[[routes]]
+pattern = "mustache.zedai.ir"
+custom_domain = true
+```
+
+This ensures the Telegram webhook and game score API use the **same** Worker
+and D1 binding. As a short-term resilience measure, the static game may
+retry `n5-mustache-rjttobot.zed-ai.workers.dev` when the custom hostname
+returns HTTP 404 / 502 / 503 / 504 or a network/CORS failure. It **never**
+retries score validation rejections (HTTP 400/401) against a second host.
+
+GitHub Actions now verifies both direct-worker and custom-domain
+`/api/status` endpoints after every bot deployment. If the deployment
+fails while attaching the hostname, update the production
+`CLOUDFLARE_API_TOKEN` to grant **Zone → Workers Routes → Write** for the
+`zedai.ir` zone; Cloudflare requires this permission when adding or
+moving Worker Custom Domains. No new token must be committed.
+
+A green GitHub build alone is not evidence that a score was recorded.
+Verify `roundsScored` before and after playing through the official Telegram
+Game Card. A real player must complete a non-skipped round.
