@@ -140,3 +140,12 @@ Previous phase tuning was too subtle: low-opacity lighting sat behind the charac
 - **30–45s NIGHT RUSH:** dark navy stage lighting, moon and bright stars, mobile/desktop face spotlight to keep the lip visible; aim windows 1.05–1.19s and 160 BPM music; more frequent double-pops until the last six seconds.
 - Prominent STAGE 2/3 and STAGE 3/3 transition banners, distinct phase HUD labels, colored mist, stage chimes. Hit detection and scoring thresholds are unchanged.
 - Dynamic night coloring now sits over **the whole playfield but beneath the HUD** (depth 41), rather than only coloring the distant background. The face light is purely visual and does not change targeting.
+
+
+### v0.9.7–v0.9.8 — Impact polish and real Ramin moments
+
+- **Impact personality:** each of the three selectable mustaches has a distinctive visual attachment bounce (snappy, curly/twirly, heavy). All share exactly the same hit evaluation, combo math and score; this is NOT a pay-to-win or style handicap.
+- **Miss-to-tree:** after a failed projectile impact, a pink-tinted duplicate drifts to the nearest tree and briefly sticks there, dislodging leaf pixels. It does not change shot origin, hit point or scored result.
+- **Physical character gags:** bold serious eyebrows, a short wink/taunt, a genuine sunglasses-lift performed by the independent accessory layer, post-Perfect mustache touch using a little animated hand, and an occasional overbalanced slip before exiting behind a tree.
+- **Fairness:** no active targeting windows or lip coordinates are moved by any moment. Hand contact runs only AFTER a confirmed Perfect (combo ≥2). Slip runs only AFTER an appearance is no longer targetable. A 4.8s scene-time cooldown restricts repeats. Visual-only effects obey pause/resume automatically.
+- New deterministic unit tests validate probabilities/cooldowns and mustache impact plans; no backend changes.

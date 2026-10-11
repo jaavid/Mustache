@@ -14,9 +14,11 @@ import { evaluateShot, readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from
 import { normalizeTouchDistance } from '../logic/touch';
 import { nextSlot, popPlan, type PopPlan } from '../logic/gameplay';
 import { MOBILE_TREE_CENTERS, MOBILE_PEEK_DISTANCE, chooseSpawnSide, peekPosition } from '../logic/treeGeometry';
-import { enterFromTree, exitBehindTree, hitReaction, launchMustache } from './gameFeel';
+import { enterFromTree, exitBehindTreeWithSlip, hitReaction, launchMustache } from './gameFeel';
 import { chooseRaminVariant, chooseSpawnEvent, variantReward, type RaminVariant, type SpawnEvent } from '../logic/variety';
 import { makeAccessory, selectAccessory, syncAccessory } from './accessories';
+import {attachMustache,missToTree} from './impactFx';
+import {RaminMomentController} from './raminMoments';
 
 /** Dedicated 540 × 960 portrait experience. Desktop scenes remain unchanged. */
 const W = 540;
@@ -124,6 +126,7 @@ export class MobilePlayScene extends Phaser.Scene {
   private selector: Phaser.GameObjects.Rectangle[] = [];
   private currentPlan!:PopPlan;
   private accessory!:Phaser.GameObjects.Image;
+  private moments!:RaminMomentController;
   private currentVariant:RaminVariant='normal';
   private pendingDouble=false;
   private previousEvent:SpawnEvent='normal';
@@ -149,6 +152,7 @@ export class MobilePlayScene extends Phaser.Scene {
     this.updateMissions=addMissionStrip(this,true).update;
     this.hero = makeRamin(this, -300, FACE_Y + 18, RAMIN_MOBILE_SCALE, 'idle').setVisible(false);
     this.accessory=makeAccessory(this);
+    this.moments=new RaminMomentController(this,this.hero,this.accessory,true);
     this.sticker = this.add.image(-300, FACE_Y, 'stache-0').setDisplaySize(82,46).setDepth(31).setVisible(false);
     this.hud();
     addSoundToggle(this,469,27,112);
@@ -234,6 +238,7 @@ export class MobilePlayScene extends Phaser.Scene {
     const treeX=MOBILE_TREE_CENTERS[slot];
     const x=peekPosition(treeX,plan.side,MOBILE_PEEK_DISTANCE);
     const y=FACE_Y;
+    this.moments.clear();
     applyRaminMood(this.hero,'idle');
     this.sticker.setVisible(false);
     selectAccessory(this.accessory,this.currentVariant);
@@ -254,7 +259,8 @@ export class MobilePlayScene extends Phaser.Scene {
         return;
       }
       this.activeTarget=true;
-      if(Math.random()<.18)raminMoment(this,this.hero,true);
+      this.moments.onSpawn(this.currentVariant);
+      if(Math.random()<.12)raminMoment(this,this.hero,true);
       this.tweens.add({targets:this.hero,y:y-5,duration:480,ease:'Sine.inOut',yoyo:true,repeat:1});
       this.time.delayedCall(plan.visibleMs+100,()=>{
         if(this.roundOver||serial!==this.spawnSerial||!this.activeTarget)return;
@@ -272,11 +278,11 @@ export class MobilePlayScene extends Phaser.Scene {
       onComplete:()=>banner.destroy()});
   }
   private hide(next:()=>void){
-    exitBehindTree(this,this.hero,this.currentPlan,()=>{
+    exitBehindTreeWithSlip(this,this.hero,this.currentPlan,()=>{
       this.sticker.setVisible(false);
       this.accessory.setVisible(false);
       if(!this.roundOver)next();
-    });
+    },this.moments.shouldSlip());
   }
   private shoot(pointer:Phaser.Input.Pointer){
     const aim={x:pointer.x,y:pointer.y};
@@ -301,6 +307,7 @@ export class MobilePlayScene extends Phaser.Scene {
         this.comboText.setText('× 0');
         playSfx('miss');
         this.feedback(aim.x,aim.y,'MISS!','#ff8eaa');
+        missToTree(this,'stache-'+style,aim,MOBILE_TREE_CENTERS,552,84,44);
         burstLeaves(this,aim.x,aim.y,3);
       }else{
         const reward=variantReward(variant,result.grade);
@@ -315,6 +322,8 @@ export class MobilePlayScene extends Phaser.Scene {
         applyRaminMood(this.hero,'surprised');
         this.sticker.setTexture('stache-'+style)
           .setPosition(mouth.x,mouth.y).setRotation(this.hero.rotation).setVisible(true);
+        attachMustache(this,this.sticker,style,result.grade);
+        this.moments.onHit(result.grade,this.combo);
         burstStars(this,mouth.x,mouth.y,result.grade==='perfect');
         impactRing(this,mouth.x,mouth.y,result.grade==='perfect');
         hitReaction(this,this.hero,RAMIN_MOBILE_SCALE,result.grade==='perfect');
@@ -336,6 +345,7 @@ export class MobilePlayScene extends Phaser.Scene {
   update(){
     if(this.hero?.active)this.followLighting(this.hero);
     if(this.hero?.active && this.accessory?.active)syncAccessory(this.hero,this.accessory);
+    if(this.moments)this.moments.update();
     if(this.hero?.active && this.sticker?.visible){
       const lip=raminLipPoint(this.hero);
       this.sticker.setPosition(lip.x,lip.y).setRotation(this.hero.rotation);

@@ -111,3 +111,20 @@ export function hitReaction(
     scene.cameras.main.flash(90, 255, 215, 130);
   }
 }
+
+/** Optional slapstick exit; only runs after the target is inactive, so there is no moving hitbox. */
+export function exitBehindTreeWithSlip(
+ scene:Phaser.Scene,hero:Phaser.GameObjects.Sprite,plan:PopPlan,finished:()=>void,slip:boolean,
+):void{
+ if(!slip){exitBehindTree(scene,hero,plan,finished);return;}
+ scene.tweens.killTweensOf(hero);
+ // A quick overbalanced wobble before returning into the same tree.
+ scene.tweens.add({
+  targets:hero,x:hero.x+plan.side*13,y:hero.y+25,
+  angle:plan.side*22,duration:96,ease:'Quad.easeOut',
+  onComplete:()=>{
+   if(!hero.active)return;
+   exitBehindTree(scene,hero,plan,finished);
+  },
+ });
+}
