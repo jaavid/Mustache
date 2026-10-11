@@ -28,6 +28,7 @@ import { applyRaminMood, makeRamin, RAMIN_MOBILE_SCALE, raminLipPoint } from './
 import { readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
 import { resolveRoundShot } from '../logic/shotResolution';
 import { startCompetitiveRound, recordCompetitiveShot } from '../platform/competitiveScores';
+import { accumulateActiveRoundMs } from '../logic/activeRoundClock';
 import { nextSlot, popPlan, type PopPlan } from '../logic/gameplay';
 import {
   MOBILE_TREE_CENTERS,
@@ -207,7 +208,8 @@ export class MobileMenuScene extends Phaser.Scene {
 
 export class MobilePlayScene extends Phaser.Scene {
   private score = 0;
-  private roundStartAt = 0;
+  private roundElapsedMs = 0;
+  private scoreRoundStarted = false;
   private combo = 0;
   private remaining = ROUND_LENGTH_SECONDS;
   private selectedStyle = 0;
@@ -239,8 +241,8 @@ export class MobilePlayScene extends Phaser.Scene {
   }
   create() {
     this.score = 0;
-    this.roundStartAt = this.time.now;
-    startCompetitiveRound(true);
+    this.roundElapsedMs = 0;
+    this.scoreRoundStarted = false;
     this.combo = 0;
     this.remaining = ROUND_LENGTH_SECONDS;
     this.selectedStyle = 0;
@@ -505,7 +507,7 @@ export class MobilePlayScene extends Phaser.Scene {
         });
         const { result, reward, gained } = outcome;
         recordCompetitiveShot({
-          tMs: Math.max(0, Math.round(this.time.now - this.roundStartAt)),
+          tMs: Math.min(46000, Math.round(this.roundElapsedMs)),
           aim,
           lip: mouth,
           variant,
@@ -573,7 +575,15 @@ export class MobilePlayScene extends Phaser.Scene {
       },
     );
   }
-  update() {
+  update(_time: number, delta: number) {
+    // Phaser's this.time.now is wall-clock based; paused tutorial screens can
+    // make a 45-second round appear minutes long. Scene update only runs while
+    // gameplay is active, so count its frame deltas instead.
+    if (!this.scoreRoundStarted) {
+      this.scoreRoundStarted = true;
+      startCompetitiveRound(true);
+    }
+    this.roundElapsedMs = accumulateActiveRoundMs(this.roundElapsedMs, delta);
     if (this.hero?.active) this.followLighting(this.hero);
     if (this.hero?.active && this.accessory?.active) syncAccessory(this.hero, this.accessory);
     if (this.moments) this.moments.update();
