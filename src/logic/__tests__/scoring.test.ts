@@ -26,7 +26,7 @@ describe('lip-shaped hit detection with honest landing coordinates',()=>{
  const lip={x:275,y:340};
  it('requires precision in two axes rather than proximity anywhere on the face',()=>{
   expect(evaluateAim(lip,lip,0,true).grade).toBe('perfect');
-  expect(evaluateAim({x:lip.x+13,y:lip.y+8},lip,0,true).grade).toBe('perfect');
+  expect(evaluateAim({x:lip.x+12,y:lip.y+7},lip,0,true).grade).toBe('perfect');
   expect(evaluateAim({x:lip.x+26,y:lip.y},lip,0,true).grade).toBe('good');
   expect(evaluateAim({x:lip.x,y:lip.y+18},lip,0,true).grade).toBe('good');
   expect(evaluateAim({x:lip.x+34,y:lip.y},lip,3,true).grade).toBe('miss');

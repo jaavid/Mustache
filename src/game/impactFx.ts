@@ -1,49 +1,79 @@
 import Phaser from 'phaser';
-import type {Grade} from '../logic/scoring';
-import {closestTree, impactPlan} from '../logic/impactPersonality';
+import type {Grade,AimPoint} from '../logic/scoring';
+import {impactPlan,treeAtImpact,type TrunkBounds} from '../logic/impactPersonality';
 import {burstLeaves} from './ambience';
 
-/** Animate the already mouth-anchored sticker, without touching Ramin's hit point. */
+/** Bounce the visual sticker at the actual landing coordinate.
+ * A rotation offset is stored separately so scene.update follows hero rotation
+ * without erasing the twirl animation or teleporting the sticker to the mouth.
+ */
 export function attachMustache(
  scene:Phaser.Scene,sticker:Phaser.GameObjects.Image,style:number,grade:Grade,
-):void{
+):void {
  const plan=impactPlan(style,grade);
  scene.tweens.killTweensOf(sticker);
- const baseX=sticker.scaleX,baseY=sticker.scaleY,rotation=sticker.rotation;
+ const baseX=sticker.scaleX,baseY=sticker.scaleY;
+ const twist={offset:plan.rotation};
+ sticker.setData('impactTwist',twist);
  sticker.setScale(baseX*plan.startScale,baseY*plan.startScale);
- sticker.setRotation(rotation+plan.rotation);
+ scene.tweens.add({targets:twist,offset:0,duration:plan.durationMs,ease:'Cubic.easeOut'});
  scene.tweens.add({
-  targets:sticker,scaleX:baseX*plan.peakScale,scaleY:baseY*plan.peakScale,
-  duration:plan.durationMs,ease:'Back.easeOut',
-  onComplete:()=>{
-   if(!sticker.active)return;
-   scene.tweens.add({targets:sticker,scaleX:baseX,scaleY:baseY,
-    duration:95,ease:'Sine.easeInOut'});
-  },
+   targets:sticker,scaleX:baseX*plan.peakScale,scaleY:baseY*plan.peakScale,
+   duration:plan.durationMs,ease:'Back.easeOut',
+   onComplete:()=>{
+    if(!sticker.active)return;
+    scene.tweens.add({targets:sticker,scaleX:baseX,scaleY:baseY,
+     duration:95,ease:'Sine.easeInOut'});
+   },
  });
 }
 
-/** A missed shot skids away and harmlessly sticks to the nearest trunk for a beat.
- * This is only a visual after-impact effect; grades and combo have been resolved.
+/** Never pull a missed shot sideways to a tree. Only physically overlapping
+ * the bark makes it stick; all other misses tumble from the real impact point.
  */
-export function missToTree(
- scene:Phaser.Scene,texture:string,aim:{x:number;y:number},
- centers:readonly number[],trunkY:number,width:number,height:number,
-):void{
- const treeX=closestTree(aim.x,centers);
- const impactY=Phaser.Math.Clamp(aim.y,trunkY-78,trunkY+110);
- const stuck=scene.add.image(aim.x,aim.y,texture)
-  .setDisplaySize(width,height).setDepth(50).setTint(0xf6a8af).setAlpha(.9);
- const direction=treeX<aim.x?-1:1;
- scene.tweens.add({
-  targets:stuck,x:treeX+direction*9,y:impactY,angle:direction*24,
-  scaleX:stuck.scaleX*.77,scaleY:stuck.scaleY*.77,
-  duration:240,ease:'Quad.easeOut',
-  onComplete:()=>{
-   if(!stuck.active)return;
-   burstLeaves(scene,stuck.x,stuck.y,4);
-   scene.tweens.add({targets:stuck,alpha:0,angle:direction*38,
-    duration:270,delay:280,onComplete:()=>stuck.destroy()});
-  },
- });
+export function resolveMissImpact(
+ scene:Phaser.Scene,texture:string,aim:AimPoint,
+ trees:TrunkBounds,width:number,height:number,
+):void {
+ const bark=treeAtImpact(aim,trees);
+ const item=scene.add.image(aim.x,aim.y,texture)
+  .setDisplaySize(width,height).setDepth(50).setTint(0xffbbc3).setAlpha(.95);
+ if(bark!==null){
+   scene.tweens.add({
+     targets:item,angle:aim.x<bark?-14:14,scaleX:item.scaleX*.84,scaleY:item.scaleY*.84,
+     duration:105,ease:'Sine.easeOut',
+     onComplete:()=>{
+       if(!item.active)return;
+       burstLeaves(scene,aim.x,aim.y,4);
+       scene.tweens.add({targets:item,y:aim.y+24,alpha:0,angle:item.angle+20,
+        duration:260,delay:290,ease:'Quad.easeIn',onComplete:()=>item.destroy()});
+     },
+   });
+ }else {
+   // Air/cheek/ground miss: the mustache falls away, never snaps to another tree.
+   scene.tweens.add({targets:item,y:aim.y+76,x:aim.x+22,
+     angle:90,alpha:0,scaleX:item.scaleX*.55,scaleY:item.scaleY*.55,
+     duration:520,ease:'Quad.easeIn',onComplete:()=>item.destroy()});
+ }
+}
+
+/** Brief mark at real landing center. GOOD also shows ideal lip center. */
+export function showLandingPrecision(
+ scene:Phaser.Scene,aim:AimPoint,lip:AimPoint,grade:Grade,
+):void {
+ const g=scene.add.graphics().setDepth(107);
+ const color=grade==='perfect'?0xffdc85:grade==='good'?0xaaf4c4:0xff919c;
+ g.lineStyle(3,color,.98);
+ g.strokeCircle(aim.x,aim.y,9);
+ g.lineBetween(aim.x-14,aim.y,aim.x-7,aim.y);
+ g.lineBetween(aim.x+7,aim.y,aim.x+14,aim.y);
+ g.lineBetween(aim.x,aim.y-14,aim.x,aim.y-7);
+ g.lineBetween(aim.x,aim.y+7,aim.x,aim.y+14);
+ if(grade==='good'){
+   g.lineStyle(1,0xffe3a0,.85);
+   g.strokeCircle(lip.x,lip.y,5);
+   g.lineBetween(aim.x,aim.y,lip.x,lip.y);
+ }
+ scene.tweens.add({targets:g,alpha:0,duration:430,delay:130,
+  onComplete:()=>g.destroy()});
 }

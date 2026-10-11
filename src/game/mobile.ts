@@ -10,14 +10,14 @@ import {tunePopPlan} from '../logic/arcadePhases';
 import { setMusicPhase } from './sound';
 import {addResultsExtras} from './replayUi';
 import { applyRaminMood, makeRamin, RAMIN_MOBILE_SCALE, raminLipPoint } from './ramin';
-import { evaluateShot, readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
-import { normalizeTouchDistance } from '../logic/touch';
+import { evaluateAim, readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
 import { nextSlot, popPlan, type PopPlan } from '../logic/gameplay';
 import { MOBILE_TREE_CENTERS, MOBILE_PEEK_DISTANCE, chooseSpawnSide, peekPosition } from '../logic/treeGeometry';
 import { enterFromTree, exitBehindTreeWithSlip, hitReaction, launchMustache } from './gameFeel';
 import { chooseRaminVariant, chooseSpawnEvent, variantReward, type RaminVariant, type SpawnEvent } from '../logic/variety';
 import { makeAccessory, selectAccessory, syncAccessory } from './accessories';
-import {attachMustache,missToTree} from './impactFx';
+import {attachMustache,resolveMissImpact,showLandingPrecision} from './impactFx';
+import {toHeroAnchor,fromHeroAnchor,type StickerAnchor} from '../logic/stickerAnchor';
 import {RaminMomentController} from './raminMoments';
 
 /** Dedicated 540 × 960 portrait experience. Desktop scenes remain unchanged. */
@@ -120,6 +120,7 @@ export class MobilePlayScene extends Phaser.Scene {
   private previousSlot = -1;
   private hero!: Phaser.GameObjects.Sprite;
   private sticker!: Phaser.GameObjects.Image;
+  private stickerAnchor:StickerAnchor|null=null;
   private scoreText!: Phaser.GameObjects.Text;
   private comboText!: Phaser.GameObjects.Text;
   private timeText!: Phaser.GameObjects.Text;
@@ -142,6 +143,7 @@ export class MobilePlayScene extends Phaser.Scene {
     this.spawnSerial=0; this.previousSlot=-1;
     this.pendingDouble=false;this.previousEvent='normal';this.currentVariant='normal';
     this.stats={...emptyStats};
+    this.stickerAnchor=null;
     portraitBackdrop(this);
     trees(this);
     addArcadeAccents(this,true);
@@ -239,6 +241,7 @@ export class MobilePlayScene extends Phaser.Scene {
     const x=peekPosition(treeX,plan.side,MOBILE_PEEK_DISTANCE);
     const y=FACE_Y;
     this.moments.clear();
+    this.stickerAnchor=null;
     applyRaminMood(this.hero,'idle');
     this.sticker.setVisible(false);
     selectAccessory(this.accessory,this.currentVariant);
@@ -298,8 +301,8 @@ export class MobilePlayScene extends Phaser.Scene {
       if(this.roundOver)return;
       this.shooting=false;
       const mouth=raminLipPoint(this.hero);
-      const distance=Phaser.Math.Distance.Between(aim.x,aim.y,mouth.x,mouth.y);
-      const result=evaluateShot(normalizeTouchDistance(distance),this.combo,true);
+      const result=evaluateAim(aim,mouth,this.combo,true,true);
+      showLandingPrecision(this,aim,mouth,result.grade);
       this.stats=recordShot(this.stats,result.grade,result.combo);
       haptic(result.grade);
       if(result.grade==='miss'){
@@ -307,7 +310,7 @@ export class MobilePlayScene extends Phaser.Scene {
         this.comboText.setText('× 0');
         playSfx('miss');
         this.feedback(aim.x,aim.y,'MISS!','#ff8eaa');
-        missToTree(this,'stache-'+style,aim,MOBILE_TREE_CENTERS,552,84,44);
+        resolveMissImpact(this,'stache-'+style,aim,{centers:MOBILE_TREE_CENTERS,centerY:552,halfWidth:23,top:395,bottom:738},84,44);
         burstLeaves(this,aim.x,aim.y,3);
       }else{
         const reward=variantReward(variant,result.grade);
@@ -321,11 +324,12 @@ export class MobilePlayScene extends Phaser.Scene {
         playSfx(result.grade==='perfect'?'perfect':'good');
         applyRaminMood(this.hero,'surprised');
         this.sticker.setTexture('stache-'+style)
-          .setPosition(mouth.x,mouth.y).setRotation(this.hero.rotation).setVisible(true);
+          .setPosition(aim.x,aim.y).setRotation(this.hero.rotation).setVisible(true);
+        this.stickerAnchor=toHeroAnchor(this.hero,aim);
         attachMustache(this,this.sticker,style,result.grade);
         this.moments.onHit(result.grade,this.combo);
-        burstStars(this,mouth.x,mouth.y,result.grade==='perfect');
-        impactRing(this,mouth.x,mouth.y,result.grade==='perfect');
+        burstStars(this,aim.x,aim.y,result.grade==='perfect');
+        impactRing(this,aim.x,aim.y,result.grade==='perfect');
         hitReaction(this,this.hero,RAMIN_MOBILE_SCALE,result.grade==='perfect');
         this.feedback(mouth.x,this.hero.y-190,'+'+gained+' '+result.grade.toUpperCase()+'!',
           result.grade==='perfect'?'#ffe083':'#aaf3d4');
@@ -346,9 +350,11 @@ export class MobilePlayScene extends Phaser.Scene {
     if(this.hero?.active)this.followLighting(this.hero);
     if(this.hero?.active && this.accessory?.active)syncAccessory(this.hero,this.accessory);
     if(this.moments)this.moments.update();
-    if(this.hero?.active && this.sticker?.visible){
-      const lip=raminLipPoint(this.hero);
-      this.sticker.setPosition(lip.x,lip.y).setRotation(this.hero.rotation);
+    if(this.hero?.active && this.sticker?.visible&&this.stickerAnchor){
+      const point=fromHeroAnchor(this.hero,this.stickerAnchor);
+      const twist=this.sticker.getData('impactTwist') as {offset:number}|undefined;
+      this.sticker.setPosition(point.x,point.y)
+        .setRotation(this.hero.rotation+(twist?.offset??0)).setAlpha(this.hero.alpha);
     }
   }
   private feedback(x:number,y:number,words:string,color:string){

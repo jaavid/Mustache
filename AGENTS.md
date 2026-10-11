@@ -17,3 +17,5 @@
 - v0.9: Maintain three independently tested round phases (0–15, 15–30, 30–45s) and fair minimum exposure. Present mission/share scores as unverified local practice only. Keep extra VFX behind input UI and avoid visual overlap on 540×960 mobile. Respect reduced-motion preferences for new ambience.
 
 - v0.9.7/v0.9.8: RaminMoments overlays MUST NOT displace the active hero/lip hitbox. `onHit` only after impact evaluation; optional slip only once target becomes inactive. `moments.clear()` at next spawn, render `moments.update()` after accessory sync. Mustache style effects remain cosmetic for scoring. Keep both desktop/mobile scenes symmetric.
+
+- v0.9.8.1: Use evaluateAim for true-aim elliptical lip scoring. GOOD/PERFECT must visually land at the pointer location via the rotated local sticker anchor (no snap to lip center). Tree misses require bark collision; all other misses fall. Keep desktop/mobile parity.

@@ -11,13 +11,14 @@ import { setMusicPhase } from './sound';
 import {addResultsExtras} from './replayUi';
 import { addForestLife, burstLeaves, burstStars } from './ambience';
 import { applyRaminMood, ensureRaminAnimations, makeRamin, preloadRamin, RAMIN_DESKTOP_SCALE, raminLipPoint } from './ramin';
-import { evaluateShot, readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
+import { evaluateAim, readBestScore, ROUND_LENGTH_SECONDS, saveBestScore } from '../logic/scoring';
 import { nextSlot, popPlan, type PopPlan } from '../logic/gameplay';
 import { DESKTOP_TREE_CENTERS, DESKTOP_PEEK_DISTANCE, chooseSpawnSide, peekPosition } from '../logic/treeGeometry';
 import { enterFromTree, exitBehindTreeWithSlip, hitReaction, launchMustache } from './gameFeel';
 import { chooseRaminVariant, chooseSpawnEvent, variantReward, type RaminVariant, type SpawnEvent } from '../logic/variety';
 import { makeAccessory, selectAccessory, syncAccessory } from './accessories';
-import {attachMustache,missToTree} from './impactFx';
+import {attachMustache,resolveMissImpact,showLandingPrecision} from './impactFx';
+import {toHeroAnchor,fromHeroAnchor,type StickerAnchor} from '../logic/stickerAnchor';
 import {RaminMomentController} from './raminMoments';
 
 const WIDTH = 960;
@@ -127,6 +128,7 @@ export class PlayScene extends Phaser.Scene {
   private selectedStyle=0;
   private hero!:Phaser.GameObjects.Sprite;
   private sticker!:Phaser.GameObjects.Image;
+  private stickerAnchor:StickerAnchor|null=null;
   private scoreText!:Phaser.GameObjects.Text;
   private timerText!:Phaser.GameObjects.Text;
   private comboText!:Phaser.GameObjects.Text;
@@ -154,6 +156,7 @@ export class PlayScene extends Phaser.Scene {
     this.active=false;this.roundOver=false;this.shooting=false;this.spawnSerial=0;this.previousSlot=-1;
     this.pendingDouble=false;this.previousEvent='normal';this.currentVariant='normal';
     this.stats={...emptyStats};
+    this.stickerAnchor=null;
     backdrop(this);addTrees(this);
     addArcadeAccents(this,false);
     const lighting=addLivingForest(this,false);
@@ -265,6 +268,7 @@ export class PlayScene extends Phaser.Scene {
     const x=peekPosition(treeX,plan.side,DESKTOP_PEEK_DISTANCE);
     const y=315;
     this.moments.clear();
+    this.stickerAnchor=null;
     applyRaminMood(this.hero,'idle');
     this.sticker.setVisible(false);
     selectAccessory(this.accessory,this.currentVariant);
@@ -324,8 +328,8 @@ export class PlayScene extends Phaser.Scene {
       if(this.roundOver)return;
       this.shooting=false;
       const mouth=raminLipPoint(this.hero);
-      const distance=Phaser.Math.Distance.Between(aim.x,aim.y,mouth.x,mouth.y);
-      const result=evaluateShot(distance,this.combo,true);
+      const result=evaluateAim(aim,mouth,this.combo,true,false);
+      showLandingPrecision(this,aim,mouth,result.grade);
       this.stats=recordShot(this.stats,result.grade,result.combo);
       haptic(result.grade);
       if(result.grade==='miss'){
@@ -333,7 +337,7 @@ export class PlayScene extends Phaser.Scene {
         this.comboText.setText('× 0');
         playSfx('miss');
         this.popFeedback(aim.x,aim.y,'MISS!','#ff848f');
-        missToTree(this,'stache-'+chosenStyle,aim,DESKTOP_TREE_CENTERS,300,66,34);
+        resolveMissImpact(this,'stache-'+chosenStyle,aim,{centers:DESKTOP_TREE_CENTERS,centerY:300,halfWidth:30,top:143,bottom:486},66,34);
         burstLeaves(this,aim.x,aim.y,3);
       }else{
         const reward=variantReward(variant,result.grade);
@@ -347,11 +351,12 @@ export class PlayScene extends Phaser.Scene {
         playSfx(result.grade==='perfect'?'perfect':'good');
         applyRaminMood(this.hero,'surprised');
         this.sticker.setTexture('stache-'+chosenStyle)
-          .setPosition(mouth.x,mouth.y).setRotation(this.hero.rotation).setVisible(true);
+          .setPosition(aim.x,aim.y).setRotation(this.hero.rotation).setVisible(true);
+        this.stickerAnchor=toHeroAnchor(this.hero,aim);
         attachMustache(this,this.sticker,chosenStyle,result.grade);
         this.moments.onHit(result.grade,this.combo);
-        burstStars(this,mouth.x,mouth.y,result.grade==='perfect');
-        impactRing(this,mouth.x,mouth.y,result.grade==='perfect');
+        burstStars(this,aim.x,aim.y,result.grade==='perfect');
+        impactRing(this,aim.x,aim.y,result.grade==='perfect');
         hitReaction(this,this.hero,RAMIN_DESKTOP_SCALE,result.grade==='perfect');
         this.popFeedback(mouth.x,this.hero.y-165,'+'+gained+' '+result.grade.toUpperCase()+'!',
           result.grade==='perfect'?'#ffd16c':'#a7efc0');
@@ -372,9 +377,11 @@ export class PlayScene extends Phaser.Scene {
     if(this.hero?.active)this.followLighting(this.hero);
     if(this.hero?.active && this.accessory?.active)syncAccessory(this.hero,this.accessory);
     if(this.moments)this.moments.update();
-    if(this.hero?.active && this.sticker?.visible){
-      const lip=raminLipPoint(this.hero);
-      this.sticker.setPosition(lip.x,lip.y).setRotation(this.hero.rotation);
+    if(this.hero?.active && this.sticker?.visible&&this.stickerAnchor){
+      const point=fromHeroAnchor(this.hero,this.stickerAnchor);
+      const twist=this.sticker.getData('impactTwist') as {offset:number}|undefined;
+      this.sticker.setPosition(point.x,point.y)
+        .setRotation(this.hero.rotation+(twist?.offset??0)).setAlpha(this.hero.alpha);
     }
   }
   private popFeedback(x:number,y:number,message:string,color:string){

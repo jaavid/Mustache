@@ -149,3 +149,11 @@ Previous phase tuning was too subtle: low-opacity lighting sat behind the charac
 - **Physical character gags:** bold serious eyebrows, a short wink/taunt, a genuine sunglasses-lift performed by the independent accessory layer, post-Perfect mustache touch using a little animated hand, and an occasional overbalanced slip before exiting behind a tree.
 - **Fairness:** no active targeting windows or lip coordinates are moved by any moment. Hand contact runs only AFTER a confirmed Perfect (combo ≥2). Slip runs only AFTER an appearance is no longer targetable. A 4.8s scene-time cooldown restricts repeats. Visual-only effects obey pause/resume automatically.
 - New deterministic unit tests validate probabilities/cooldowns and mustache impact plans; no backend changes.
+
+### v0.9.8.1 — Honest aiming and non-magnetic misses
+
+- Previously any GOOD/PERFECT sticker jumped to lip center and was recentered every frame. New stickers stay at the actual landing coordinate relative to the moving/rotating hero.
+- A narrower horizontal ellipse replaces the 43px-radius face circle. Desktop PERFECT radius 17×12, GOOD 33×21; mobile 21×15 and 38×26 for finger tolerance.
+- A precision crosshair marks the actual landing. GOOD adds a small reference dot at the ideal mouth center and a displacement line.
+- Missed throws stick to a tree only when the actual aim point collides with visible trunk bark; all other misses fall/fade without any nearest-tree attraction.
+- All three cosmetic mustache bounce patterns and original combo/point bonuses remain; stored personal best is unchanged.
