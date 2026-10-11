@@ -21,6 +21,7 @@ jobs:
           cache: npm
       - name: Install reproducible dependencies
         run: npm ci --no-audit --no-fund
+      - run: npm run format:check
       - run: npm run lint
       - run: npm run assets:check
       - run: npm run docs:check
