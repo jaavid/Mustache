@@ -62,7 +62,7 @@ See [Architecture](docs/ARCHITECTURE.md), [Art pipeline](assets/README.md), [Con
 - Vitest tests pure game logic. ESLint and TypeScript `strict` cover code quality.
 - The optional browser workflow runs smoke checks and collects mobile and desktop screenshots. Screenshots are **review artifacts**, not automated pixel-perfect baselines.
 - Every push to `main` builds and deploys to GitHub Pages using relative Vite asset paths.
-- This is a **static practice game**. It has no accounts, backend, authoritative ranking, blockchain integration, or token awards; browser scores are untrusted.
+- Standalone browser play stays local-only. Official Telegram Game sessions use a separate Cloudflare Worker and D1 weekly board; no blockchain integration or token awards are enabled, and submitted impact traces are not prize-grade proof.
 
 ## Official Telegram Game (@RJTtobot)
 
@@ -89,3 +89,20 @@ Telegram webhook.
 **not enabled yet**: today's local scores are client-controlled. They must not be
 published as verified scores or used for prizes until server-side round
 validation and anti-cheat are implemented.
+
+## Weekly score service (Cloudflare D1)
+
+Official Telegram Game launches issue short-lived per-player sessions on
+`mustache.zedai.ir`. The browser submits an impact trace; the Worker
+recalculates the score, stores a weekly best in D1 and attempts
+`setGameScore` for the original Game Card. The result screen includes a
+clickable weekly top-ten panel.
+
+Deployment now requires the additional `CLOUDFLARE_D1_DATABASE_ID` GitHub
+production secret and an initial `n5-mustache-scores` D1 database. The CI
+workflow applies SQL migrations **before** deploying the Worker. See
+[Telegram scoring and D1 setup](docs/TELEGRAM_SCORES.md).
+
+**Scores are not prize-grade.** Server arithmetic validation cannot establish
+that a client-controlled animated target was genuinely hit; do not award N5
+tokens based on these records.

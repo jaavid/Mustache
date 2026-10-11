@@ -116,17 +116,17 @@ sensitive data.
 - Test the standalone web version; it must still use Web Share/clipboard.
 - Optionally try inline mode by typing `@RJTtobot mustache` in another chat.
 
-## 5. Scores and prizes: intentionally out of scope
+## 5. Scores, D1 and prize restrictions
 
-Current `localStorage` scores are **practice-only**. No `setGameScore`,
-`getGameHighScores`, wallet integration or prize issuance is enabled. Telegram
-Game Cards work without server scores, but their **official chat leaderboard**
-will remain empty until server-validated scoring is implemented.
+Native Game Card scores and D1 weekly top-ten are now implemented. Before
+merging the scoring PR, provision the D1 database and the additional GitHub
+secret `CLOUDFLARE_D1_DATABASE_ID`. The deploy workflow applies migrations
+before updating the Worker; it still never changes the existing Telegram webhook.
 
-Future work must authenticate game sessions using Telegram callback context,
-capture or generate server-verifiable rounds and validate shots and timestamps
-before posting server-approved scores with `setGameScore`. Do not accept an
-arbitrary score from the browser or offer real N5 rewards yet.
+Read [Telegram scores and weekly rankings](TELEGRAM_SCORES.md) for exact setup,
+the difference between all-time Telegram rankings and weekly D1 rankings,
+API behavior and the explicit anti-cheat limitation. N5 prizes remain
+disabled; client-controlled target positions cannot certify honest play.
 
 Official documentation:
 
