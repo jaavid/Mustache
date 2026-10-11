@@ -171,7 +171,7 @@ test('charge survives regular shots until a manually equipped golden perfect', (
     const result = verifyRoundShots([normal, another, gold, later], portrait, 810, pickups);
     assert.equal(result.score, 810);
     assert.equal(result.goldenPerfect, 1);
-    assert.equal(verifyRoundShots([normal, another, later], portrait, 330, pickups).goldenPerfect, 0);
+    assert.equal(verifyRoundShots([normal, another, { ...later, comboBefore: 2 }], portrait, 330, pickups).goldenPerfect, 0);
     assert.throws(
       () => verifyRoundShots([normal, another, gold, { ...gold, tMs: 30500, comboBefore: 3 }], portrait, 1130, pickups),
       /INVALID_GOLDEN_SHOT/,
