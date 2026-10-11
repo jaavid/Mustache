@@ -157,3 +157,15 @@ Previous phase tuning was too subtle: low-opacity lighting sat behind the charac
 - A precision crosshair marks the actual landing. GOOD adds a small reference dot at the ideal mouth center and a displacement line.
 - Missed throws stick to a tree only when the actual aim point collides with visible trunk bark; all other misses fall/fade without any nearest-tree attraction.
 - All three cosmetic mustache bounce patterns and original combo/point bonuses remain; stored personal best is unchanged.
+
+
+### v0.9.8.2 — Complete-frame facial animation fix
+
+The old `ramin-emote-serious` and `ramin-emote-wink` transparent overlays were drawn over the original painted eyes and eyebrows, producing duplicates. Both effects now use **actual full-body sprite frames** from a six-frame, 210×362 canvas sprite sheet built at boot from the existing Ramin art:
+
+- Frames 0–3 reproduce the original idle, blink, surprise and victory poses.
+- Frame 4 starts with the idle illustration, then **replaces** the left-eye pixel region with the original closed-eye pose, so the other eye stays open (wink).
+- Frame 5 starts with the idle illustration, then **replaces** the brow pixels with the original surprised/raised-brow artwork. Existing brows are overwritten rather than drawn twice.
+- These two new frames are composed once, not in every render tick. No additional eye/brow layers exist in gameplay. Other accessories and the mustache-touch hand remain separate scene objects.
+- Facial gestures return to idle after 540ms, unless an impact has already selected a different expression; pending resets are cancelled on spawn and hit.
+- Mouth anchor, canvas dimensions, hit detection and sticker coordinates stay unchanged.

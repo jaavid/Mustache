@@ -19,3 +19,5 @@
 - v0.9.7/v0.9.8: RaminMoments overlays MUST NOT displace the active hero/lip hitbox. `onHit` only after impact evaluation; optional slip only once target becomes inactive. `moments.clear()` at next spawn, render `moments.update()` after accessory sync. Mustache style effects remain cosmetic for scoring. Keep both desktop/mobile scenes symmetric.
 
 - v0.9.8.1: Use evaluateAim for true-aim elliptical lip scoring. GOOD/PERFECT must visually land at the pointer location via the rotated local sticker anchor (no snap to lip center). Tree misses require bark collision; all other misses fall. Keep desktop/mobile parity.
+
+- v0.9.8.2: Ramin facial expressions must use only complete sprite frames from `ramin-face-atlas-v2`; never draw facial eyes/eyebrows as scene foreground textures. Build wink from blink eye pixels and serious from the existing eyebrow artwork, do not shift the 210x362 lip calibration. `RaminMomentController` cancels stale resets on impact or next spawn.

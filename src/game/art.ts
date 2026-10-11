@@ -186,19 +186,6 @@ function treeFront(c: Ctx, variant: number) {
 
 /** Pixel overlays share the Ramin sheet's 210×362 frame and do not touch his lip at y=136. */
 /** Emotion overlays match the 210x362 Ramin sheet; every pixel stays above the lip. */
-function raminEmote(c:Ctx,kind:'serious'|'wink') {
-  if(kind==='serious'){
-    // Strong inward-pointing eyebrows and cheek highlights.
-    rect(c,69,89,33,7,'#201c26');rect(c,73,86,21,5,'#34242b');
-    rect(c,110,88,34,7,'#201c26');rect(c,119,85,23,5,'#34242b');
-    rect(c,91,96,8,4,'#4c2e33');rect(c,112,96,8,4,'#4c2e33');
-  }else{
-    // A clearly animated wink plus cheek crease.
-    rect(c,72,108,27,7,'#38252a');rect(c,77,113,19,3,'#1a1b23');
-    rect(c,127,112,14,4,'#653c3e');
-    rect(c,135,123,10,3,'#dc997f');
-  }
-}
 function raminEmoteHand(c:Ctx){
   // Cartoon palm, cuff and a finger pointing toward the glued mustache.
   rect(c,5,22,18,12,'#151c2a');rect(c,7,23,16,6,'#61708e');
@@ -394,7 +381,6 @@ export function createArt(scene: Phaser.Scene) {
     makeCanvas(scene,`tree-front-${i}`,96,220,ctx=>treeFront(ctx,i));
   }
   for (const variant of RAMIN_VARIANTS) makeCanvas(scene,`ramin-acc-${variant}`,210,362,ctx=>raminAccessory(ctx,variant));
-  for(const kind of ['serious','wink'] as const)makeCanvas(scene,`ramin-emote-${kind}`,210,362,ctx=>raminEmote(ctx,kind));
   makeCanvas(scene,'ramin-emote-hand',35,40,raminEmoteHand);
   makeCanvas(scene,'ramin',64,88,ctx=>hero(ctx));
   makeCanvas(scene,'ramin-blink',64,88,ctx=>hero(ctx,'blink'));
