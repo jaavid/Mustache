@@ -13,7 +13,8 @@ export const RAMIN_FRAME_HEIGHT = 362;
 export const RAMIN_DESKTOP_SCALE = 0.64;
 export const RAMIN_MOBILE_SCALE = 0.82;
 const LIP_X_RATIO = 0;
-const LIP_Y_RATIO = 136 / RAMIN_FRAME_HEIGHT - 0.5; // calibrated upper-lip point across aligned frames
+const RAMIN_LIP_SOURCE_Y = 136;
+const BORHAN_LIP_SOURCE_Y = 128; // measured against the supplied four-frame art
 
 export type RaminMood = 'idle' | 'blink' | 'surprised' | 'victory' | 'wink' | 'serious';
 
@@ -171,7 +172,10 @@ export function raminLipPoint(hero: Phaser.GameObjects.Sprite): { x: number; y: 
     hero.x,
     hero.y,
     hero.displayWidth * LIP_X_RATIO,
-    hero.displayHeight * LIP_Y_RATIO,
+    hero.displayHeight *
+      ((hero.getData('character') === 'borhan' ? BORHAN_LIP_SOURCE_Y : RAMIN_LIP_SOURCE_Y) /
+        RAMIN_FRAME_HEIGHT -
+        0.5),
     hero.rotation,
   );
 }
