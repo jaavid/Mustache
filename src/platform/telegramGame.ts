@@ -15,8 +15,7 @@ export function isTelegramGame(): boolean {
   const proxy = currentGameProxy();
   // Ordinary browser visitors must keep the existing Web Share/clipboard flow.
   return (
-    typeof proxy?.shareScore === 'function' &&
-    typeof proxy.initParams?.tgShareScoreUrl === 'string'
+    typeof proxy?.shareScore === 'function' && typeof proxy.initParams?.tgShareScoreUrl === 'string'
   );
 }
 
