@@ -1,4 +1,5 @@
 import { evaluateAim, type AimPoint, type ShotResult } from './scoring';
+import { GOLDEN_PERFECT_BONUS } from '../../shared/goldenRules.js';
 import { recordShot, type RoundStats } from './roundStats';
 import { variantReward, type RaminVariant, type VariantReward } from './variety';
 
@@ -15,12 +16,15 @@ export type ShotContext = Readonly<{
   stats: RoundStats;
   variant: RaminVariant;
   portrait: boolean;
+  /** One-use special projectile awarded after three validated pickups. */
+  goldenShot?: boolean;
 }>;
 
 export type ResolvedShot = Readonly<{
   result: ShotResult;
   reward: VariantReward;
   gained: number;
+  goldenPerfect: boolean;
   score: number;
   combo: number;
   stats: RoundStats;
@@ -29,12 +33,14 @@ export type ResolvedShot = Readonly<{
 export function resolveRoundShot(context: ShotContext): ResolvedShot {
   const result = evaluateAim(context.aim, context.lip, context.combo, true, context.portrait);
   const reward = variantReward(context.variant, result.grade);
-  const gained = result.points + reward.bonus;
+  const goldenPerfect = context.goldenShot === true && result.grade === 'perfect';
+  const gained = result.points + reward.bonus + (goldenPerfect ? GOLDEN_PERFECT_BONUS : 0);
 
   return {
     result,
     reward,
     gained,
+    goldenPerfect,
     score: context.score + gained,
     combo: result.combo,
     stats: recordShot(context.stats, result.grade, result.combo),

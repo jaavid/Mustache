@@ -29,6 +29,21 @@ describe('shared shot transaction', () => {
     expect(resolveRoundShot({ ...base, aim: base.lip, variant: 'sunglasses' }).gained).toBe(145);
   });
 
+  it('pays +350 only for a single charged PERFECT', () => {
+    expect(resolveRoundShot({ ...base, aim: base.lip, goldenShot: true })).toMatchObject({
+      gained: 470,
+      goldenPerfect: true,
+    });
+    expect(resolveRoundShot({ ...base, aim: { x: 295, y: 350 }, goldenShot: true })).toMatchObject({
+      gained: 70,
+      goldenPerfect: false,
+    });
+    expect(resolveRoundShot({ ...base, aim: { x: 500, y: 350 }, goldenShot: true })).toMatchObject({
+      gained: 0,
+      goldenPerfect: false,
+    });
+  });
+
   it('counts a miss once and resets combo without granting points', () => {
     const shot = resolveRoundShot({ ...base, aim: { x: 500, y: 350 } });
     expect(shot).toMatchObject({ score: 500, combo: 0, gained: 0 });

@@ -1,3 +1,4 @@
+import { goldenPosition, GOLDEN_SPAWN_MS } from '../../shared/goldenRules.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { verifyRoundShots } from '../src/scoring.js';
@@ -63,10 +64,10 @@ class MemoryD1 {
             return {meta:{changes:1}};
           }
           if (sql.startsWith('UPDATE game_rounds SET score=')) {
-            const [score, week_start, finished_at, id, token_hash, now] = args;
+            const [score, week_start, finished_at, golden_perfect, id, token_hash, now] = args;
             const row=db.rounds.get(id);
             if(!row || row.token_hash!==token_hash || row.score!==null || row.expires_at<now) return {meta:{changes:0}};
-            Object.assign(row,{score,week_start,finished_at});
+            Object.assign(row,{score,week_start,finished_at,golden_perfect});
             return {meta:{changes:1}};
           }
           return {meta:{changes:0}};
@@ -154,4 +155,23 @@ test('abnormally short rounds are rejected', async () => {
   const session={token_hash:'hash',user_id:1};
   const started=await startRound(db,session,false,1000);
   await assert.rejects(finishRound(db,session,{roundId:started.roundId,score:0,shots:[]},2000),/INVALID_ROUND_DURATION/);
+});
+
+test('three legitimate pickups authorize exactly one +350 PERFECT and golden badge', () => {
+  for (const portrait of [false, true]) {
+    const pickups = [0, 1, 2].map(index => {
+      const tMs = GOLDEN_SPAWN_MS[index] + 1250;
+      return { index, tMs, aim: goldenPosition(index, tMs, portrait) };
+    });
+    const lip = portrait ? { x: 270, y: 545 } : { x: 480, y: 285 };
+    const shot = { tMs: 23600, aim: lip, lip, variant: 'normal', comboBefore: 0, goldenShot: true };
+    const verified = verifyRoundShots([shot], portrait, 450, pickups);
+    assert.equal(verified.goldenPerfect, 1);
+    assert.equal(verified.score, 450);
+    assert.equal(verifyRoundShots([{ ...shot, aim: { x: lip.x + 25, y: lip.y } }], portrait, 50, pickups).goldenPerfect, 0);
+    assert.throws(() => verifyRoundShots([shot], portrait, 450, pickups.slice(0, 2)), /INVALID_GOLDEN_SHOT/);
+    assert.throws(() => verifyRoundShots([shot], portrait, 450, [{ ...pickups[0], aim: { x: 0, y: 0 } }, ...pickups.slice(1)]), /INVALID_GOLDEN_PICKUP/);
+    assert.throws(() => verifyRoundShots([shot], portrait, 450, [pickups[0], pickups[0], pickups[2]]), /INVALID_GOLDEN_PICKUP/);
+    assert.throws(() => verifyRoundShots([shot, { ...shot, tMs: 26000, comboBefore: 1 }], portrait, 450, pickups), /INVALID_GOLDEN_SHOT/);
+  }
 });

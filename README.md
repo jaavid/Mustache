@@ -19,6 +19,16 @@ Throw a mustache at the precise upper-lip location while Ramin peeks from three 
 
 **Controls:** click/tap to aim and shoot, use 1–3 to select styles on desktop, and P to pause. Desktop/landscape uses a 960 × 540 logical canvas; portrait mobile uses 540 × 960. Rotating restarts the current round.
 
+## Golden Mustache (score bonus)
+
+Five golden mustaches fly across each 45-second round. Catch three to charge one golden shot.
+Only a PERFECT hit with that projectile earns **+350 points**, in addition to normal scoring.
+Pickup taps do not consume a Ramin shot or break a combo. This is an in-game score bonus,
+**not** a NFIVE token or a financial prize. Telegram's leaderboard validates the pickup
+trace and displays a golden badge for verified golden-perfect records.
+
+See [Golden Mustache rules and integrity](docs/GOLDEN_MUSTACHE.md).
+
 ## Development
 
 Use **Node.js 22**. Clone the repository and run:

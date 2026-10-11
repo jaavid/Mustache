@@ -106,6 +106,15 @@ test('inline callbacks and stale messages are safe', async () => {
   assert.equal(stale.calls[0].payload.show_alert, true);
 });
 
+test('golden-perfect achievers show badge without HTML injection', () => {
+  const view = formatLeaderboardMessage({
+    period: 'week', offset: 0, startLabel: 'week', playerCount: 1,
+    players: [{ rank: 1, name: 'Gold', score: 450, goldenPerfect: 1 }],
+    me: { rank: 1, name: 'Gold', score: 450, goldenPerfect: 1 },
+  });
+  assert.match(view.text, /450 🥇/);
+});
+
 test('rendered leaderboard stays plain text, independent of player name formatting', () => {
   const result = formatLeaderboardMessage({
     period: 'all', offset: 0, startLabel: 'All time', playerCount: 1,

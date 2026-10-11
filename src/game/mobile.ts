@@ -47,6 +47,7 @@ import { makeAccessory, selectAccessory, syncAccessory } from './accessories';
 import { attachMustache, resolveMissImpact, showLandingPrecision } from './impactFx';
 import { toHeroAnchor, fromHeroAnchor, type StickerAnchor } from '../logic/stickerAnchor';
 import { RaminMomentController } from './raminMoments';
+import { GoldenFlyer } from './goldenFlyer';
 
 /** Dedicated 540 × 960 portrait experience. Desktop scenes remain unchanged. */
 const W = 540;
@@ -232,6 +233,7 @@ export class MobilePlayScene extends Phaser.Scene {
   private pendingDouble = false;
   private previousEvent: SpawnEvent = 'normal';
   private stats: RoundStats = { ...emptyStats };
+  private golden!: GoldenFlyer;
   private updatePhase!: (elapsed: number) => void;
   private followLighting!: (hero: Phaser.GameObjects.Sprite) => void;
   private updateMissions!: (score: number, perfect: number, combo: number) => void;
@@ -277,6 +279,9 @@ export class MobilePlayScene extends Phaser.Scene {
       .setDepth(31)
       .setVisible(false);
     this.hud();
+    this.golden = new GoldenFlyer(this, true, (message, color) =>
+      this.varietyNotice(message, color),
+    );
     addSoundToggle(this, 469, 27, 112);
     addMusicToggle(this, 70, 27, 112);
     addPauseButton(this, 473, 195, true);
@@ -470,14 +475,10 @@ export class MobilePlayScene extends Phaser.Scene {
   }
   private shoot(pointer: Phaser.Input.Pointer) {
     const aim = { x: pointer.x, y: pointer.y };
-    if (
-      this.roundOver ||
-      this.shooting ||
-      !this.activeTarget ||
-      aim.y < HUD_BOTTOM ||
-      aim.y > SELECTOR_TOP
-    )
-      return;
+    if (this.roundOver || this.shooting) return;
+    if (this.golden.tryCollect(aim.x, aim.y, this.roundElapsedMs)) return;
+    if (!this.activeTarget || aim.y < HUD_BOTTOM || aim.y > SELECTOR_TOP) return;
+    const shotIsGolden = this.golden.consume();
     this.shooting = true;
     this.activeTarget = false;
     this.spawnSerial++;
@@ -487,7 +488,7 @@ export class MobilePlayScene extends Phaser.Scene {
     playSfx('shot');
     launchMustache(
       this,
-      'stache-' + style,
+      shotIsGolden ? 'stache-gold' : 'stache-' + style,
       { x: 270, y: 772 },
       aim,
       { width: 100, height: 49 },
@@ -504,14 +505,16 @@ export class MobilePlayScene extends Phaser.Scene {
           stats: this.stats,
           variant,
           portrait: true,
+          goldenShot: shotIsGolden,
         });
-        const { result, reward, gained } = outcome;
+        const { result, reward, gained, goldenPerfect } = outcome;
         recordCompetitiveShot({
           tMs: Math.min(46000, Math.round(this.roundElapsedMs)),
           aim,
           lip: mouth,
           variant,
           comboBefore,
+          goldenShot: shotIsGolden,
         });
         this.stats = outcome.stats;
         this.score = outcome.score;
@@ -540,7 +543,7 @@ export class MobilePlayScene extends Phaser.Scene {
           playSfx(result.grade === 'perfect' ? 'perfect' : 'good');
           applyRaminMood(this.hero, 'surprised');
           this.sticker
-            .setTexture('stache-' + style)
+            .setTexture(shotIsGolden ? 'stache-gold' : 'stache-' + style)
             .setPosition(aim.x, aim.y)
             .setRotation(this.hero.rotation)
             .setVisible(true);
@@ -556,7 +559,8 @@ export class MobilePlayScene extends Phaser.Scene {
             '+' + gained + ' ' + result.grade.toUpperCase() + '!',
             result.grade === 'perfect' ? '#ffe083' : '#aaf3d4',
           );
-          if (reward.bonus > 0) this.varietyNotice(reward.label, '#ffe291');
+          if (goldenPerfect) this.varietyNotice('GOLDEN PERFECT +350!', '#ffe085');
+          else if (reward.bonus > 0) this.varietyNotice(reward.label, '#ffe291');
           if (result.grade === 'perfect' && this.combo >= 3 && Math.random() < 0.3) {
             applyRaminMood(this.hero, 'victory');
             raminMoment(this, this.hero, true);
@@ -584,6 +588,7 @@ export class MobilePlayScene extends Phaser.Scene {
       startCompetitiveRound(true);
     }
     this.roundElapsedMs = accumulateActiveRoundMs(this.roundElapsedMs, delta);
+    this.golden.update(this.roundElapsedMs);
     if (this.hero?.active) this.followLighting(this.hero);
     if (this.hero?.active && this.accessory?.active) syncAccessory(this.hero, this.accessory);
     if (this.moments) this.moments.update();

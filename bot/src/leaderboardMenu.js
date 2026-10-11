@@ -44,7 +44,7 @@ export function formatLeaderboardMessage(board) {
   if (board.players.length) {
     board.players.slice(0, 10).forEach(player => {
       lines.push(String(player.rank).padStart(2, '0') + '. ' +
-        String(player.name).slice(0, 48) + ' — ' + Number(player.score).toLocaleString('en-US'));
+        String(player.name).slice(0, 48) + ' — ' + Number(player.score).toLocaleString('en-US') + (Number(player.goldenPerfect || 0) > 0 ? ' 🥇' : ''));
     });
   } else {
     lines.push('هنوز امتیازی برای این بازه ثبت نشده است.');
@@ -52,7 +52,7 @@ export function formatLeaderboardMessage(board) {
   lines.push('', '👥 بازیکنان: ' + Number(board.playerCount).toLocaleString('en-US'));
   if ('me' in board) {
     lines.push(board.me
-      ? '🎯 رتبه شما: ' + board.me.rank + ' · ' + Number(board.me.score).toLocaleString('en-US') + ' امتیاز'
+      ? '🎯 رتبه شما: ' + board.me.rank + ' · ' + Number(board.me.score).toLocaleString('en-US') + ' امتیاز' + (Number(board.me.goldenPerfect || 0) > 0 ? ' 🥇' : '')
       : '🎯 در این بازه هنوز امتیازی ثبت نکرده‌اید.');
   }
   if (board.period === 'week') {
