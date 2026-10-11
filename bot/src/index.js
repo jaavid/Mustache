@@ -2,6 +2,7 @@
  * Client-provided gameplay telemetry is re-scored but NOT prize-grade anti-cheat.
  */
 import { issueSession, authenticate, startRound, finishRound, leaderboard } from './sessions.js';
+import { parseLeaderboardCallback, formatLeaderboardMessage } from './leaderboardMenu.js';
 export const DEFAULT_GAME_URL = 'https://mustache.alexa.ir/';
 export const DEFAULT_GAME_SHORT_NAME = 'mustache';
 export const DEFAULT_BOT_USERNAME = 'rjttobot';
@@ -20,7 +21,7 @@ export function isSameSecret(actual, expected) {
 
 export function parseGameCommand(input, botUsername = DEFAULT_BOT_USERNAME) {
   const first = String(input ?? '').trim().split(/\s+/)[0];
-  const match = /^\/(start|play|help|top|score)(?:@([a-zA-Z0-9_]+))?$/i.exec(first);
+  const match = /^\/(start|play|help|top|score|leaderboard)(?:@([a-zA-Z0-9_]+))?$/i.exec(first);
   if (!match) return null;
   if (match[2] && match[2].toLowerCase() !== botUsername.toLowerCase()) return null;
   return match[1].toLowerCase();
@@ -48,20 +49,62 @@ export async function handleTelegramUpdate(update, env, send) {
     } else if (command === 'help') {
       await send('sendMessage', {
         chat_id: message.chat.id,
-        text: 'N5 Mustache Mayhem: /play to launch, /top for the Tehran Saturday-to-Saturday leaderboard, /score for your ranking. No real token prizes.',
+        text: '🎮 /play برای شروع بازی\n🏆 /leaderboard برای جدول‌های امروز، هفته، ماه شمسی و کل دوران\n📊 /top و /score هم جدول تعاملی را باز می‌کنند.\n\nهفته مسابقه: شنبه تا شنبه به وقت تهران.\nفعلاً جایزه توکنی فعال نیست.',
       });
-    } else if (command === 'top' || command === 'score') {
+    } else if (command === 'top' || command === 'score' || command === 'leaderboard') {
       if (!env.DB) throw new Error('D1_NOT_CONFIGURED');
       const board = await leaderboard(env.DB, Date.now(), { userId: message.from?.id });
-      const lines = ['🏆 MUSTACHE · TEHRAN WEEKLY TOP 10', board.startLabel || '', ''];
-      if (board.players.length === 0) lines.push('No scored rounds this week yet.');
-      for (const player of board.players) {
-        lines.push('#' + player.rank + '  ' + player.name + ' — ' + player.score);
+      await send('sendMessage', {
+        chat_id: message.chat.id,
+        ...formatLeaderboardMessage(board),
+      });
+    }
+    return;
+  }
+
+  if (update.callback_query?.id && update.callback_query.data?.startsWith('lb:')) {
+    const callback = update.callback_query;
+    const target = parseLeaderboardCallback(callback.data);
+    if (!target) {
+      await send('answerCallbackQuery', {
+        callback_query_id: callback.id,
+        text: 'گزینه رتبه‌بندی نامعتبر است. دوباره /leaderboard را بفرستید.',
+        show_alert: true,
+      });
+      return;
+    }
+    if (!env.DB) throw new Error('D1_NOT_CONFIGURED');
+    const board = await leaderboard(env.DB, Date.now(), {
+      ...target,
+      userId: callback.from?.id,
+    });
+    const view = formatLeaderboardMessage(board);
+    // Edit the same bot message instead of sending one message per button tap.
+    const inlineId = callback.inline_message_id;
+    const chatId = callback.message?.chat?.id;
+    const messageId = callback.message?.message_id;
+    if (!inlineId && (chatId === undefined || messageId === undefined)) {
+      await send('answerCallbackQuery', {
+        callback_query_id: callback.id, text: 'این پیام دیگر قابل ویرایش نیست.', show_alert: true,
+      });
+      return;
+    }
+    const destination = inlineId
+      ? { inline_message_id: inlineId }
+      : { chat_id: chatId, message_id: messageId };
+    try {
+      await send('editMessageText', { ...destination, ...view });
+      await send('answerCallbackQuery', { callback_query_id: callback.id, cache_time: 0 });
+    } catch (error) {
+      // Re-tapping the active tab is normal, not a failed webhook delivery.
+      if (error instanceof Error && error.message === 'TELEGRAM_MESSAGE_NOT_MODIFIED') {
+        await send('answerCallbackQuery', { callback_query_id: callback.id, cache_time: 0 });
+        return;
       }
-      lines.push('', 'Players: ' + board.playerCount);
-      if (board.me) lines.push('Your rank: #' + board.me.rank + ' · ' + board.me.score);
-      lines.push('Play: https://t.me/RJTtobot?game=mustache');
-      await send('sendMessage', { chat_id: message.chat.id, text: lines.join('\n') });
+      await send('answerCallbackQuery', {
+        callback_query_id: callback.id, text: 'به‌روزرسانی جدول ممکن نشد. دوباره تلاش کنید.',
+        show_alert: true, cache_time: 0,
+      });
     }
     return;
   }
@@ -108,6 +151,9 @@ export async function callTelegram(token, method, payload) {
     if (method === 'setGameScore' &&
         /BOT_SCORE_NOT_MODIFIED|score.*not (greater|modified)|not greater/i.test(description)) {
       throw new Error('TELEGRAM_SCORE_NOT_HIGHER');
+    }
+    if (method === 'editMessageText' && /message is not modified/i.test(description)) {
+      throw new Error('TELEGRAM_MESSAGE_NOT_MODIFIED');
     }
     throw new Error('Telegram Bot API failed for ' + method);
   }
