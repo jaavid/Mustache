@@ -1,6 +1,6 @@
 # Architecture and invariants
 
-Mustache Mayhem is a client-only Phaser game. Vite bundles the code and one source PNG; Canvas produces decorative textures at runtime, Web Audio synthesizes audio, and localStorage stores practice statistics.
+Mustache Mayhem uses client-side Phaser gameplay; official Telegram score submissions have a separate Cloudflare Worker and D1 persistence layer. Vite bundles the code and one source PNG; Canvas produces decorative textures at runtime, Web Audio synthesizes audio, and localStorage stores practice statistics. The server validates score arithmetic, not whether client-controlled target motion was genuine.
 
 ## Round lifecycle
 
@@ -31,3 +31,14 @@ Desktop and portrait scenes intentionally have different rendering and input lay
 ## Quality
 
 Use lockfile-based `npm ci`, ESLint, TypeScript strict, Vitest and an optional Playwright screenshot workflow. Screenshots are not yet a visual-diff acceptance gate.
+
+## Telegram backend boundaries
+
+- `bot/src/index.js`: BotFather Game webhook, authenticated score APIs and native Telegram score updates.
+- `bot/src/sessions.js`: secure callback-issued bearer sessions, D1 rounds and weekly ranking queries.
+- `bot/src/scoring.js`: server re-evaluation of client impact traces, with bounded timing and geometry.
+- `src/platform/competitiveScores.ts`: client telemetry transport; failure leaves the local game playable.
+- `bot/migrations/`: D1 schema applied before Worker deployment.
+
+**Do not confuse server score arithmetic checks with full anti-cheat.** The
+client controls the animated target; cryptocurrency rewards remain disabled.
