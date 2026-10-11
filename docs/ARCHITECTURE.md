@@ -35,10 +35,13 @@ Use lockfile-based `npm ci`, ESLint, TypeScript strict, Vitest and an optional P
 ## Telegram backend boundaries
 
 - `bot/src/index.js`: BotFather Game webhook, authenticated score APIs and native Telegram score updates.
-- `bot/src/sessions.js`: secure callback-issued bearer sessions, D1 rounds and weekly ranking queries.
+- `bot/src/sessions.js`: secure callback-issued bearer sessions, D1 rounds and multi-period ranking queries.
+- `bot/src/periods.js`: Saturday-to-Saturday Asia/Tehran boundaries and Solar Hijri month windows.
 - `bot/src/scoring.js`: server re-evaluation of client impact traces, with bounded timing and geometry.
 - `src/platform/competitiveScores.ts`: client telemetry transport; failure leaves the local game playable.
 - `bot/migrations/`: D1 schema applied before Worker deployment.
 
 **Do not confuse server score arithmetic checks with full anti-cheat.** The
 client controls the animated target; cryptocurrency rewards remain disabled.
+
+- `src/game/leaderboardOverlay.ts`: automatic results overlay with current/archived weekly, daily, Persian-monthly, all-time and native chat rankings.

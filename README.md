@@ -96,13 +96,27 @@ Official Telegram Game launches issue short-lived per-player sessions on
 `mustache.zedai.ir`. The browser submits an impact trace; the Worker
 recalculates the score, stores a weekly best in D1 and attempts
 `setGameScore` for the original Game Card. The result screen includes a
-clickable weekly top-ten panel.
+automatically opened Saturday-to-Saturday Tehran weekly top-ten panel, with daily,
+Persian-monthly, all-time, Telegram chat tabs and the player's rank.
 
-Deployment now requires the additional `CLOUDFLARE_D1_DATABASE_ID` GitHub
-production secret and an initial `n5-mustache-scores` D1 database. The CI
-workflow applies SQL migrations **before** deploying the Worker. See
+Deployment uses the existing `CLOUDFLARE_D1_DATABASE_ID` GitHub production secret
+and `n5-mustache-scores` D1 database. CI applies SQL migrations **before** deploying the Worker. See
 [Telegram scoring and D1 setup](docs/TELEGRAM_SCORES.md).
 
 **Scores are not prize-grade.** Server arithmetic validation cannot establish
 that a client-controlled animated target was genuinely hit; do not award N5
 tokens based on these records.
+
+## Tehran competitions
+
+Weekly contest windows are Saturday 00:00 to next Saturday 00:00
+\`Asia/Tehran\` (start inclusive, end exclusive). The month tab follows the
+**Solar Hijri calendar** in Tehran. Original scores remain in D1 and are
+rebucketed by \`finished_at\`, with no destructive migration.
+
+After a native Telegram round is accepted, the game automatically displays
+the weekly top ten, personal rank and Telegram sync status. A new personal
+high is sent through \`setGameScore\`, updating the original Telegram
+Game Card. Telegram chat scores remain all-time and chat-local, distinct
+from global weekly D1 rankings. Chat commands \`/top\` and \`/score\`
+show the Tehran competition results.
