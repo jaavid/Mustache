@@ -1,14 +1,20 @@
 {
   "name": "n5-mustache-mayhem",
   "private": true,
-  "version": "0.9.8.2",
+  "version": "0.9.9",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "lint": "eslint .",
+    "format": "prettier --write src/ docs/ assets/ scripts/ *.md *.json *.js",
+    "format:check": "prettier --check eslint.config.js scripts/ *.json",
+    "assets:check": "node scripts/check-assets.mjs",
+    "docs:check": "node scripts/check-docs.mjs",
+    "check": "npm run lint && npm run assets:check && npm run docs:check && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
     "phaser": "^3.90.0"
@@ -16,6 +22,9 @@
   "devDependencies": {
     "typescript": "~5.8.3",
     "vite": "^6.3.5",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "@typescript-eslint/parser": "^8.46.0",
+    "eslint": "^9.38.0",
+    "prettier": "^3.6.2"
   }
 }

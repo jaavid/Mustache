@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "sourceAssets": [
+    {
+      "path": "src/assets/ramin-sheet.png",
+      "kind": "spritesheet",
+      "frameWidth": 210,
+      "frameHeight": 362,
+      "frames": 4,
+      "orientation": "horizontal",
+      "purpose": "Four source expressions: idle, blink, surprised, victory"
+    }
+  ],
+  "generatedTextures": [
+    {
+      "key": "ramin-face-atlas-v2",
+      "producer": "src/game/facialAtlas.ts",
+      "kind": "canvas-spritesheet",
+      "frames": 6,
+      "source": "src/assets/ramin-sheet.png"
+    },
+    {
+      "key": "forest",
+      "producer": "src/game/art.ts",
+      "kind": "canvas"
+    },
+    {
+      "key": "tree-back-{0..2}",
+      "producer": "src/game/art.ts",
+      "count": 3
+    },
+    {
+      "key": "tree-front-{0..2}",
+      "producer": "src/game/art.ts",
+      "count": 3
+    },
+    {
+      "key": "ramin-acc-{variant}",
+      "producer": "src/game/art.ts",
+      "count": 5
+    },
+    {
+      "key": "ramin-emote-hand",
+      "producer": "src/game/art.ts"
+    },
+    {
+      "key": "stache-{0..2}",
+      "producer": "src/game/art.ts",
+      "count": 3
+    },
+    {
+      "key": "mist",
+      "producer": "src/game/art.ts"
+    },
+    {
+      "key": "forest-front",
+      "producer": "src/game/art.ts"
+    },
+    {
+      "key": "leaf-{0..2}",
+      "producer": "src/game/art.ts",
+      "count": 3
+    },
+    {
+      "key": "spark",
+      "producer": "src/game/art.ts"
+    },
+    {
+      "key": "butterfly",
+      "producer": "src/game/art.ts"
+    },
+    {
+      "key": "coin",
+      "producer": "src/game/art.ts"
+    },
+    {
+      "key": "n5-dynamic-face-light",
+      "producer": "src/game/arcadeVisuals.ts"
+    }
+  ],
+  "audio": {
+    "producer": "src/game/sound.ts",
+    "kind": "Web Audio synthesized, no media files"
+  }
+}
