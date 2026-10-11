@@ -36,12 +36,12 @@ class FakeD1 {
               return { meta: { changes: 1 } };
             }
             if (sql.startsWith('UPDATE game_rounds SET score=')) {
-              const [score, week_start, finished_at, id, token_hash, at] = args;
+              const [score, week_start, finished_at, golden_perfect, id, token_hash, at] = args;
               const row = db.rounds.get(id);
               if (!row || row.token_hash !== token_hash || row.score !== null || row.expires_at < at) {
                 return { meta: { changes: 0 } };
               }
-              Object.assign(row, { score, week_start, finished_at });
+              Object.assign(row, { score, week_start, finished_at, golden_perfect });
               return { meta: { changes: 1 } };
             }
             if (sql.startsWith('UPDATE game_rounds SET telegram_state=')) {
@@ -80,11 +80,12 @@ class FakeD1 {
             for (const r of db.rounds.values()) {
               if (r.score === null || r.finished_at === undefined) continue;
               if (hasWindow && (r.finished_at < start || r.finished_at >= end)) continue;
-              best.set(r.user_id, Math.max(r.score, best.get(r.user_id) || 0));
+              const old = best.get(r.user_id);
+              if (!old || r.score > old.score || (r.score === old.score && (r.golden_perfect || 0) > (old.golden_perfect || 0))) best.set(r.user_id, r);
             }
-            const items = [...best].map(([user_id, score]) => ({
-              user_id, score, display_name: db.users.get(user_id),
-            })).sort((a, b) => b.score - a.score || a.user_id - b.user_id);
+            const items = [...best].map(([user_id, row]) => ({
+              user_id, score: row.score, golden_perfect: row.golden_perfect || 0, display_name: db.users.get(user_id),
+            })).sort((a, b) => b.score - a.score || b.golden_perfect - a.golden_perfect || a.user_id - b.user_id);
             const ranked = items.map((r, i) => ({ ...r, rank: i + 1, player_count: items.length }));
             return { results: ranked.filter(r => r.rank <= 10 || r.user_id === viewer) };
           },
