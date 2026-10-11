@@ -170,14 +170,20 @@ function jsonReply(data, status = 200, origin = null) {
 
 async function gameApi(request, env, url) {
   const source = request.headers.get('origin');
-  const allowedOrigin = env.GAME_ORIGIN || HTTP_ORIGIN;
-  // Browser requests must originate from the deployed game; bearer session still
-  // authenticates the user and Origin is NOT considered an authentication factor.
-  if (source && source !== allowedOrigin) return jsonReply({ error: 'ORIGIN_DENIED' }, 403);
-  const cors = source === allowedOrigin ? source : null;
+  // Custom game domain plus explicitly configured first-party Pages origin.
+  // Never return wildcard CORS: Telegram-issued bearer sessions remain mandatory.
+  const allowedOrigins = new Set([
+    env.GAME_ORIGIN || HTTP_ORIGIN,
+    ...(env.GAME_ORIGINS || '').split(',').map(item => item.trim()).filter(Boolean),
+  ]);
+  if (source && !allowedOrigins.has(source)) {
+    console.warn('Score API origin rejected', { path: url.pathname, reason: 'ORIGIN_DENIED' });
+    return jsonReply({ error: 'ORIGIN_DENIED' }, 403);
+  }
+  const cors = source && allowedOrigins.has(source) ? source : null;
   const api = url.pathname;
   if (request.method === 'OPTIONS') {
-    if (source !== allowedOrigin) return new Response(null, { status: 403 });
+    if (!cors) return new Response(null, { status: 403 });
     return new Response(null, {
       status: 204,
       headers: {
@@ -192,6 +198,17 @@ async function gameApi(request, env, url) {
   if (!env.DB) return jsonReply({ error: 'DATABASE_NOT_CONFIGURED' }, 503, cors);
 
   try {
+    if (api === '/api/status' && request.method === 'GET') {
+      // Aggregates only; never expose Telegram identities or session secrets.
+      const counts = await env.DB.prepare(
+        'SELECT COUNT(*) AS rounds_started, COUNT(score) AS rounds_scored FROM game_rounds'
+      ).first();
+      return jsonReply({
+        service: 'mustache-scores', database: 'connected',
+        roundsStarted: Number(counts?.rounds_started || 0),
+        roundsScored: Number(counts?.rounds_scored || 0),
+      }, 200, cors);
+    }
     if (api === '/api/leaderboard' && request.method === 'GET') {
       const period = url.searchParams.get('period') || 'week';
       const offset = Number(url.searchParams.get('offset') || 0);
@@ -264,7 +281,9 @@ async function gameApi(request, env, url) {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'SERVER_ERROR';
     const safe = /^(INVALID_|UNKNOWN_ROUND|ROUND_ALREADY_PROCESSED|SCORE_MISMATCH|IMPOSSIBLE_SHOT_RATE)/.test(message);
-    if (!safe) console.error('Score API failure:', message);
+    // Include only the short error code and route; no player data, scores or tokens.
+    if (safe) console.warn('Score API validation rejected', { route: api, code: message });
+    else console.error('Score API internal failure', { route: api, code: 'SERVER_ERROR' });
     return jsonReply({ error: safe ? message : 'SERVER_ERROR' }, safe ? 400 : 500, cors);
   }
 }
