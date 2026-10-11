@@ -6,6 +6,8 @@ on:
       - 'bot/**'
       - 'src/platform/**'
       - 'src/game/replayUi.ts'
+      - 'src/game/scenes.ts'
+      - 'src/game/mobile.ts'
       - 'docs/TELEGRAM_GAME.md'
       - 'index.html'
       - 'package.json'

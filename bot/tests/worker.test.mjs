@@ -14,7 +14,11 @@ const config = {
 
 async function dispatch(update) {
   const calls = [];
-  await handleTelegramUpdate(update, config, async (method, payload) => {
+  const mockDb = {
+    prepare() { return { bind() { return this; } }; },
+    async batch() { return []; },
+  };
+  await handleTelegramUpdate(update, { ...config, DB: mockDb }, async (method, payload) => {
     calls.push({ method, payload });
   });
   return calls;
@@ -36,15 +40,19 @@ test('start and play send native Game Cards', async () => {
 
 test('the Game Play callback opens the approved HTTPS game URL', async () => {
   const calls = await dispatch({
-    callback_query: { id: 'cb-1', game_short_name: 'mustache' },
+    callback_query: {
+      id: 'cb-1', game_short_name: 'mustache',
+      from: { id: 777, first_name: 'Ramin' },
+      message: { message_id: 8, chat: { id: -99 } },
+    },
   });
-  assert.deepEqual(calls, [
-    { method: 'answerCallbackQuery', payload: {
-      callback_query_id: 'cb-1',
-      url: 'https://mustache.alexa.ir/',
-      cache_time: 0,
-    } },
-  ]);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].method, 'answerCallbackQuery');
+  assert.equal(calls[0].payload.callback_query_id, 'cb-1');
+  const result = new URL(calls[0].payload.url);
+  assert.equal(result.origin, 'https://mustache.alexa.ir');
+  assert.match(result.searchParams.get('tg_session'), /^[a-f0-9]{64}$/);
+  assert.equal(calls[0].payload.cache_time, 0);
 });
 
 test('unknown games never get an open redirect', async () => {
