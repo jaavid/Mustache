@@ -55,6 +55,7 @@ import { makeAccessory, selectAccessory, syncAccessory } from './accessories';
 import { attachMustache, resolveMissImpact, showLandingPrecision } from './impactFx';
 import { toHeroAnchor, fromHeroAnchor, type StickerAnchor } from '../logic/stickerAnchor';
 import { RaminMomentController } from './raminMoments';
+import { GoldenFlyer } from './goldenFlyer';
 
 const WIDTH = 960;
 const HEIGHT = 540;
@@ -275,6 +276,7 @@ export class PlayScene extends Phaser.Scene {
   private pendingDouble = false;
   private previousEvent: SpawnEvent = 'normal';
   private stats: RoundStats = { ...emptyStats };
+  private golden!: GoldenFlyer;
   private updatePhase!: (elapsed: number) => void;
   private followLighting!: (hero: Phaser.GameObjects.Sprite) => void;
   private updateMissions!: (score: number, perfect: number, combo: number) => void;
@@ -320,6 +322,7 @@ export class PlayScene extends Phaser.Scene {
       .setDepth(31)
       .setVisible(false);
     this.createHud();
+    this.golden = new GoldenFlyer(this, false, (message, color) => this.varietyNotice(message, color));
     addSoundToggle(this, 895, 36);
     addMusicToggle(this, 896, 105, 106);
     addPauseButton(this, 780, 105, false);
@@ -540,9 +543,11 @@ export class PlayScene extends Phaser.Scene {
     );
   }
   private handlePointer(pointer: Phaser.Input.Pointer) {
-    if (this.roundOver || this.shooting || !this.active || pointer.y < 125 || pointer.y > 450)
-      return;
+    if (this.roundOver || this.shooting) return;
+    if (this.golden.tryCollect(pointer.x, pointer.y, this.roundElapsedMs)) return;
+    if (!this.active || pointer.y < 125 || pointer.y > 450) return;
     const aim = { x: pointer.x, y: pointer.y };
+    const shotIsGolden = this.golden.consume();
     this.shooting = true;
     this.active = false;
     this.spawnSerial++;
@@ -552,7 +557,7 @@ export class PlayScene extends Phaser.Scene {
     playSfx('shot');
     launchMustache(
       this,
-      'stache-' + chosenStyle,
+      shotIsGolden ? 'stache-gold' : 'stache-' + chosenStyle,
       { x: 480, y: 459 },
       aim,
       { width: 75, height: 38 },
@@ -569,14 +574,16 @@ export class PlayScene extends Phaser.Scene {
           stats: this.stats,
           variant,
           portrait: false,
+          goldenShot: shotIsGolden,
         });
-        const { result, reward, gained } = outcome;
+        const { result, reward, gained, goldenPerfect } = outcome;
         recordCompetitiveShot({
           tMs: Math.min(46000, Math.round(this.roundElapsedMs)),
           aim,
           lip: mouth,
           variant,
           comboBefore,
+          goldenShot: shotIsGolden,
         });
         this.stats = outcome.stats;
         this.score = outcome.score;
@@ -605,7 +612,7 @@ export class PlayScene extends Phaser.Scene {
           playSfx(result.grade === 'perfect' ? 'perfect' : 'good');
           applyRaminMood(this.hero, 'surprised');
           this.sticker
-            .setTexture('stache-' + chosenStyle)
+            .setTexture(shotIsGolden ? 'stache-gold' : 'stache-' + chosenStyle)
             .setPosition(aim.x, aim.y)
             .setRotation(this.hero.rotation)
             .setVisible(true);
@@ -621,7 +628,8 @@ export class PlayScene extends Phaser.Scene {
             '+' + gained + ' ' + result.grade.toUpperCase() + '!',
             result.grade === 'perfect' ? '#ffd16c' : '#a7efc0',
           );
-          if (reward.bonus > 0) this.varietyNotice(reward.label, '#ffe291');
+          if (goldenPerfect) this.varietyNotice('GOLDEN PERFECT +350!', '#ffe085');
+          else if (reward.bonus > 0) this.varietyNotice(reward.label, '#ffe291');
           if (result.grade === 'perfect' && this.combo >= 3 && Math.random() < 0.3) {
             applyRaminMood(this.hero, 'victory');
             raminMoment(this, this.hero, false);
@@ -649,6 +657,7 @@ export class PlayScene extends Phaser.Scene {
       startCompetitiveRound(false);
     }
     this.roundElapsedMs = accumulateActiveRoundMs(this.roundElapsedMs, delta);
+    this.golden.update(this.roundElapsedMs);
     if (this.hero?.active) this.followLighting(this.hero);
     if (this.hero?.active && this.accessory?.active) syncAccessory(this.hero, this.accessory);
     if (this.moments) this.moments.update();
