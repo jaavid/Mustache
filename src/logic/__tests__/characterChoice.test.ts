@@ -26,7 +26,11 @@ describe('pre-round hero selection', () => {
   });
   it('maps three distinct Borhan visual styles without changing scoring indices', () => {
     setSelectedCharacter('borhan');
-    expect(BORHAN_MUSTACHE_NAMES).toHaveLength(3);
+    expect(BORHAN_MUSTACHE_NAMES).toEqual([
+      'SHORT HORSESHOE',
+      'CLASSIC HORSESHOE',
+      'HEAVY HORSESHOE',
+    ]);
     expect([0, 1, 2].map((index) => mustacheTexture(index))).toEqual([
       'borhan-stache-0',
       'borhan-stache-1',

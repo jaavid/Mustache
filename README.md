@@ -6,7 +6,7 @@ Pixel-art arcade game built with **Phaser 3, TypeScript, and Vite**.
 
 ## Gameplay
 
-Choose **Ramin or Borhan** in a six-second pre-round selection (1/2 on desktop, tap either hero on mobile), then throw a mustache at the precise upper-lip location while the chosen hero peeks from three trees. The current selection carries into the result screen and can be changed before every replay. **Borhan has his own three mustache silhouettes** (chevron, handlebar and horseshoe), plus a matching golden special; these use the same scoring/hit zones as Ramin.
+Choose **Ramin or Borhan** in a six-second pre-round selection (1/2 on desktop, tap either hero on mobile), then throw a mustache at the precise upper-lip location while the chosen hero peeks from three trees. The current selection carries into the result screen and can be changed before every replay. **Borhan appears with a clean upper lip and separately aligned glasses.** **Borhan has his own three mustache silhouettes** (short, classic and heavy horseshoe), plus a matching golden special; these use the same scoring/hit zones as Ramin.
 
 - **45 seconds** with distinct sunset (0–15 s), twilight (15–30 s), and night (30–45 s) stages.
 - The projectile scores **at impact**; the sticker stays exactly where you aimed (no automatic correction).
@@ -21,7 +21,7 @@ Choose **Ramin or Borhan** in a six-second pre-round selection (1/2 on desktop, 
 
 ## Golden Mustache (score bonus)
 
-Five golden mustaches fly across each 45-second round. Catch three to turn the **middle mustache in the selector** golden. Tap/click that middle slot
+Five golden mustaches fly across each 45-second round. They now cross in 1.8 seconds with a slight vertical weave and smaller collectible hit zones, validated identically on client and server. Catch three to turn the **middle mustache in the selector** golden. Tap/click that middle slot
 (or press 2) to equip the special shot; ordinary shots with slots 1 and 3 preserve it.
 Even if slot 2 was already selected, you must actively select it again after charging.
 Only a PERFECT hit with the equipped golden projectile earns **+350 points**, in addition to
