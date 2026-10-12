@@ -4,11 +4,11 @@ The collectible golden mustache is **not** Ramin's existing rare golden variant.
 
 ## Rules (45-second active round)
 
-- Five **public, deterministic** 2.5-second flyovers start at 7, 14, 21, 28 and 35 seconds. Alternating directions and layout-specific lanes have exactly the same schedule for all players.
-- Tap the golden mustache while it is in flight. A pickup never launches an ordinary shot, resets the combo or grants direct points.
+- Five **public, deterministic** 1.8-second flyovers start at 7, 14, 21, 28 and 35 seconds. Alternating directions and layout-specific lanes have exactly the same schedule for all players.
+- Tap the golden mustache while it is in flight. The flight is 28% faster, follows a vertical weave, and has a tighter touch ellipse (portrait 34×23 px; desktop 30×20 px). A pickup never launches an ordinary shot, resets the combo or grants direct points.
 - Exactly **three different successful pickups** charge **one** golden projectile. Further flyovers are disabled after charging.
 - The middle (slot **2**) mustache in the bottom selector turns golden and pulses. Existing selection remains unchanged, and the golden shot is **not** armed automatically — even if slot 2 was already selected before the third pickup. To equip it, explicitly tap/click slot 2 (or press 2 on a keyboard) after charging. Switch back to slot 1 or 3 at any time to save the charge. Ordinary shots do not spend it.
-- After equipping gold, the next shot at Ramin consumes the one-use golden projectile, including a GOOD or MISS. The middle slot returns to the standard style after consumption.
+- After equipping gold, the next shot at the chosen hero consumes the one-use golden projectile, including a GOOD or MISS. The middle slot returns to the standard style after consumption.
 - Only a PERFECT golden projectile grants **+350 bonus** in addition to the usual hit, combo and Ramin-variant rewards. GOOD/MISS consume the charge with **zero golden bonus**.
 - The golden projectile still lands at the actual pointer coordinates at impact, with normal GOOD/PERFECT hit boxes. No auto snap.
 - Progress is per-round, not a wallet asset. No NFT, NFIVE token or financial rewards.

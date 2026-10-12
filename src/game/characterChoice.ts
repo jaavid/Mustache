@@ -21,7 +21,7 @@ export function characterName(character: CharacterId = currentCharacter): string
 }
 
 /** Visual-only projectile mapping; scoring keeps the same three style indices. */
-export const BORHAN_MUSTACHE_NAMES = ['CHEVRON', 'HANDLEBAR', 'HORSESHOE'] as const;
+export const BORHAN_MUSTACHE_NAMES = ['SHORT HORSESHOE', 'CLASSIC HORSESHOE', 'HEAVY HORSESHOE'] as const;
 export function mustacheTexture(style: number, gold = false): string {
   if (!Number.isInteger(style) || style < 0 || style > 2) {
     throw new RangeError('Unknown mustache style');

@@ -17,7 +17,7 @@
       "frameHeight": 362,
       "frames": 4,
       "orientation": "horizontal",
-      "purpose": "Borhan: idle, wink, surprised and victory; upper-lip aligned with Ramin"
+      "purpose": "Borhan: clean upper lip in all four poses, independent glasses calibration"
     }
   ],
   "generatedTextures": [
@@ -52,6 +52,11 @@
     },
     {
       "key": "ramin-acc-{variant}",
+      "producer": "src/game/art.ts",
+      "count": 5
+    },
+    {
+      "key": "borhan-acc-{variant}",
       "producer": "src/game/art.ts",
       "count": 5
     },

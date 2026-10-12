@@ -6,6 +6,7 @@ import {
   GOLDEN_SPAWN_MS,
 } from '../../shared/goldenRules.js';
 import { recordCompetitiveGoldenPickup } from '../platform/competitiveScores';
+import { mustacheTexture } from './characterChoice';
 
 /** Cosmetic and input presentation only; authoritative flight rules live in shared/. */
 export class GoldenFlyer {
@@ -30,12 +31,12 @@ export class GoldenFlyer {
     this.notice = notice;
     this.onChargeChange = onChargeChange;
     this.glow = scene.add
-      .circle(-100, -100, portrait ? 48 : 41, 0xffd84e, 0.2)
+      .circle(-100, -100, portrait ? 39 : 34, 0xffd84e, 0.2)
       .setDepth(63)
       .setVisible(false);
     this.sprite = scene.add
-      .image(-100, -100, 'stache-gold')
-      .setDisplaySize(portrait ? 94 : 84, portrait ? 53 : 45)
+      .image(-100, -100, mustacheTexture(1, true))
+      .setDisplaySize(portrait ? 80 : 74, portrait ? 44 : 40)
       .setDepth(64)
       .setVisible(false);
     scene.tweens.add({
