@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'src/assets/borhan-sheet.png'
+      - 'src/assets/mammad-sheet.png'
+      - 'src/game/characterSelect.ts'
       - 'src/game/ramin.ts'
       - 'assets/manifest.json'
       - '.github/workflows/browser-smoke.yml'

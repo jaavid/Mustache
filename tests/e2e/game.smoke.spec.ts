@@ -30,10 +30,10 @@ test('loads pixel-art scene and enters play in desktop and portrait layouts', as
     box.y + box.height * (isMobile ? 792 / 960 : 385 / 540),
   );
 
-  // Select Borhan via the same keyboard controls in both layouts, then launch.
+  // Select Mammad via the same third-character keyboard control in both layouts, then launch.
   await page.waitForTimeout(150);
   await canvas.screenshot({ path: info.outputPath('character-select.png') });
-  await page.keyboard.press('2');
+  await page.keyboard.press('3');
   await page.keyboard.press('Enter');
   await page.waitForTimeout(900);
   await expect(canvas).toBeVisible();
@@ -45,6 +45,6 @@ test('loads pixel-art scene and enters play in desktop and portrait layouts', as
     box.y + box.height * (isMobile ? 769 / 960 : 451 / 540),
   );
   await page.waitForTimeout(1200);
-  await canvas.screenshot({ path: info.outputPath('borhan-active-round.png') });
+  await canvas.screenshot({ path: info.outputPath('mammad-active-round.png') });
   expect(errors).toEqual([]);
 });

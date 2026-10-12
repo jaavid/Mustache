@@ -12,7 +12,7 @@ import { playSfx } from './sound';
 
 /**
  * A short, skippable character draft before every round.
- * Ramin remains the default and a timeout never changes the score contract.
+ * Ramin remains the default; the three choices do not change the scoring contract.
  * Phaser coordinates handle both FIT-scaled 960x540 and 540x960 screens.
  */
 export class CharacterSelectScene extends Phaser.Scene {
@@ -26,10 +26,10 @@ export class CharacterSelectScene extends Phaser.Scene {
     const portrait = h > w;
     const cx = w / 2;
     const cy = portrait ? 461 : 280;
-    const cardW = portrait ? 230 : 274;
-    const cardH = portrait ? 444 : 322;
-    const centers = portrait ? [137, 403] : [318, 642];
-    const scale = portrait ? 0.77 : 0.66;
+    const cardW = portrait ? 156 : 264;
+    const cardH = portrait ? 388 : 322;
+    const centers = portrait ? [94, 270, 446] : [181, 480, 779];
+    const scale = portrait ? 0.57 : 0.6;
     const heroY = cy - (portrait ? 13 : 11);
     const nameY = cy + cardH / 2 - (portrait ? 36 : 28);
 
@@ -54,7 +54,13 @@ export class CharacterSelectScene extends Phaser.Scene {
         .setDepth(60);
 
     uiText(cx, portrait ? 77 : 45, 'CHOOSE YOUR HERO', portrait ? 36 : 40, '#ffdb80');
-    uiText(cx, portrait ? 137 : 91, '6 SECONDS TO PICK  •  1 OR 2', portrait ? 18 : 19, '#c9f4df');
+    uiText(
+      cx,
+      portrait ? 137 : 91,
+      '6 SECONDS TO PICK  •  1 / 2 / 3',
+      portrait ? 18 : 19,
+      '#c9f4df',
+    );
 
     const borders: Phaser.GameObjects.Rectangle[] = [];
     const names: Phaser.GameObjects.Text[] = [];
@@ -133,8 +139,10 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     this.input.keyboard?.on('keydown-ONE', () => choose('ramin'));
     this.input.keyboard?.on('keydown-TWO', () => choose('borhan'));
+    this.input.keyboard?.on('keydown-THREE', () => choose('mammad'));
     this.input.keyboard?.on('keydown-NUMPAD_ONE', () => choose('ramin'));
     this.input.keyboard?.on('keydown-NUMPAD_TWO', () => choose('borhan'));
+    this.input.keyboard?.on('keydown-NUMPAD_THREE', () => choose('mammad'));
     this.input.keyboard?.once('keydown-ENTER', launch);
     this.input.keyboard?.once('keydown-SPACE', launch);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => timer.remove(false));

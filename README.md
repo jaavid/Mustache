@@ -6,7 +6,7 @@ Pixel-art arcade game built with **Phaser 3, TypeScript, and Vite**.
 
 ## Gameplay
 
-Choose **Ramin or Borhan** in a six-second pre-round selection (1/2 on desktop, tap either hero on mobile), then throw a mustache at the precise upper-lip location while the chosen hero peeks from three trees. The current selection carries into the result screen and can be changed before every replay. **Borhan appears with a clean upper lip and separately aligned glasses.** **Borhan has his own three mustache silhouettes** (short, classic and heavy horseshoe), plus a matching golden special; these use the same scoring/hit zones as Ramin.
+Choose **Ramin, Borhan or Mammad** in a six-second pre-round selection (1/2/3 on desktop, tap a hero on mobile), then throw a mustache at the precise upper-lip location while the chosen hero peeks from three trees. The current selection carries into the result screen and can be changed before every replay. **Borhan appears with a clean upper lip and separately aligned glasses.** **Borhan has his own three mustache silhouettes** (short, classic and heavy horseshoe), plus a matching golden special. **Mammad** uses the supplied four graduation poses, his own academic accessories and the standard mustache styles. All three share the same scoring/hit zones.
 
 - **45 seconds** with distinct sunset (0–15 s), twilight (15–30 s), and night (30–45 s) stages.
 - The projectile scores **at impact**; the sticker stays exactly where you aimed (no automatic correction).
@@ -67,7 +67,8 @@ Run `npm run format` for documentation and config files. Formatting the whole le
 | `src/game/characterSelect.ts`, `src/game/characterChoice.ts` | Six-second character selection shared by both layouts      |
 | `src/game/art.ts`                                            | Canvas-generated pixel art                                 |
 | `src/game/facialAtlas.ts`                                    | Six-frame Ramin atlas derived from original four frames    |
-| `src/assets/ramin-sheet.png`, `src/assets/borhan-sheet.png`  | Aligned four-frame character sprite sheets                 |
+| `src/assets/ramin-sheet.png`, `src/assets/borhan-sheet.png`  | Original aligned four-frame character sprite sheets        |
+| `src/assets/mammad-sheet.png`                                | Compact four-frame Mammad sprite sheet                     |
 
 See [Architecture](docs/ARCHITECTURE.md), [Art pipeline](assets/README.md), [Contributing](CONTRIBUTING.md), and [Changelog](CHANGELOG.md).
 

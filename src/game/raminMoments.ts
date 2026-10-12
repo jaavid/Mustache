@@ -60,7 +60,7 @@ export class RaminMomentController {
     const token = ++this.faceToken;
     this.faceEvent = this.scene.time.delayedCall(540, () => {
       if (token !== this.faceToken || !this.hero.active || !this.hero.visible) return;
-      const prefix = this.hero.getData('character') === 'borhan' ? 'borhan' : 'ramin';
+      const prefix = (this.hero.getData('character') as string | undefined) ?? 'ramin';
       const expected = kind === 'serious' ? `${prefix}-serious-hold` : `${prefix}-wink-hold`;
       // Do not interrupt surprised/victory after a projectile has arrived.
       if (this.hero.anims.currentAnim?.key === expected) applyRaminMood(this.hero, 'idle');

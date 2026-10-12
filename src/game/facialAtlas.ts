@@ -15,19 +15,20 @@ import {
  * Brow raise: idle frame, with the BROW REGION replaced by the raised brows
  * from the supplied surprised drawing. Neither operation adds new eyebrows.
  *
- * All 6 frames are 210x362 and retain the exact same upper-lip anchor.
+ * Frames retain each source's calibrated geometry (210x362 for Ramin/Borhan,
+ * 87x150 for Mammad). Already-complete winks are used without pixel patches.
  */
 export function createFacialAtlas(
   scene: Phaser.Scene,
   sourceKey = 'ramin-sheet',
   atlasKey = FACE_ATLAS_KEY,
+  frameSize = { width: FACIAL_FRAME_WIDTH, height: FACIAL_FRAME_HEIGHT },
 ): void {
   if (scene.textures.exists(atlasKey)) return;
   const source = scene.textures.get(sourceKey);
   const first = source.get(0);
   const image = first.source.image as CanvasImageSource;
-  const w = FACIAL_FRAME_WIDTH,
-    h = FACIAL_FRAME_HEIGHT;
+  const { width: w, height: h } = frameSize;
   const atlas = document.createElement('canvas');
   atlas.width = w * 6;
   atlas.height = h;
@@ -41,7 +42,7 @@ export function createFacialAtlas(
   for (let frame = 0; frame < 4; frame++) drawOriginal(frame, frame);
   // Borhan's supplied second pose is already a complete wink (no eye patch needed).
   drawOriginal(
-    sourceKey === 'borhan-sheet' ? FACE_FRAME_INDEX.blink : FACE_FRAME_INDEX.idle,
+    sourceKey === 'ramin-sheet' ? FACE_FRAME_INDEX.idle : FACE_FRAME_INDEX.blink,
     FACE_FRAME_INDEX.wink,
   );
   drawOriginal(FACE_FRAME_INDEX.idle, FACE_FRAME_INDEX.serious);
@@ -90,9 +91,9 @@ export function createFacialAtlas(
     }
     ctx.putImageData(dst, dstX, patch.y);
   };
-  if (sourceKey !== 'borhan-sheet')
+  if (sourceKey === 'ramin-sheet')
     replaceRegion(FACE_FRAME_INDEX.blink, FACE_FRAME_INDEX.wink, FACE_PATCHES.wink);
-  if (sourceKey !== 'borhan-sheet')
+  if (sourceKey === 'ramin-sheet')
     replaceRegion(FACE_FRAME_INDEX.surprised, FACE_FRAME_INDEX.serious, FACE_PATCHES.serious);
 
   // TextureManager.addSpriteSheet accepts an HTMLImageElement or Phaser Texture,

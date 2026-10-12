@@ -6,7 +6,11 @@ import { getSelectedCharacter, type CharacterId } from './characterChoice';
 
 const raminSheetUrl = new URL('../assets/ramin-sheet.png', import.meta.url).href;
 const borhanSheetUrl = new URL('../assets/borhan-sheet.png', import.meta.url).href;
+const mammadSheetUrl = new URL('../assets/mammad-sheet.png', import.meta.url).href;
 const BORHAN_ATLAS_KEY = 'borhan-face-atlas-v1';
+const MAMMAD_ATLAS_KEY = 'mammad-face-atlas-v1';
+const MAMMAD_FRAME_WIDTH = 87;
+const MAMMAD_FRAME_HEIGHT = 150;
 
 export const RAMIN_FRAME_WIDTH = 210;
 export const RAMIN_FRAME_HEIGHT = 362;
@@ -15,6 +19,7 @@ export const RAMIN_MOBILE_SCALE = 0.82;
 const LIP_X_RATIO = 0;
 const RAMIN_LIP_SOURCE_Y = 136;
 const BORHAN_LIP_SOURCE_Y = 125; // approved clean sprite: just below nose, upper lip
+const MAMMAD_LIP_SOURCE_Y = 136; // virtual 210x362 geometry at the clean upper lip
 
 export type RaminMood = 'idle' | 'blink' | 'surprised' | 'victory' | 'wink' | 'serious';
 
@@ -35,11 +40,23 @@ export function preloadRamin(scene: Phaser.Scene): void {
       endFrame: 3,
     });
   }
+  if (!scene.textures.exists('mammad-sheet')) {
+    scene.load.spritesheet('mammad-sheet', mammadSheetUrl, {
+      frameWidth: MAMMAD_FRAME_WIDTH,
+      frameHeight: MAMMAD_FRAME_HEIGHT,
+      startFrame: 0,
+      endFrame: 3,
+    });
+  }
 }
 
 export function ensureRaminAnimations(scene: Phaser.Scene): void {
   createFacialAtlas(scene);
   createFacialAtlas(scene, 'borhan-sheet', BORHAN_ATLAS_KEY);
+  createFacialAtlas(scene, 'mammad-sheet', MAMMAD_ATLAS_KEY, {
+    width: MAMMAD_FRAME_WIDTH,
+    height: MAMMAD_FRAME_HEIGHT,
+  });
   const { anims } = scene;
   if (!anims.exists('ramin-blink-loop')) {
     anims.create({
@@ -94,7 +111,7 @@ export function ensureRaminAnimations(scene: Phaser.Scene): void {
       repeat: -1,
     });
   }
-  // Borhan uses separate animation keys, keeping existing Ramin keys unmodified.
+  // Each extra character owns its animation keys; Ramin's original keys stay untouched.
   const poses: [string, number[]][] = [
     ['blink-loop', [FACE_FRAME_INDEX.idle, FACE_FRAME_INDEX.blink, FACE_FRAME_INDEX.idle]],
     ['idle-hold', [FACE_FRAME_INDEX.idle]],
@@ -103,16 +120,21 @@ export function ensureRaminAnimations(scene: Phaser.Scene): void {
     ['serious-hold', [FACE_FRAME_INDEX.serious]],
     ['victory-bounce', [FACE_FRAME_INDEX.victory]],
   ];
-  for (const [name, frames] of poses) {
-    const key = 'borhan-' + name;
-    if (!anims.exists(key)) {
-      anims.create({
-        key,
-        frames: frames.map((frame) => ({ key: BORHAN_ATLAS_KEY, frame })),
-        frameRate: name === 'blink-loop' ? 5 : 1,
-        repeat: -1,
-        repeatDelay: name === 'blink-loop' ? 2800 : 0,
-      });
+  for (const [character, atlas] of [
+    ['borhan', BORHAN_ATLAS_KEY],
+    ['mammad', MAMMAD_ATLAS_KEY],
+  ] as const) {
+    for (const [name, frames] of poses) {
+      const key = `${character}-${name}`;
+      if (!anims.exists(key)) {
+        anims.create({
+          key,
+          frames: frames.map((frame) => ({ key: atlas, frame })),
+          frameRate: name === 'blink-loop' ? 5 : 1,
+          repeat: -1,
+          repeatDelay: name === 'blink-loop' ? 2800 : 0,
+        });
+      }
     }
   }
 }
@@ -125,8 +147,16 @@ export function makeCharacter(
   scale: number,
   mood: RaminMood = 'idle',
 ): Phaser.GameObjects.Sprite {
-  const atlas = character === 'borhan' ? BORHAN_ATLAS_KEY : FACE_ATLAS_KEY;
+  const atlas =
+    character === 'borhan'
+      ? BORHAN_ATLAS_KEY
+      : character === 'mammad'
+        ? MAMMAD_ATLAS_KEY
+        : FACE_ATLAS_KEY;
   const hero = scene.add.sprite(x, y, atlas, FACE_FRAME_INDEX.idle).setScale(scale).setDepth(20);
+  // The compact Mammad source has the same on-screen size and lip geometry.
+  if (character === 'mammad')
+    hero.setDisplaySize(RAMIN_FRAME_WIDTH * scale, RAMIN_FRAME_HEIGHT * scale);
   hero.setData('character', character);
   applyRaminMood(hero, mood);
   return hero;
@@ -143,7 +173,7 @@ export function makeRamin(
 }
 
 export function applyRaminMood(hero: Phaser.GameObjects.Sprite, mood: RaminMood): void {
-  const prefix = hero.getData('character') === 'borhan' ? 'borhan' : 'ramin';
+  const prefix = (hero.getData('character') as CharacterId | undefined) ?? 'ramin';
   switch (mood) {
     case 'wink':
       hero.play(`${prefix}-wink-hold`);
@@ -173,7 +203,11 @@ export function raminLipPoint(hero: Phaser.GameObjects.Sprite): { x: number; y: 
     hero.y,
     hero.displayWidth * LIP_X_RATIO,
     hero.displayHeight *
-      ((hero.getData('character') === 'borhan' ? BORHAN_LIP_SOURCE_Y : RAMIN_LIP_SOURCE_Y) /
+      ((hero.getData('character') === 'borhan'
+        ? BORHAN_LIP_SOURCE_Y
+        : hero.getData('character') === 'mammad'
+          ? MAMMAD_LIP_SOURCE_Y
+          : RAMIN_LIP_SOURCE_Y) /
         RAMIN_FRAME_HEIGHT -
         0.5),
     hero.rotation,
