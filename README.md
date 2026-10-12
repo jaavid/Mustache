@@ -67,8 +67,8 @@ Run `npm run format` for documentation and config files. Formatting the whole le
 | `src/game/characterSelect.ts`, `src/game/characterChoice.ts` | Six-second character selection shared by both layouts      |
 | `src/game/art.ts`                                            | Canvas-generated pixel art                                 |
 | `src/game/facialAtlas.ts`                                    | Six-frame Ramin atlas derived from original four frames    |
-| `src/assets/ramin-sheet.png`, `src/assets/borhan-sheet.png`  | Original aligned four-frame character sprite sheets          |
-| `src/assets/mammad-sheet.png`                              | Compact four-frame Mammad sprite sheet                        |
+|`src/assets/ramin-sheet.png`, `src/assets/borhan-sheet.png`   |Original aligned four-frame character sprite sheets           |
+|`src/assets/mammad-sheet.png`                                 |Compact four-frame Mammad sprite sheet                         |
 
 See [Architecture](docs/ARCHITECTURE.md), [Art pipeline](assets/README.md), [Contributing](CONTRIBUTING.md), and [Changelog](CHANGELOG.md).
 
