@@ -16,7 +16,10 @@ export function makeAccessory(scene: Phaser.Scene): Phaser.GameObjects.Image {
 
 export function selectAccessory(image: Phaser.GameObjects.Image, variant: RaminVariant): void {
   const character = (image.getData('character') as CharacterId) || 'ramin';
-  image.setTexture(character + '-acc-' + variant).setData('costume', variant).setVisible(false);
+  image
+    .setTexture(character + '-acc-' + variant)
+    .setData('costume', variant)
+    .setVisible(false);
 }
 
 export function syncAccessory(

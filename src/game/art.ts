@@ -352,9 +352,7 @@ function borhanMustache(c: Ctx, style: number, golden = false): void {
   ] as const;
   const model = models[style];
   if (!model) throw new RangeError('Unknown Borhan mustache style');
-  const shades = golden
-    ? ['#765018', '#c78b27', '#ffe9a2']
-    : ['#211411', '#4c2d20', '#956249'];
+  const shades = golden ? ['#765018', '#c78b27', '#ffe9a2'] : ['#211411', '#4c2d20', '#956249'];
   for (let x = 2; x < MUSTACHE_WIDTH - 2; x++) {
     const t = Math.abs(x - 35.5) / model.halfWidth;
     if (t > 1) continue;
