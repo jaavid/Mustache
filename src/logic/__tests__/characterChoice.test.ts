@@ -13,14 +13,18 @@ afterEach(() => setSelectedCharacter('ramin'));
 
 describe('pre-round hero selection', () => {
   it('keeps the old game default and valid countdown', () => {
-    expect(CHARACTER_IDS).toEqual(['ramin', 'borhan']);
+    expect(CHARACTER_IDS).toEqual(['ramin', 'borhan', 'mammad']);
     expect(CHARACTER_PICK_SECONDS).toBe(6);
     expect(characterName('ramin')).toBe('RAMIN');
+    expect(characterName('mammad')).toBe('MAMMAD');
   });
   it('switches the cosmetic hero without modifying scores', () => {
     setSelectedCharacter('borhan');
     expect(getSelectedCharacter()).toBe('borhan');
     expect(characterName()).toBe('BORHAN');
+    setSelectedCharacter('mammad');
+    expect(getSelectedCharacter()).toBe('mammad');
+    expect(characterName()).toBe('MAMMAD');
     setSelectedCharacter('ramin');
     expect(getSelectedCharacter()).toBe('ramin');
   });
@@ -39,6 +43,13 @@ describe('pre-round hero selection', () => {
     expect(mustacheTexture(1, true)).toBe('borhan-stache-gold');
     setSelectedCharacter('ramin');
     expect(mustacheTexture(2)).toBe('stache-2');
+    expect(mustacheTexture(1, true)).toBe('stache-gold');
+    setSelectedCharacter('mammad');
+    expect([0, 1, 2].map((index) => mustacheTexture(index))).toEqual([
+      'stache-0',
+      'stache-1',
+      'stache-2',
+    ]);
     expect(mustacheTexture(1, true)).toBe('stache-gold');
     expect(() => mustacheTexture(3)).toThrow(RangeError);
   });

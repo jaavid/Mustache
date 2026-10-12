@@ -1,8 +1,8 @@
 # Art pipeline
 
-Only **one committed raster image** exists: `src/assets/ramin-sheet.png`, a horizontally aligned **four-frame sheet** at 210 × 362 pixels per frame (overall 840 × 362).
+Three committed raster character sprite sheets exist: `src/assets/ramin-sheet.png`, `src/assets/borhan-sheet.png` (both four 210 × 362 frames), and `src/assets/mammad-sheet.png` (four 87 × 150 frames). Mammad's intentionally compact pixel-art export renders at the same 210 × 362 gameplay size.
 
-Most forest visuals, mustaches, accessories, leaves, mist and effects are generated in `src/game/art.ts`. The six-frame expression atlas is synthesized in `src/game/facialAtlas.ts`, with two expressions derived from pixel regions of the original. Web Audio synthesizes music and SFX. Nothing is missing simply because there are few PNG files.
+Most forest visuals, mustaches, accessories, leaves, mist and effects are generated in `src/game/art.ts`. Six-frame expression atlases are synthesized in `src/game/facialAtlas.ts`. Only Ramin's wink and raised brows require pixel-region composition; Borhan and Mammad use their complete supplied expression frames. Web Audio synthesizes music and SFX. Nothing is missing simply because there are few PNG files.
 
 The machine-readable [manifest](manifest.json) records source images and generated texture ownership. Run `npm run assets:check` to check PNG signatures, frame dimensions and producer files.
 
@@ -26,3 +26,7 @@ When real layered artwork becomes available, export six complete aligned artist-
 3. Register the stable Phaser texture key before any scene uses it.
 4. Test both viewports and all three forest lighting phases.
 5. Verify mustaches still land at their real pointer coordinate.
+
+## Mammad contract
+
+Mammad's four poses were derived from the supplied graduation artwork (idle, wink, surprise, victory). The optimized transparent source is four horizontal frames at **87 × 150**, displayed at **210 × 362** in-game. All expressions keep the same anchor, with the upper lip calibrated at virtual Y=136. The wink frame also serves blink, and neutral serves the fallback serious frame; no duplicate facial overlays are added. His mortarboard remains visible with cap-specific headband and gold accessories. The standard three mustache styles and gold projectile are shared with Ramin; score validation is unchanged.

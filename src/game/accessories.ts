@@ -29,7 +29,7 @@ export function syncAccessory(
   image
     .setPosition(hero.x, hero.y)
     .setRotation(hero.rotation)
-    .setScale(hero.scaleX, hero.scaleY)
+    .setDisplaySize(hero.displayWidth, hero.displayHeight)
     .setAlpha(hero.alpha)
     .setVisible(hero.visible && image.getData('costume') !== 'normal');
 }

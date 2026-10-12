@@ -341,6 +341,28 @@ function raminAccessory(c: Ctx, variant: RaminVariant) {
   rect(c, 146, 62, 12, 4, '#f7d58c');
 }
 
+/** Academic accessories stay away from Mammad's upper-lip target.
+ * Keep his mortarboard visible: don't place Ramin's crown on top of it.
+ */
+function mammadAccessory(c: Ctx, variant: RaminVariant): void {
+  if (variant === 'headband') {
+    // A bright ribbon across the graduation cap, not the eyebrows.
+    rect(c, 52, 38, 112, 8, '#a42767');
+    rect(c, 55, 39, 105, 5, '#ff459b');
+    rect(c, 57, 39, 99, 2, '#ffc0dc');
+    return;
+  }
+  if (variant === 'gold') {
+    // Honor tassel / cap pin; the face and aiming lane remain untouched.
+    rect(c, 156, 37, 9, 9, '#bf852e');
+    rect(c, 158, 39, 5, 5, '#ffe39c');
+    rect(c, 172, 62, 6, 18, '#d8a342');
+    rect(c, 173, 64, 3, 13, '#fff0b4');
+    return;
+  }
+  raminAccessory(c, variant);
+}
+
 /** Three mustaches inspired by Borhan's original horseshoe silhouette.
  * The game retains the same three style indices and projectile hit logic.
  */
@@ -489,6 +511,7 @@ export function createArt(scene: Phaser.Scene) {
   for (const variant of RAMIN_VARIANTS) {
     makeCanvas(scene, `ramin-acc-${variant}`, 210, 362, (ctx) => raminAccessory(ctx, variant));
     makeCanvas(scene, `borhan-acc-${variant}`, 210, 362, (ctx) => borhanAccessory(ctx, variant));
+    makeCanvas(scene, `mammad-acc-${variant}`, 210, 362, (ctx) => mammadAccessory(ctx, variant));
   }
   makeCanvas(scene, 'ramin-emote-hand', 35, 40, raminEmoteHand);
   makeCanvas(scene, 'mist', 480, 90, mist);

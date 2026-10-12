@@ -18,6 +18,15 @@
       "frames": 4,
       "orientation": "horizontal",
       "purpose": "Approved Borhan: original idle, wink, surprise, victory poses; clean upper lip, independent glasses calibration"
+    },
+    {
+      "path": "src/assets/mammad-sheet.png",
+      "kind": "spritesheet",
+      "frameWidth": 87,
+      "frameHeight": 150,
+      "frames": 4,
+      "orientation": "horizontal",
+      "purpose": "Mammad graduation poses: idle, wink, surprise, victory; transparent indexed PNG rendered at shared 210x362 gameplay size"
     }
   ],
   "generatedTextures": [
@@ -34,6 +43,13 @@
       "kind": "canvas-spritesheet",
       "frames": 6,
       "source": "src/assets/borhan-sheet.png"
+    },
+    {
+      "key": "mammad-face-atlas-v1",
+      "producer": "src/game/facialAtlas.ts",
+      "kind": "canvas-spritesheet",
+      "frames": 6,
+      "source": "src/assets/mammad-sheet.png"
     },
     {
       "key": "forest",
@@ -57,6 +73,11 @@
     },
     {
       "key": "borhan-acc-{variant}",
+      "producer": "src/game/art.ts",
+      "count": 5
+    },
+    {
+      "key": "mammad-acc-{variant}",
       "producer": "src/game/art.ts",
       "count": 5
     },
