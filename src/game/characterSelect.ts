@@ -54,7 +54,13 @@ export class CharacterSelectScene extends Phaser.Scene {
         .setDepth(60);
 
     uiText(cx, portrait ? 77 : 45, 'CHOOSE YOUR HERO', portrait ? 36 : 40, '#ffdb80');
-    uiText(cx, portrait ? 137 : 91, '6 SECONDS TO PICK  •  1 / 2 / 3', portrait ? 18 : 19, '#c9f4df');
+    uiText(
+      cx,
+      portrait ? 137 : 91,
+      '6 SECONDS TO PICK  •  1 / 2 / 3',
+      portrait ? 18 : 19,
+      '#c9f4df',
+    );
 
     const borders: Phaser.GameObjects.Rectangle[] = [];
     const names: Phaser.GameObjects.Text[] = [];
