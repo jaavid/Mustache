@@ -341,47 +341,57 @@ function raminAccessory(c: Ctx, variant: RaminVariant) {
   rect(c, 146, 62, 12, 4, '#f7d58c');
 }
 
-/** Borhan's three exclusive 72×40 pixel masks: chevron, handlebar, horseshoe.
- * Cosmetic only. Same physical image bounds and landing rules as Ramin.
+/** Three mustaches inspired by Borhan's original horseshoe silhouette.
+ * The game retains the same three style indices and projectile hit logic.
  */
 function borhanMustache(c: Ctx, style: number, golden = false): void {
-  const tones = golden ? ['#694214', '#bd801e', '#ffe38b'] : ['#160f13', '#402522', '#9c644a'];
-  for (let x = 2; x < 70; x++) {
-    const offset = Math.abs(x - 35.5);
-    const t = offset / 34;
-    let center = 15,
-      thick = 8;
-    if (style === 0) {
-      // Broad, pointed chevron with downward sweeping wings.
-      center = 12 + 11 * t;
-      thick = 8 + 3 * (1 - t) - 7 * Math.pow(t, 3);
-    } else if (style === 1) {
-      // Thin upward-twirled handlebar.
-      center = 15 - 8 * Math.pow(t, 3);
-      thick = 4 + 3 * (1 - t);
-    } else {
-      // Dense horseshoe with drooping ends.
-      center = 14 + 13 * Math.pow(t, 3);
-      thick = 8 + 3 * t - 5 * Math.pow(t, 4);
-    }
-    if (offset < 1.5) thick *= 0.55; // Natural central parting.
-    const top = Math.max(1, Math.round(center - thick / 2));
-    const bottom = Math.min(37, Math.round(center + thick / 2));
+  const models = [
+    { halfWidth: 25, body: 6, drop: 8 },
+    { halfWidth: 30, body: 8, drop: 15 },
+    { halfWidth: 33, body: 10, drop: 21 },
+  ] as const;
+  const model = models[style];
+  if (!model) throw new RangeError('Unknown Borhan mustache style');
+  const shades = golden
+    ? ['#765018', '#c78b27', '#ffe9a2']
+    : ['#211411', '#4c2d20', '#956249'];
+  for (let x = 2; x < MUSTACHE_WIDTH - 2; x++) {
+    const t = Math.abs(x - 35.5) / model.halfWidth;
+    if (t > 1) continue;
+    const top = Math.round(9 + 5 * t);
+    const thickness = model.body + 2 * (1 - t);
+    const leg = model.drop * Math.pow(Math.max(0, (t - 0.45) / 0.55), 1.35);
+    const bottom = Math.min(MUSTACHE_HEIGHT - 2, Math.round(top + thickness + leg));
     for (let y = top; y <= bottom; y++) {
-      const outline = y === top || y === bottom || x < 4 || x > 67;
-      const shine = !outline && y <= top + 2 && x % 11 !== 0;
-      rect(c, x, y, 1, 1, tones[outline ? 0 : shine ? 2 : 1]);
+      const border = y === top || y === bottom || t > 0.96;
+      const shine = !border && y <= top + 2 && (x + y) % 8 !== 0;
+      rect(c, x, y, 1, 1, shades[border ? 0 : shine ? 2 : 1]);
     }
   }
-  if (style === 1) {
-    // Boxy curled tips are deliberately different from Ramin's curled silhouette.
-    for (const side of [0, 1]) {
-      const sx = side ? 64 : 4;
-      rect(c, sx, 2, 4, 8, tones[0]);
-      rect(c, sx + (side ? -2 : 2), 3, 3, 5, tones[1]);
-      rect(c, sx, 2, 2, 3, tones[2]);
-    }
+}
+
+/** Borhan's eyes are 8px higher and slightly narrower than Ramin's.
+ * Preserve the old Ramin overlays and transform only the Borhan glasses.
+ */
+function borhanAccessory(c: Ctx, variant: RaminVariant): void {
+  if (variant !== 'round' && variant !== 'sunglasses') {
+    raminAccessory(c, variant);
+    return;
   }
+  const scratch = document.createElement('canvas');
+  scratch.width = 210;
+  scratch.height = 362;
+  const source = scratch.getContext('2d');
+  if (!source) throw new Error('Cannot draw Borhan accessory');
+  source.imageSmoothingEnabled = false;
+  raminAccessory(source, variant);
+  c.save();
+  c.imageSmoothingEnabled = false;
+  c.translate(105, 102);
+  c.scale(0.9, 0.88);
+  c.translate(-105, -110);
+  c.drawImage(scratch, 0, 0);
+  c.restore();
 }
 
 function mustache(c: Ctx, style: number, golden = false) {
@@ -478,8 +488,10 @@ export function createArt(scene: Phaser.Scene) {
     makeCanvas(scene, `tree-back-${i}`, 96, 220, (ctx) => treeBack(ctx, i));
     makeCanvas(scene, `tree-front-${i}`, 96, 220, (ctx) => treeFront(ctx, i));
   }
-  for (const variant of RAMIN_VARIANTS)
+  for (const variant of RAMIN_VARIANTS) {
     makeCanvas(scene, `ramin-acc-${variant}`, 210, 362, (ctx) => raminAccessory(ctx, variant));
+    makeCanvas(scene, `borhan-acc-${variant}`, 210, 362, (ctx) => borhanAccessory(ctx, variant));
+  }
   makeCanvas(scene, 'ramin-emote-hand', 35, 40, raminEmoteHand);
   makeCanvas(scene, 'mist', 480, 90, mist);
   makeCanvas(scene, 'forest-front', 480, 80, forestFront);

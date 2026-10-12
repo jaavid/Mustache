@@ -1,18 +1,24 @@
 import Phaser from 'phaser';
 import type { RaminVariant } from '../logic/variety';
+import { getSelectedCharacter, type CharacterId } from './characterChoice';
 
-/** Full-frame accessory images share Ramin's frame dimensions and origin.
- * Depth 22 sits above his sprite (20) but behind the tree bark (28).
+/** Full-frame overlays inherit hero transform; different face geometry is
+ * calibrated in the two different accessory textures.
  */
 export function makeAccessory(scene: Phaser.Scene): Phaser.GameObjects.Image {
-  return scene.add.image(-300, -300, 'ramin-acc-normal').setDepth(22).setVisible(false);
-}
-export function selectAccessory(image: Phaser.GameObjects.Image, variant: RaminVariant): void {
-  image
-    .setTexture('ramin-acc-' + variant)
-    .setData('costume', variant)
+  const character = getSelectedCharacter();
+  return scene.add
+    .image(-300, -300, character + '-acc-normal')
+    .setData('character', character)
+    .setDepth(22)
     .setVisible(false);
 }
+
+export function selectAccessory(image: Phaser.GameObjects.Image, variant: RaminVariant): void {
+  const character = (image.getData('character') as CharacterId) || 'ramin';
+  image.setTexture(character + '-acc-' + variant).setData('costume', variant).setVisible(false);
+}
+
 export function syncAccessory(
   hero: Phaser.GameObjects.Sprite,
   image: Phaser.GameObjects.Image,
