@@ -14,7 +14,7 @@ export const RAMIN_DESKTOP_SCALE = 0.64;
 export const RAMIN_MOBILE_SCALE = 0.82;
 const LIP_X_RATIO = 0;
 const RAMIN_LIP_SOURCE_Y = 136;
-const BORHAN_LIP_SOURCE_Y = 128; // measured against the supplied four-frame art
+const BORHAN_LIP_SOURCE_Y = 125; // approved clean sprite: just below nose, upper lip
 
 export type RaminMood = 'idle' | 'blink' | 'surprised' | 'victory' | 'wink' | 'serious';
 
