@@ -57,7 +57,9 @@ portraitMedia.addEventListener('change', () => {
     game?.scene.isActive('CharacterSelect') ||
     game?.scene.isActive('Guide') ||
     game?.scene.isActive('PauseOverlay')
-  ) return;
+  ) {
+    return;
+  }
   mountGame();
 });
 mountGame();
