@@ -4,6 +4,8 @@ export const GAME_COMMANDS = [
   { command: 'leaderboard', description: '〰️🏆 سیبیل‌سالار کیه؟ جدول روز، هفته، ماه و کل دوران!' },
   { command: 'top', description: '〰️👑 ۱۰ سیبیل‌زن برتر جنگل رو بشناس!' },
   { command: 'score', description: '〰️📈 سیبیلات چند امتیاز آوردن؟ رتبه‌تو ببین!' },
+  { command: 'profile', description: '〰️ پروفایل، XP و مرحله طلایی' },
+  { command: 'invite', description: '〰️ لینک دعوت دوستان و بوست روزانه' },
   { command: 'help', description: '〰️🧭 سیبیل‌اولی؟ فوت‌وفن بازی اینجاست!' },
 ];
 
