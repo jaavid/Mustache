@@ -47,7 +47,17 @@ function mountGame(): void {
   });
 }
 
-// Orientation changes rebuild scenes to avoid carrying incompatible world coordinates.
-// A live round restarts after rotating; best scores still persist in localStorage.
-portraitMedia.addEventListener('change', mountGame);
+// Rebuilding a running scene discards its server-issued round and may burn a
+// one-shot Golden Ticket. Preserve the current logical canvas until the round
+// and its overlays finish; layout changes are applied outside active gameplay.
+portraitMedia.addEventListener('change', () => {
+  if (
+    game?.scene.isActive('Play') ||
+    game?.scene.isPaused('Play') ||
+    game?.scene.isActive('CharacterSelect') ||
+    game?.scene.isActive('Guide') ||
+    game?.scene.isActive('PauseOverlay')
+  ) return;
+  mountGame();
+});
 mountGame();

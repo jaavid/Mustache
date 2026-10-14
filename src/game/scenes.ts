@@ -603,12 +603,15 @@ export class PlayScene extends Phaser.Scene {
     );
   }
   private handlePointer(pointer: Phaser.Input.Pointer) {
-    if (this.roundOver || this.shooting) return;
+    if (this.roundOver) return;
+    // Collectibles remain tappable during the flight of an ordinary projectile.
+    // One active shot per appearance is still enforced below.
     if (
       getSelectedGameMode() === 'classic' &&
       this.golden.tryCollect(pointer.x, pointer.y, this.roundElapsedMs)
     )
       return;
+    if (this.shooting) return;
     if (!this.active || pointer.y < 125 || pointer.y > 450) return;
     const aim = { x: pointer.x, y: pointer.y };
     const shotIsGolden =
