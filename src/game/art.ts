@@ -78,7 +78,14 @@ function paintForest(c: Ctx, width: number, height: number, seed: number) {
   sky.addColorStop(1, '#172e32');
   c.fillStyle = sky;
   c.fillRect(0, 0, width, height);
-  const glow = c.createRadialGradient(openingX, horizon - 70, 8, openingX, horizon - 70, tall ? 156 : 168);
+  const glow = c.createRadialGradient(
+    openingX,
+    horizon - 70,
+    8,
+    openingX,
+    horizon - 70,
+    tall ? 156 : 168,
+  );
   glow.addColorStop(0, 'rgba(238,205,128,0.36)');
   glow.addColorStop(0.42, 'rgba(148,189,133,0.16)');
   glow.addColorStop(1, 'rgba(148,189,133,0)');
@@ -127,8 +134,15 @@ function paintForest(c: Ctx, width: number, height: number, seed: number) {
   // inward toward the clearing, while staying strictly behind every hit target.
   rect(c, 0, ground - 4, width, height - ground + 4, '#15362f');
   for (let i = 0; i < 12; i++) {
-    const x = i * width / 11 - 20;
-    ellipse(c, x, ground + 6 + r() * 19, 30 + r() * 27, 17 + r() * 10, i % 2 ? '#20503b' : '#275541');
+    const x = (i * width) / 11 - 20;
+    ellipse(
+      c,
+      x,
+      ground + 6 + r() * 19,
+      30 + r() * 27,
+      17 + r() * 10,
+      i % 2 ? '#20503b' : '#275541',
+    );
   }
   c.fillStyle = '#50684a';
   c.beginPath();
@@ -136,7 +150,14 @@ function paintForest(c: Ctx, width: number, height: number, seed: number) {
   c.lineTo(openingX + 9, ground - 1);
   c.bezierCurveTo(openingX - 6, ground + 33, openingX + 42, height - 26, openingX + 59, height);
   c.lineTo(openingX - 74, height);
-  c.bezierCurveTo(openingX - 33, height - 35, openingX - 24, ground + 25, openingX - 12, ground - 1);
+  c.bezierCurveTo(
+    openingX - 33,
+    height - 35,
+    openingX - 24,
+    ground + 25,
+    openingX - 12,
+    ground - 1,
+  );
   c.fill();
   for (let i = 0; i < 55; i++) {
     const x = openingX - 60 + r() * 120;
@@ -157,7 +178,14 @@ function paintForest(c: Ctx, width: number, height: number, seed: number) {
         const reach = 17 + r() * 40;
         const bx = side === 0 ? x + trunkWidth : x - reach;
         rect(c, bx, y, reach, 4 + r() * 4, '#183835');
-        ellipse(c, side === 0 ? bx + reach : bx, y - 4, 23 + r() * 17, 14 + r() * 11, '#164036');
+        ellipse(
+          c,
+          side === 0 ? bx + reach : bx,
+          y - 4,
+          23 + r() * 17,
+          14 + r() * 11,
+          '#164036',
+        );
         ellipse(c, side === 0 ? bx + reach + 4 : bx - 4, y - 9, 15, 8, '#285b46');
       }
       for (let k = 0; k < 3; k++) {
