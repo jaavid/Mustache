@@ -104,16 +104,33 @@ export async function recordCompletedRound(db, roundId, userId, score, now = Dat
   ).bind(now, userId).run();
 }
 
+export async function dailyMissions(db, userId, now = Date.now()) {
+  const { start, end } = periodBounds(now, 'day');
+  const row = await db.prepare(
+    "SELECT COUNT(*) AS rounds, MAX(score) AS best, SUM(golden_perfect) AS golden " +
+    "FROM game_rounds WHERE user_id=? AND mode='classic' AND score IS NOT NULL AND finished_at>=? AND finished_at<?"
+  ).bind(userId, start, end).first();
+  const rounds = Number(row?.rounds || 0);
+  const best = Number(row?.best || 0);
+  const golden = Number(row?.golden || 0);
+  return [
+    { id: 'rounds', title: 'PLAY 2 CLASSIC ROUNDS', current: Math.min(2, rounds), target: 2, done: rounds >= 2 },
+    { id: 'score', title: 'SCORE 1200 IN A ROUND', current: Math.min(1200, best), target: 1200, done: best >= 1200 },
+    { id: 'golden', title: 'LAND GOLDEN PERFECT', current: Math.min(1, golden), target: 1, done: golden >= 1 },
+  ];
+}
+
 export async function playerProfile(db, userId, botUsername = 'RJTtobot', now = Date.now()) {
   const progress = await getProgress(db, userId, now);
-  const [user, stats] = await Promise.all([
+  const [user, stats, missions] = await Promise.all([
     db.prepare('SELECT display_name FROM game_users WHERE user_id=?').bind(userId).first(),
     db.prepare(
       'SELECT COUNT(*) AS rounds, MAX(score) AS best, SUM(golden_perfect) AS golden_perfects ' +
       'FROM game_rounds WHERE user_id=? AND score IS NOT NULL'
     ).bind(userId).first(),
+    dailyMissions(db, userId, now),
   ]);
-  return { ...progress, name: user?.display_name || 'Player', bestScore: Number(stats?.best || 0),
+  return { ...progress, missions, name: user?.display_name || 'Player', bestScore: Number(stats?.best || 0),
     goldenPerfects: Number(stats?.golden_perfects || 0),
     inviteUrl: 'https://t.me/' + botUsername + '?start=ref_' + userId.toString(36) };
 }

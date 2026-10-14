@@ -14,7 +14,9 @@ that authorizes /api/profile and the competitive round API.
   Tehran days**. Pre-existing historical scores are retained but **not retroactively
   counted** towards new XP/unlock counters. Explain this to returning players.
 - Player profile and invite URL are available in the menu, via /profile
-  and authenticated GET /api/profile.
+  and authenticated GET /api/profile. Three daily classic missions (play two rounds,
+  score at least 1200 in a round, and a Golden Perfect) are computed from D1
+  each Tehran day; they are visible in the profile and do not award tokens.
 
 ## Catch-up Golden Ticket
 

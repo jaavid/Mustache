@@ -50,6 +50,8 @@ export async function handleTelegramUpdate(update, env, send) {
       await send('sendGame', { chat_id: message.chat.id, game_short_name: gameShortName });
     } else if (command === 'profile' || command === 'invite') {
       if (!env.DB || !Number.isSafeInteger(message.from?.id)) return;
+      await env.DB.prepare('INSERT INTO game_users(user_id, display_name, updated_at) VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET display_name=excluded.display_name, updated_at=excluded.updated_at')
+        .bind(message.from.id, String(message.from.first_name || 'Player').slice(0, 48), Date.now()).run();
       const profile = await playerProfile(env.DB, message.from.id, botUsername);
       const output = command === 'invite'
         ? '〰️ لینک دعوت شما:\n' + profile.inviteUrl + '\n\nهر دوست جدید پس از تکمیل اولین بازی معتبر ۵٪ بوست روزانه (حداکثر ۳ نفر و ۲۰۰ امتیاز در هر راند) فعال می‌کند.'

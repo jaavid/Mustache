@@ -449,6 +449,10 @@ export class MobilePlayScene extends Phaser.Scene {
       popPlan(ROUND_LENGTH_SECONDS - this.remaining, Math.random()),
       ROUND_LENGTH_SECONDS - this.remaining,
     );
+    if (getSelectedGameMode() === 'goldRush') {
+      plan.visibleMs = Math.max(850, Math.round(plan.visibleMs * 0.85));
+      plan.pauseMs = Math.max(100, Math.round(plan.pauseMs * 0.8));
+    }
     plan.side = chooseSpawnSide(slot, MOBILE_TREE_CENTERS.length, plan.side);
     plan.shift = MOBILE_PEEK_DISTANCE;
     if (event === 'fake-out') plan.visibleMs = 350;

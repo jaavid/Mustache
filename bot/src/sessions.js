@@ -73,14 +73,14 @@ export async function finishRound(db, session, data, now = Date.now()) {
   const { score, goldenPerfect } = verifyRoundShots(data.shots, !!round.portrait, data.score, data.goldenPickups ?? [], round.mode || 'classic');
   const weekStart = tehranWeekStart(now);
   const activeInvites = (round.mode || 'classic') === 'classic' ? await dailyReferralCount(db, session.user_id, now) : 0;
-  const bonus = referralBonus(score, activeInvites);
+  const bonus = Math.min(referralBonus(score, activeInvites), 15000 - score);
   const rankedScore = score + bonus;
   const result = await db.prepare('UPDATE game_rounds SET score=?, week_start=?, finished_at=?, golden_perfect=?, ranked_score=? WHERE id=? AND token_hash=? AND score IS NULL AND expires_at>=?').bind(
     score, weekStart, now, goldenPerfect, rankedScore, round.id, session.token_hash, now,
   ).run();
   if (result.meta.changes !== 1) {
-    const saved = await db.prepare('SELECT score, week_start FROM game_rounds WHERE id=?').bind(round.id).first();
-    if (saved?.score !== null && saved?.score !== undefined) return { score: saved.score, weekStart: saved.week_start, duplicate: true };
+    const saved = await db.prepare('SELECT score, week_start, mode, ranked_score FROM game_rounds WHERE id=?').bind(round.id).first();
+    if (saved?.score !== null && saved?.score !== undefined) return { score: saved.score, rankedScore: saved.ranked_score ?? saved.score, weekStart: saved.week_start, mode: saved.mode || 'classic', duplicate: true };
     throw new Error('ROUND_ALREADY_PROCESSED');
   }
   await recordCompletedRound(db, round.id, session.user_id, score, now);
@@ -102,7 +102,7 @@ export async function leaderboard(db, now = Date.now(), options = {}) {
     'WITH per_round AS (',
     ' SELECT user_id, COALESCE(ranked_score, score) AS score, score AS base_score,',
     ' COALESCE(ranked_score, score)-score AS boost_points, golden_perfect, finished_at, id,',
-    ' ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY score DESC, golden_perfect DESC, finished_at ASC, id ASC) AS own_rank',
+    ' ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY COALESCE(ranked_score, score) DESC, golden_perfect DESC, finished_at ASC, id ASC) AS own_rank',
     " FROM game_rounds WHERE score IS NOT NULL AND mode='" + mode + "'" + range,
     '), highs AS (',
     ' SELECT user_id, score, base_score, boost_points, golden_perfect FROM per_round WHERE own_rank=1',

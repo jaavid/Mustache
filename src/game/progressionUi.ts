@@ -185,19 +185,11 @@ export function showProfile(
       '#bbe6d7',
       17,
     );
-    const invite = scene.add
-      .rectangle(w / 2, base + 371, portrait ? 300 : 278, 47, 0x32685d)
-      .setStrokeStyle(3, 0xa3ebc3)
-      .setInteractive({ useHandCursor: true });
-    root.add(invite);
-    add(base + 371, 'COPY INVITE LINK', '#f5ffed', 18);
-    invite.on(
-      'pointerdown',
-      (_: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
-        event.stopPropagation();
-        void copyInvite(scene, portrait, profile.inviteUrl);
-      },
-    );
+    const finished = profile.missions.filter((mission) => mission.done).length;
+    add(base + 345, 'DAILY MISSIONS ' + finished + '/3', '#ffe5a4', 17);
+    add(base + 390, profile.missions.map((mission) =>
+      (mission.done ? '✓ ' : '• ') + mission.title + ' ' + mission.current + '/' + mission.target
+    ).join('\n'), '#d5f2e0', portrait ? 15 : 14);
   } else {
     add(base + 125, 'PLAY THROUGH @RJTtobot TO SAVE XP');
     add(base + 184, 'BROWSER PRACTICE IS LOCAL ONLY');

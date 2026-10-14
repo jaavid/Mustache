@@ -59,6 +59,7 @@ export type PlayerProfile = {
   goldUnlocked: boolean;
   goldTicketEligible: boolean;
   goldRushAvailable: boolean;
+  missions: Array<{ id: string; title: string; current: number; target: number; done: boolean }>;
   rank: number | null;
   weeklyScore?: number;
   rival?: Leader | null;

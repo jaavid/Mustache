@@ -517,6 +517,10 @@ export class PlayScene extends Phaser.Scene {
       popPlan(ROUND_LENGTH_SECONDS - this.remaining, Math.random()),
       ROUND_LENGTH_SECONDS - this.remaining,
     );
+    if (getSelectedGameMode() === 'goldRush') {
+      plan.visibleMs = Math.max(850, Math.round(plan.visibleMs * 0.85));
+      plan.pauseMs = Math.max(100, Math.round(plan.pauseMs * 0.8));
+    }
     plan.side = chooseSpawnSide(slot, DESKTOP_TREE_CENTERS.length, plan.side);
     plan.shift = DESKTOP_PEEK_DISTANCE;
     if (event === 'fake-out') plan.visibleMs = 320;
