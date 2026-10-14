@@ -577,13 +577,13 @@ export class PlayScene extends Phaser.Scene {
     });
   }
   private varietyNotice(message: string, color: string) {
-    const banner = label(this, 480, 167, message, 21, color)
+    const banner = label(this, 480, 377, message, 21, color)
       .setDepth(116)
       .setBackgroundColor('#18263d')
       .setPadding(9, 3);
     this.tweens.add({
       targets: banner,
-      y: 153,
+      y: 361,
       alpha: 0,
       duration: 860,
       delay: 380,

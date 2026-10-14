@@ -53,7 +53,7 @@ export class GoldenFlyer {
     this.hud = scene.add
       .text(
         portrait ? 270 : 480,
-        portrait ? 218 : 144,
+        portrait ? 742 : 433,
         goldRush ? 'PERFECT 0/3 · +150' : 'GOLD 0/3',
         {
           fontFamily: '"Courier New", monospace',

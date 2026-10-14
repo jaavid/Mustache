@@ -263,7 +263,7 @@ export function addPhaseHud(
 export function announcePhase(scene: Phaser.Scene, portrait: boolean, phase: RoundPhase): void {
   if (phase === 'WARMUP') return;
   const x = scene.scale.width / 2,
-    y = portrait ? 318 : 217;
+    y = portrait ? 368 : 217;
   const headline = phase === 'GROOVE' ? 'STAGE 2 / 3 · TWILIGHT' : 'STAGE 3 / 3 · NIGHT RUSH!';
   const under = scene.add
     .rectangle(x, y, portrait ? 470 : 570, portrait ? 65 : 66, 0x111b31, 0.82)
