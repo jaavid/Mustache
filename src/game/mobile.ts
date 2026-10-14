@@ -402,7 +402,7 @@ export class MobilePlayScene extends Phaser.Scene {
     this.goldenArmed = false;
     const icon = this.styleIcons[1];
     this.tweens.killTweensOf(icon);
-    icon.setAlpha(1).setTexture(mustacheTexture(1, ready));
+    icon.setAlpha(1).setTexture(mustacheTexture(1, ready || getSelectedGameMode() === 'goldRush'));
     this.styleLabels[1].setText(ready ? 'GOLD' : '2').setColor(ready ? '#ffe291' : '#fff2bb');
     if (ready) {
       this.tweens.add({ targets: icon, alpha: 0.66, duration: 480, yoyo: true, repeat: -1 });
@@ -587,7 +587,7 @@ export class MobilePlayScene extends Phaser.Scene {
           this.feedback(aim.x, aim.y, 'MISS!', '#ff8eaa');
           resolveMissImpact(
             this,
-            mustacheTexture(style, shotIsGolden),
+            mustacheTexture(style, shotIsGolden || getSelectedGameMode() === 'goldRush'),
             aim,
             { centers: MOBILE_TREE_CENTERS, centerY: 552, halfWidth: 23, top: 395, bottom: 738 },
             84,
@@ -602,7 +602,7 @@ export class MobilePlayScene extends Phaser.Scene {
           playSfx(result.grade === 'perfect' ? 'perfect' : 'good');
           applyRaminMood(this.hero, 'surprised');
           this.sticker
-            .setTexture(mustacheTexture(style, shotIsGolden))
+            .setTexture(mustacheTexture(style, shotIsGolden || getSelectedGameMode() === 'goldRush'))
             .setPosition(aim.x, aim.y)
             .setRotation(this.hero.rotation)
             .setVisible(true);

@@ -32,6 +32,21 @@ trace and displays a golden badge for verified golden-perfect records.
 
 See [Golden Mustache rules and integrity](docs/GOLDEN_MUSTACHE.md).
 
+## Mustache 2.0 progression and Gold Rush
+
+Verified Telegram Game rounds now build a server-side XP/level profile. Gold Rush opens
+permanently after 12 verified rounds across 2 different Tehran days, or via a daily
+catch-up Golden Ticket for eligible lower-ranked players. Gold Rush has its own
+scoreboard and uses all-golden projectiles (+50 on PERFECT and +150 every third
+consecutive PERFECT) instead of the three-pickup collectible bonus.
+
+The /invite command and in-game profile expose a personal Telegram referral link.
+Up to three new friends completing their first verified round each day earn the
+inviter a 5% classic ranked-score boost, capped at 200 points per round. Original
+raw scores remain intact for native Telegram Game Cards. See
+[Player progression and referrals](docs/PLAYER_PROGRESSION.md) for rules, database
+migration, limitations and launch checks.
+
 ## Development
 
 Use **Node.js 22**. Clone the repository and run:

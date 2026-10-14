@@ -75,16 +75,14 @@ export async function finishRound(db, session, data, now = Date.now()) {
   const activeInvites = (round.mode || 'classic') === 'classic' ? await dailyReferralCount(db, session.user_id, now) : 0;
   const bonus = referralBonus(score, activeInvites);
   const rankedScore = score + bonus;
-  const result = await db.prepare('UPDATE game_rounds SET score=?, week_start=?, finished_at=?, golden_perfect=? WHERE id=? AND token_hash=? AND score IS NULL AND expires_at>=?').bind(
-    score, weekStart, now, goldenPerfect, round.id, session.token_hash, now,
+  const result = await db.prepare('UPDATE game_rounds SET score=?, week_start=?, finished_at=?, golden_perfect=?, ranked_score=? WHERE id=? AND token_hash=? AND score IS NULL AND expires_at>=?').bind(
+    score, weekStart, now, goldenPerfect, rankedScore, round.id, session.token_hash, now,
   ).run();
   if (result.meta.changes !== 1) {
     const saved = await db.prepare('SELECT score, week_start FROM game_rounds WHERE id=?').bind(round.id).first();
     if (saved?.score !== null && saved?.score !== undefined) return { score: saved.score, weekStart: saved.week_start, duplicate: true };
     throw new Error('ROUND_ALREADY_PROCESSED');
   }
-  await db.prepare('UPDATE game_rounds SET ranked_score=? WHERE id=? AND user_id=? AND ranked_score IS NULL')
-    .bind(rankedScore, round.id, session.user_id).run();
   await recordCompletedRound(db, round.id, session.user_id, score, now);
   return { score, rankedScore, referralBonus: bonus, weekStart, mode: round.mode || 'classic', duplicate: false };
 }
