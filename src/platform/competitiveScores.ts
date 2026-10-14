@@ -1,3 +1,5 @@
+import { getSelectedGameMode, type GameMode } from '../logic/gameMode';
+
 /**
  * Official Game backend bridge. Standalone browser visitors keep local scores.
  * Telegram identities come ONLY from server-issued callback session tokens.
@@ -20,9 +22,11 @@ type Trace = {
   goldenShot?: boolean;
 };
 type GoldenPickup = { index: number; tMs: number; aim: Aim };
-export type Leader = { rank: number; name: string; score: number; goldenPerfect?: number };
+export type Leader = { rank: number; name: string; score: number; goldenPerfect?: number; baseScore?: number; boostPoints?: number };
 export type Period = 'day' | 'week' | 'month' | 'all';
 export type Board = {
+  mode?: GameMode;
+  rival?: Leader | null;
   period: Period;
   offset: number;
   timeZone: string;
@@ -35,7 +39,16 @@ export type Board = {
   players: Leader[];
   me?: Leader | null;
 };
+export type PlayerProfile = {
+  name: string; xp: number; level: number; nextLevelXp: number; roundsPlayed: number;
+  activeDays: number; bestScore: number; goldenPerfects: number; dailyInvites: number;
+  goldUnlocked: boolean; goldTicketEligible: boolean; goldRushAvailable: boolean;
+  rank: number | null; weeklyScore?: number; rival?: Leader | null; inviteUrl: string;
+};
 export type Submission = {
+  mode?: GameMode;
+  rankedScore?: number;
+  referralBonus?: number;
   state: 'local' | 'saved' | 'unavailable';
   error?: string;
   telegramSynced?: boolean;
@@ -111,13 +124,13 @@ async function api(path: string, payload: unknown) {
 let active: { started: Promise<string>; shots: Trace[]; goldenPickups: GoldenPickup[] } | null =
   null;
 
-export function startCompetitiveRound(portrait: boolean): void {
+export function startCompetitiveRound(portrait: boolean, mode: GameMode = 'classic'): void {
   if (!sessionToken) {
     active = null;
     return;
   }
   active = {
-    started: api('/api/round/start', { portrait }).then((data) => String(data.roundId)),
+    started: api('/api/round/start', { portrait, mode }).then((data) => String(data.roundId)),
     shots: [],
     goldenPickups: [],
   };
@@ -150,6 +163,9 @@ export async function submitCompetitiveRound(score: number): Promise<Submission>
     });
     return {
       state: 'saved',
+      mode: result.mode,
+      rankedScore: Number(result.rankedScore ?? result.score),
+      referralBonus: Number(result.referralBonus || 0),
       telegramSynced: !!result.telegramSynced,
       telegramState: result.telegramState,
       telegramScores: result.telegramScores as Leader[],
@@ -167,8 +183,9 @@ export async function submitCompetitiveRound(score: number): Promise<Submission>
 export async function getLeaderboard(
   period: Period = 'week',
   offset = 0,
+  mode: GameMode = getSelectedGameMode(),
 ): Promise<Board | undefined> {
-  const query = new URLSearchParams({ period, offset: String(offset) });
+  const query = new URLSearchParams({ period, offset: String(offset), mode });
   try {
     const headers = sessionToken ? { authorization: 'Bearer ' + sessionToken } : undefined;
     let response = await requestScoreApi('/api/leaderboard?' + query, {
@@ -189,4 +206,18 @@ export async function getLeaderboard(
 /** Retained for callers that only request the current Tehran competition. */
 export function getWeeklyLeaderboard(): Promise<Board | undefined> {
   return getLeaderboard('week');
+}
+
+/** Verified progress only: untrusted browser localStorage cannot unlock competitive modes. */
+export async function getPlayerProfile(): Promise<PlayerProfile | null> {
+  if (!sessionToken) return null;
+  try {
+    const response = await requestScoreApi('/api/profile', {
+      headers: { authorization: 'Bearer ' + sessionToken }, cache: 'no-store',
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as PlayerProfile;
+  } catch {
+    return null;
+  }
 }

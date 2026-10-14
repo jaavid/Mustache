@@ -224,7 +224,7 @@ async function gameApi(request, env, url) {
       const now = Date.now();
       const result = await playerProfile(env.DB, session.user_id, env.BOT_USERNAME || DEFAULT_BOT_USERNAME, now);
       const board = await leaderboard(env.DB, now, { userId: session.user_id });
-      return jsonReply({ ...result, rank: board.me?.rank ?? null, rival: board.rival ?? null,
+      return jsonReply({ ...result, rank: board.me?.rank ?? null, weeklyScore: board.me?.score ?? 0, rival: board.rival ?? null,
         goldTicketEligible: goldCatchUpEligible(result, board),
         goldRushAvailable: result.goldUnlocked || goldCatchUpEligible(result, board) }, 200, cors);
     }
