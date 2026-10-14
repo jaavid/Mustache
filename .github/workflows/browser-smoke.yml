@@ -7,6 +7,10 @@ on:
       - 'src/assets/mammad-sheet.png'
       - 'src/game/characterSelect.ts'
       - 'src/game/ramin.ts'
+      - 'src/main.ts'
+      - 'src/game/**/*.ts'
+      - 'package.json'
+      - 'package-lock.json'
       - 'assets/manifest.json'
       - '.github/workflows/browser-smoke.yml'
   schedule:
