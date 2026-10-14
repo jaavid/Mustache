@@ -537,8 +537,7 @@ export class PlayScene extends Phaser.Scene {
     this.sticker.setVisible(false);
     selectAccessory(this.accessory, this.currentVariant);
     burstLeaves(this, treeX, y + 95, 7);
-    if (event === 'fake-out') this.varietyNotice('FAKE-OUT!', '#ffc3ab');
-    else if (fromDouble) this.varietyNotice('AGAIN!', '#ffdd82');
+    if (fromDouble) this.varietyNotice('AGAIN!', '#ffdd82');
     else if (event === 'double') this.varietyNotice('DOUBLE POP!', '#ffdd82');
     else if (this.currentVariant === 'gold')
       this.varietyNotice(`GOLD ${characterName()} · +50`, '#ffd774');
@@ -550,6 +549,8 @@ export class PlayScene extends Phaser.Scene {
         applyRaminMood(this.hero, 'surprised');
         this.time.delayedCall(plan.visibleMs, () => {
           if (this.roundOver || serial !== this.spawnSerial) return;
+          // Reveal the trick only when it has actually escaped.
+          this.varietyNotice('FAKE-OUT!', '#ffc3ab');
           this.hideTarget(() => this.time.delayedCall(160, () => this.popTarget()));
         });
         return;

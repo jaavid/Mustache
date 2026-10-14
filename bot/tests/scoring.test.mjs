@@ -38,7 +38,12 @@ test('server recomputes grades, combos and variant rewards from impact coordinat
     { tMs: 7200, aim: {x:200,y:410}, lip:{x:289,y:280}, variant:'normal', comboBefore:2 },
     { tMs: 9800, aim: {x:289,y:280}, lip:{x:289,y:280}, variant:'sunglasses', comboBefore:0 },
   ];
-  assert.equal(verifyRoundShots(shots,false,385).score,385);
+  const verified = verifyRoundShots(shots,false,385);
+  assert.equal(verified.score,385);
+  assert.equal(verified.perfect,3);
+  assert.equal(verified.good,0);
+  assert.equal(verified.misses,1);
+  assert.equal(verified.maxCombo,2);
   assert.throws(() => verifyRoundShots(shots,false,99999),/SCORE_MISMATCH/);
   assert.throws(() => verifyRoundShots([...shots, shots[3]],false,385),/IMPOSSIBLE_SHOT_RATE/);
   assert.throws(() => verifyRoundShots([{...shots[0],lip:{x:289,y:1}}],false,100),/INVALID_TARGET/);

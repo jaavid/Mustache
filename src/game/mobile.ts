@@ -469,8 +469,7 @@ export class MobilePlayScene extends Phaser.Scene {
     this.sticker.setVisible(false);
     selectAccessory(this.accessory, this.currentVariant);
     burstLeaves(this, treeX, 650, 8);
-    if (event === 'fake-out') this.varietyNotice('FAKE-OUT!', '#ffc3ab');
-    else if (fromDouble) this.varietyNotice('AGAIN!', '#ffdd82');
+    if (fromDouble) this.varietyNotice('AGAIN!', '#ffdd82');
     else if (event === 'double') this.varietyNotice('DOUBLE POP!', '#ffdd82');
     else if (this.currentVariant === 'gold') this.varietyNotice('GOLD +50!', '#ffd774');
     else if (this.currentVariant === 'sunglasses')
@@ -481,6 +480,8 @@ export class MobilePlayScene extends Phaser.Scene {
         applyRaminMood(this.hero, 'surprised');
         this.time.delayedCall(plan.visibleMs, () => {
           if (this.roundOver || serial !== this.spawnSerial) return;
+          // Do not telegraph the trick before players have seen it.
+          this.varietyNotice('FAKE-OUT!', '#ffc3ab');
           this.hide(() => this.time.delayedCall(160, () => this.pop()));
         });
         return;

@@ -85,7 +85,8 @@ export async function finishRound(db, session, data, now = Date.now()) {
   }
   const duration = now - round.started_at;
   if (duration < 35000 || now > round.expires_at) throw new Error('INVALID_ROUND_DURATION');
-  const { score, goldenPerfect } = verifyRoundShots(data.shots, !!round.portrait, data.score, data.goldenPickups ?? [], round.mode || 'classic');
+  const verified = verifyRoundShots(data.shots, !!round.portrait, data.score, data.goldenPickups ?? [], round.mode || 'classic');
+  const { score, goldenPerfect } = verified;
   const weekStart = tehranWeekStart(now);
   const activeInvites = (round.mode || 'classic') === 'classic' ? await dailyReferralCount(db, session.user_id, now) : 0;
   const bonus = Math.min(referralBonus(score, activeInvites), 15000 - score);
@@ -98,6 +99,13 @@ export async function finishRound(db, session, data, now = Date.now()) {
       'WHERE id=? AND token_hash=? AND score IS NULL AND expires_at>=?'
     ).bind(score, weekStart, now, goldenPerfect, rankedScore, round.id, session.token_hash, now),
     ...completedRoundStatements(db, round.id, session.user_id, score, now, true),
+    // Only accepted, progress-recorded rounds generate analytics. Ignore duplicate retries.
+    db.prepare('INSERT OR IGNORE INTO game_round_metrics ' +
+      '(round_id, shots, perfect, good, misses, max_combo, golden_pickups) ' +
+      'SELECT id, ?, ?, ?, ?, ?, ? FROM game_rounds ' +
+      'WHERE id=? AND score IS NOT NULL AND progress_recorded=1'
+    ).bind(verified.count, verified.perfect, verified.good, verified.misses,
+      verified.maxCombo, (data.goldenPickups ?? []).length, round.id),
   ]);
   if (result.meta.changes !== 1) {
     const saved = await db.prepare('SELECT score, week_start, mode, ranked_score FROM game_rounds WHERE id=?').bind(round.id).first();
