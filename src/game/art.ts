@@ -38,127 +38,188 @@ function rand(seed: number) {
   };
 }
 
-function forestBackground(c: Ctx) {
-  const r = rand(7005);
-  const sky = c.createLinearGradient(0, 0, 0, 200);
-  sky.addColorStop(0, '#18263f');
-  sky.addColorStop(0.45, '#465580');
-  sky.addColorStop(0.75, '#8973a5');
-  sky.addColorStop(1, '#4a617e');
-  c.fillStyle = sky;
-  c.fillRect(0, 0, SW, SH);
-  // Dawn reflected beyond an ancient forest.
-  ellipse(c, 250, 92, 97, 71, '#c4a3a050');
-  ellipse(c, 248, 80, 54, 37, '#f4c7a850');
-  ellipse(c, 273, 72, 16, 16, '#f4dab0');
-  ellipse(c, 279, 66, 14, 14, '#465580');
-  for (let i = 0; i < 80; i++)
-    rect(c, r() * 480, r() * 130, r() * 2 + 1, r() * 2 + 1, r() > 0.5 ? '#b8d5bd66' : '#ffffff42');
-  // Many layers of vertical tree silhouettes, read as parallax depth.
-  for (let layer = 0; layer < 3; layer++) {
-    const trunk = ['#34445c', '#2b4652', '#213b47'][layer];
-    const canopy = ['#344c65', '#2c505a', '#21484b'][layer];
-    for (let j = 0; j < 18; j++) {
-      const x = j * 31 - 22 + r() * 19;
-      const top = 10 + r() * 60 + layer * 15;
-      rect(c, x, top, 5 + layer * 3, 195, trunk);
-      rect(c, x - 7, top + 34, 16, 3, trunk);
-      ellipse(c, x, top, 25 + layer * 4, 24 + layer * 3, canopy);
-      ellipse(c, x - 14, top + 14, 21, 16, canopy);
-      ellipse(c, x + 11, top + 15, 19, 22, canopy);
+/** Large shapes, distinct trunks, overlapping crowns and a floor-level trail
+ * establish a readable woodland silhouette even on a narrow phone screen.
+ * All noise is deterministic, drawn once in Boot, and carries no hit geometry.
+ */
+function distantPine(
+  c: Ctx,
+  x: number,
+  base: number,
+  height: number,
+  halfWidth: number,
+  colors: readonly [string, string, string],
+) {
+  const tip = base - height;
+  rect(c, x - 3, tip + height * 0.4, 6, height * 0.64, colors[2]);
+  for (let step = 0; step < 10; step++) {
+    const y = tip + step * height * 0.072;
+    const width = halfWidth * (0.2 + step * 0.086);
+    rect(c, x - width, y, width * 2, 7 + height * 0.022, colors[0]);
+    if (step > 3 && step % 2 === 0) {
+      rect(c, x - width + 3, y + 2, width * 0.53, 2, colors[1]);
     }
   }
-  // Mountain valley and waterfalls.
-  c.fillStyle = '#52667b';
+}
+
+function paintForest(c: Ctx, width: number, height: number, seed: number) {
+  const r = rand(seed);
+  const tall = height > width;
+  const horizon = tall ? 299 : 162;
+  const ground = tall ? 335 : 193;
+  const openingX = width * (tall ? 0.54 : 0.52);
+
+  // An emerald interior instead of open mountain scenery. A warm clearing
+  // behind the target separates the hero from the overlapping tree silhouettes.
+  const sky = c.createLinearGradient(0, 0, 0, height);
+  sky.addColorStop(0, '#102433');
+  sky.addColorStop(0.32, '#21464c');
+  sky.addColorStop(0.64, '#376355');
+  sky.addColorStop(1, '#172e32');
+  c.fillStyle = sky;
+  c.fillRect(0, 0, width, height);
+  const glow = c.createRadialGradient(openingX, horizon - 70, 8, openingX, horizon - 70, tall ? 156 : 168);
+  glow.addColorStop(0, 'rgba(238,205,128,0.36)');
+  glow.addColorStop(0.42, 'rgba(148,189,133,0.16)');
+  glow.addColorStop(1, 'rgba(148,189,133,0)');
+  c.fillStyle = glow;
+  c.fillRect(0, 0, width, height);
+
+  // Sunbeams pass between high branches and are cut by the tree silhouettes.
+  for (let i = 0; i < 7; i++) {
+    const center = openingX - 90 + i * 29;
+    c.fillStyle = i % 2 ? '#d9d7a010' : '#edf0b80c';
+    c.beginPath();
+    c.moveTo(center, 0);
+    c.lineTo(center + 12, 0);
+    c.lineTo(center + 34 + i * 3, ground);
+    c.lineTo(center - 11 + i * 3, ground);
+    c.fill();
+  }
+
+  // Three parallax-like layers: slender distant conifers, leafy midground,
+  // and giant outer trunks. The center remains the brightest playable zone.
+  const far = ['#244a4c', '#32675b', '#294b4c'] as const;
+  for (let layer = 0; layer < 3; layer++) {
+    const dark: [string, string, string][] = [
+      ['#24454c', '#39605a', '#1d363e'],
+      ['#1a4144', '#386b56', '#1b3736'],
+      ['#133a37', '#2e684b', '#18322f'],
+    ];
+    const count = tall ? 13 : 23;
+    const stride = width / (count - 1);
+    for (let i = 0; i < count; i++) {
+      const x = i * stride - 12 + r() * 21;
+      const base = horizon + 13 + layer * 12 + r() * 28;
+      const size = (tall ? 112 : 87) + layer * (tall ? 23 : 16) + r() * 35;
+      distantPine(c, x, base, size, (tall ? 24 : 21) + layer * 6, dark[layer]);
+    }
+    // Broadleaf crowns distinguish the scene from a mountain pine silhouette.
+    for (let i = 0; i < (tall ? 9 : 17); i++) {
+      const x = i * (width / (tall ? 8 : 16)) - 9 + r() * 18;
+      const y = horizon - 57 - layer * 8 - r() * 35;
+      ellipse(c, x, y, 22 + layer * 7 + r() * 15, 19 + r() * 13, far[layer]);
+      ellipse(c, x + 13, y - 6, 17 + r() * 11, 14 + r() * 10, dark[layer][1]);
+    }
+  }
+
+  // Understory and an unmistakably wooded floor. A winding mossy path points
+  // inward toward the clearing, while staying strictly behind every hit target.
+  rect(c, 0, ground - 4, width, height - ground + 4, '#15362f');
+  for (let i = 0; i < 12; i++) {
+    const x = i * width / 11 - 20;
+    ellipse(c, x, ground + 6 + r() * 19, 30 + r() * 27, 17 + r() * 10, i % 2 ? '#20503b' : '#275541');
+  }
+  c.fillStyle = '#50684a';
   c.beginPath();
-  c.moveTo(0, 171);
-  c.lineTo(57, 132);
-  c.lineTo(108, 158);
-  c.lineTo(159, 117);
-  c.lineTo(226, 152);
-  c.lineTo(311, 121);
-  c.lineTo(384, 144);
-  c.lineTo(480, 104);
-  c.lineTo(480, 220);
-  c.lineTo(0, 220);
-  c.closePath();
+  c.moveTo(openingX - 12, ground - 1);
+  c.lineTo(openingX + 9, ground - 1);
+  c.bezierCurveTo(openingX - 6, ground + 33, openingX + 42, height - 26, openingX + 59, height);
+  c.lineTo(openingX - 74, height);
+  c.bezierCurveTo(openingX - 33, height - 35, openingX - 24, ground + 25, openingX - 12, ground - 1);
   c.fill();
-  c.fillStyle = '#324f55';
-  c.beginPath();
-  c.moveTo(0, 179);
-  c.lineTo(68, 150);
-  c.lineTo(125, 172);
-  c.lineTo(195, 145);
-  c.lineTo(271, 164);
-  c.lineTo(352, 135);
-  c.lineTo(480, 173);
-  c.lineTo(480, 235);
-  c.lineTo(0, 235);
-  c.closePath();
-  c.fill();
-  rect(c, 390, 124, 23, 110, '#88cad0');
-  rect(c, 394, 127, 4, 105, '#bfe6dd');
-  rect(c, 404, 124, 2, 116, '#c9edeb');
-  for (let i = 0; i < 30; i++) rect(c, 385 + r() * 40, 227 + r() * 16, 2 + r() * 5, 1, '#d3ddd188');
-  rect(c, 0, 179, 480, 91, '#253f3f');
-  // Ruined mossy bridge behind stage.
-  rect(c, 320, 140, 140, 7, '#6d665f');
-  rect(c, 318, 143, 144, 4, '#3b434d');
-  for (let x = 330; x < 463; x += 20) {
-    rect(c, x, 129, 4, 17, '#55535c');
-    rect(c, x + 4, 133, 16, 3, '#8a7e78');
+  for (let i = 0; i < 55; i++) {
+    const x = openingX - 60 + r() * 120;
+    const y = ground + r() * (height - ground);
+    rect(c, x, y, 2 + r() * 8, 1 + r() * 3, i % 3 === 0 ? '#9c9962' : '#68805b');
   }
-  // Lush ground blocks with exposed rocky edge.
-  rect(c, 0, 188, 480, 82, '#233e37');
-  for (let i = 0; i < 110; i++) {
-    let x = Math.floor(r() * 480),
-      y = 184 + Math.floor(r() * 56);
-    rect(
-      c,
-      x,
-      y,
-      2 + Math.floor(r() * 9),
-      1 + Math.floor(r() * 4),
-      ['#375c44', '#2b5a4b', '#47664d', '#566d4f'][Math.floor(r() * 4)],
-    );
+
+  // Towering dark trunks and lateral boughs frame the clearing from both
+  // sides; the gameplay trees still provide all of the real occlusion.
+  for (const side of [0, 1]) {
+    for (let j = 0; j < 3; j++) {
+      const x = side === 0 ? -18 + j * 18 : width + 8 - j * 18;
+      const trunkWidth = 13 + j * 3;
+      rect(c, x, -12, trunkWidth, ground + 31, '#132d2e');
+      rect(c, x + 3, 0, 4, ground - 6, '#32534a');
+      for (let k = 0; k < 5; k++) {
+        const y = 34 + k * 40 + r() * 19;
+        const reach = 17 + r() * 40;
+        const bx = side === 0 ? x + trunkWidth : x - reach;
+        rect(c, bx, y, reach, 4 + r() * 4, '#183835');
+        ellipse(c, side === 0 ? bx + reach : bx, y - 4, 23 + r() * 17, 14 + r() * 11, '#164036');
+        ellipse(c, side === 0 ? bx + reach + 4 : bx - 4, y - 9, 15, 8, '#285b46');
+      }
+      for (let k = 0; k < 3; k++) {
+        const rootY = ground + k * 7;
+        const spread = 15 + k * 9;
+        rect(c, x - spread / 2, rootY, trunkWidth + spread, 5, '#153a34');
+      }
+    }
   }
-  for (let i = 0; i < 40; i++) {
-    const x = Math.floor(r() * 480),
-      y = 233 + Math.floor(r() * 36);
-    rect(c, x, y, 3 + Math.floor(r() * 12), 2 + Math.floor(r() * 6), '#1b3335');
+
+  // A continuous canopy roof, with leaves, hanging creepers and broken
+  // highlights, is the strongest jungle cue and survives mobile cropping.
+  for (let x = -26; x < width + 36; x += 22) {
+    const crown = 17 + r() * 29;
+    ellipse(c, x, 2 + r() * 5, 26 + r() * 15, crown, '#102f31');
+    ellipse(c, x + 9, -5, 17 + r() * 10, crown * 0.7, '#215140');
+    ellipse(c, x + 4, crown * 0.39, 12 + r() * 8, 10 + r() * 8, '#2c6548');
+    for (let j = 0; j < 4; j++) {
+      rect(c, x - 16 + r() * 36, 8 + r() * crown, 3 + r() * 5, 2, '#4b8156');
+    }
   }
-  // Moss covered stepping stones and glowing mushrooms.
-  for (let i = 0; i < 15; i++) {
-    const x = Math.floor(r() * 480),
-      y = 217 + Math.floor(r() * 51);
-    ellipse(c, x, y, 8 + r() * 8, 3 + r() * 3, '#526b5a');
-    rect(c, x - 5, y - 2, 8, 2, '#7e8965');
+  for (let i = 0; i < (tall ? 18 : 29); i++) {
+    const x = 3 + r() * (width - 6);
+    const vineLength = 13 + r() * (tall ? 85 : 54);
+    rect(c, x, 0, 2, vineLength, '#244e3e');
+    for (let y = 12; y < vineLength; y += 14) {
+      rect(c, x - 7, y, 7, 3, '#3c8153');
+      rect(c, x + 2, y - 5, 7, 3, '#37744b');
+    }
   }
-  for (let i = 0; i < 28; i++) {
-    const x = Math.floor(r() * 470) + 4,
-      y = Math.floor(200 + r() * 58);
-    rect(c, x, y - 2, 2, 5, '#c9c8a2');
-    ellipse(c, x + 1, y - 3, 5, 3, r() > 0.55 ? '#c875e4' : '#a8a0ff');
-    rect(c, x, y - 4, 2, 1, '#ffdcfa');
+
+  // Fern fronds and bright mushrooms make the ground read at 2x pixel scale.
+  for (let i = 0; i < (tall ? 60 : 90); i++) {
+    const x = r() * width;
+    const y = ground + 9 + r() * Math.max(1, height - ground - 13);
+    const h = 8 + r() * 17;
+    rect(c, x, y - h, 2, h, '#2d754f');
+    for (let k = 0; k < 4; k++) {
+      rect(c, x - 6 - k, y - h + k * 4, 7 + k, 2, '#3d8756');
+      rect(c, x + 2, y - h + k * 4 + 2, 7 + k, 2, '#285e47');
+    }
   }
-  // Hanging drapery of canopy: strong top framing.
-  for (let x = -22; x < 500; x += 13) {
-    const len = 8 + Math.floor(r() * 36);
-    ellipse(c, x, 0, 24, len, '#112f35');
-    ellipse(c, x + 6, 4, 18, len * 0.6, '#17473c');
-    for (let j = 0; j < 4; j++) rect(c, x - 9 + r() * 24, 7 + r() * len, 3, 3, '#286048');
+  for (let i = 0; i < (tall ? 25 : 32); i++) {
+    const x = 8 + r() * (width - 16);
+    const y = ground + 12 + r() * Math.max(1, height - ground - 20);
+    rect(c, x, y - 5, 3, 7, '#b8bb8d');
+    ellipse(c, x + 1, y - 6, 6, 3, i % 3 ? '#c48ec8' : '#e9b775');
+    rect(c, x - 1, y - 8, 3, 1, '#ffe5b1');
   }
-  // Side vignettes, no dependency on external assets.
-  for (const x of [-7, 470]) {
-    rect(c, x, 0, 14, 210, '#1a303b');
-    rect(c, x + 3, 0, 4, 200, '#3a4a47');
+  for (let i = 0; i < (tall ? 38 : 54); i++) {
+    const x = r() * width;
+    const y = 70 + r() * (ground - 85);
+    rect(c, x, y, 2, 2, i % 3 ? '#a5d78699' : '#f9df9c99');
   }
-  // Back fireflies
-  for (let i = 0; i < 52; i++) {
-    const x = Math.floor(r() * 480),
-      y = Math.floor(r() * 210);
-    rect(c, x, y, 2, 2, i % 3 === 0 ? '#f7dc86' : '#73d7a377');
-  }
+}
+
+function forestBackground(c: Ctx) {
+  paintForest(c, SW, SH, 7005);
+}
+
+function forestPortrait(c: Ctx) {
+  paintForest(c, 270, 480, 9705);
 }
 
 /**
@@ -504,6 +565,7 @@ function butterfly(c: Ctx) {
 
 export function createArt(scene: Phaser.Scene) {
   makeCanvas(scene, 'forest', SW, SH, forestBackground);
+  makeCanvas(scene, 'forest-portrait', 270, 480, forestPortrait);
   for (let i = 0; i < 3; i++) {
     makeCanvas(scene, `tree-back-${i}`, 96, 220, (ctx) => treeBack(ctx, i));
     makeCanvas(scene, `tree-front-${i}`, 96, 220, (ctx) => treeFront(ctx, i));
