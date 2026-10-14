@@ -49,6 +49,10 @@ export function verifyRoundShots(shots, portrait, clientScore, goldenPickups = [
   let goldenUsed = false;
   let goldenPerfect = 0;
   let perfectStreak = 0;
+  let perfectHits = 0;
+  let goodHits = 0;
+  let misses = 0;
+  let maxCombo = 0;
   for (const shot of shots) {
     if (!shot || typeof shot !== 'object') throw new Error('INVALID_SHOT');
     const { tMs, aim, lip, variant, comboBefore, goldenShot } = shot;
@@ -76,6 +80,10 @@ export function verifyRoundShots(shots, portrait, clientScore, goldenPickups = [
     const perfect = (dx / radii[0]) ** 2 + (dy / radii[1]) ** 2 <= 1;
     const good = (dx / radii[2]) ** 2 + (dy / radii[3]) ** 2 <= 1;
     combo = good ? comboBefore + 1 : 0;
+    if (perfect) perfectHits++;
+    else if (good) goodHits++;
+    else misses++;
+    maxCombo = Math.max(maxCombo, combo);
     perfectStreak = perfect ? perfectStreak + 1 : 0;
     if (good) {
       score += (perfect ? 100 : 50) + Math.min(50, Math.max(0, combo - 1) * 10);
@@ -90,5 +98,6 @@ export function verifyRoundShots(shots, portrait, clientScore, goldenPickups = [
     prevTime = tMs;
   }
   if (score !== clientScore || score > 15000) throw new Error('SCORE_MISMATCH');
-  return { score, count: shots.length, goldenPerfect };
+  return { score, count: shots.length, goldenPerfect,
+    perfect: perfectHits, good: goodHits, misses, maxCombo };
 }

@@ -17,6 +17,7 @@ class TransactionalD1 {
       '0002_tehran_scoreboards.sql',
       '0003_golden_perfect.sql',
       '0004_player_progression.sql',
+      '0005_gameplay_metrics.sql',
     ]) {
       this.connection.exec(readFileSync(new URL('../migrations/' + migration, import.meta.url), 'utf8'));
     }
@@ -136,6 +137,7 @@ for (const failurePoint of ['INSERT INTO game_progress', 'UPDATE game_referrals 
       assert.equal(afterError.progress_recorded, 0);
       assert.equal(db.read('SELECT COUNT(*) AS n FROM game_progress WHERE user_id=27').n, 0);
       assert.equal(db.read('SELECT qualified_at FROM game_referrals WHERE referred_user_id=27').qualified_at, null);
+      assert.equal(db.read('SELECT COUNT(*) AS n FROM game_round_metrics').n, 0);
 
       const saved = await finishRound(db, player, data, now + 100);
       assert.equal(saved.score, 100);
@@ -146,10 +148,13 @@ for (const failurePoint of ['INSERT INTO game_progress', 'UPDATE game_referrals 
       assert.equal(progress.active_days, 1);
       assert.equal(db.read('SELECT progress_recorded FROM game_rounds WHERE id=?', started.roundId).progress_recorded, 1);
       assert.equal(db.read('SELECT qualified_at FROM game_referrals WHERE referred_user_id=27').qualified_at, now + 100);
+      assert.deepEqual(db.read('SELECT shots, perfect, good, misses, max_combo, golden_pickups FROM game_round_metrics WHERE round_id=?', started.roundId),
+        { shots: 1, perfect: 1, good: 0, misses: 0, max_combo: 1, golden_pickups: 0 });
 
       const replay = await finishRound(db, player, { ...data, score: 9000, shots: [] }, now + 200);
       assert.equal(replay.score, 100);
       assert.equal(replay.duplicate, true);
+      assert.equal(db.read('SELECT COUNT(*) AS n FROM game_round_metrics').n, 1);
       assert.equal(db.read('SELECT xp, rounds_played FROM game_progress WHERE user_id=27').xp, 41);
       assert.equal(db.read('SELECT xp, rounds_played FROM game_progress WHERE user_id=27').rounds_played, 1);
     } finally {
