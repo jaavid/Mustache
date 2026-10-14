@@ -14,6 +14,7 @@ export class GoldenFlyer {
   private readonly portrait: boolean;
   private readonly notice: (message: string, color: string) => void;
   private readonly onChargeChange: (ready: boolean) => void;
+  private readonly goldRush: boolean;
   private readonly sprite: Phaser.GameObjects.Image;
   private readonly glow: Phaser.GameObjects.Arc;
   private readonly hud: Phaser.GameObjects.Text;
@@ -25,19 +26,21 @@ export class GoldenFlyer {
     portrait: boolean,
     notice: (message: string, color: string) => void,
     onChargeChange: (ready: boolean) => void,
+    goldRush = false,
   ) {
     this.scene = scene;
     this.portrait = portrait;
     this.notice = notice;
     this.onChargeChange = onChargeChange;
+    this.goldRush = goldRush;
     this.glow = scene.add
       .circle(-100, -100, portrait ? 39 : 34, 0xffd84e, 0.2)
-      .setDepth(63)
+      .setDepth(120)
       .setVisible(false);
     this.sprite = scene.add
       .image(-100, -100, mustacheTexture(1, true))
       .setDisplaySize(portrait ? 80 : 74, portrait ? 44 : 40)
-      .setDepth(64)
+      .setDepth(121)
       .setVisible(false);
     scene.tweens.add({
       targets: this.glow,
@@ -48,7 +51,7 @@ export class GoldenFlyer {
       repeat: -1,
     });
     this.hud = scene.add
-      .text(portrait ? 270 : 480, portrait ? 218 : 144, 'GOLD 0/3', {
+      .text(portrait ? 270 : 480, portrait ? 218 : 144, goldRush ? 'PERFECT 0/3 · +150' : 'GOLD 0/3', {
         fontFamily: '"Courier New", monospace',
         fontSize: portrait ? '20px' : '18px',
         fontStyle: 'bold',
@@ -59,7 +62,13 @@ export class GoldenFlyer {
         padding: { x: 9, y: 5 },
       })
       .setOrigin(0.5)
-      .setDepth(89);
+      .setDepth(119);
+  }
+
+  /** Gold Rush is a streak mechanic, not a collectible charge. */
+  setPerfectStreak(streak: number): void {
+    if (!this.goldRush) return;
+    this.hud.setText('PERFECT ' + (streak % 3) + '/3 · +150');
   }
 
   get ready(): boolean {

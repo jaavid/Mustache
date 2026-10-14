@@ -266,7 +266,7 @@ export function announcePhase(scene: Phaser.Scene, portrait: boolean, phase: Rou
     y = portrait ? 318 : 217;
   const headline = phase === 'GROOVE' ? 'STAGE 2 / 3 · TWILIGHT' : 'STAGE 3 / 3 · NIGHT RUSH!';
   const under = scene.add
-    .rectangle(x, y, portrait ? 470 : 570, portrait ? 65 : 66, 0x111b31, 0.95)
+    .rectangle(x, y, portrait ? 470 : 570, portrait ? 65 : 66, 0x111b31, 0.82)
     .setStrokeStyle(4, phase === 'FINALE' ? 0xffab9c : 0xb8a5ff)
     .setDepth(108);
   const text = scene.add

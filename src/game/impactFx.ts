@@ -113,9 +113,12 @@ export function showLandingPrecision(
   g.lineBetween(aim.x + 7, aim.y, aim.x + 14, aim.y);
   g.lineBetween(aim.x, aim.y - 14, aim.x, aim.y - 7);
   g.lineBetween(aim.x, aim.y + 7, aim.x, aim.y + 14);
-  if (grade === 'good') {
-    g.lineStyle(1, 0xffe3a0, 0.85);
+  // Near-face misses show the true center, teaching accuracy without aim assist.
+  const nearLip = Math.abs(aim.x - lip.x) <= 70 && Math.abs(aim.y - lip.y) <= 55;
+  if (grade === 'good' || (grade === 'miss' && nearLip)) {
+    g.lineStyle(2, 0xffe3a0, 0.9);
     g.strokeCircle(lip.x, lip.y, 5);
+    g.lineStyle(1, 0xffe3a0, 0.7);
     g.lineBetween(aim.x, aim.y, lip.x, lip.y);
   }
   scene.tweens.add({
