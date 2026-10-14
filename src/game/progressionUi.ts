@@ -58,6 +58,7 @@ export function addProgressionMenu(
   const goldY = portrait ? 870 : 455;
   let profile: PlayerProfile | null = null;
   let ready = false;
+  let ticketConfirmed = false;
   const status = surface(
     scene,
     center,
@@ -66,8 +67,16 @@ export function addProgressionMenu(
     portrait ? 54 : 47,
     '🔒 GOLD RUSH · LOADING',
     () => {
-      if (ready && profile?.goldRushAvailable) playGold();
-      else if (ready) showProfile(scene, portrait, profile);
+      if (!ready) return;
+      if (!profile?.goldRushAvailable) {
+        showProfile(scene, portrait, profile);
+      } else if (!profile.goldUnlocked && !ticketConfirmed) {
+        // Explicit second tap: entering the mode consumes today's only ticket.
+        ticketConfirmed = true;
+        status('CONFIRM · USE DAILY TICKET');
+      } else {
+        playGold();
+      }
     },
   );
   const profileText = surface(
@@ -101,7 +110,7 @@ export function addProgressionMenu(
         : result.goldRushAvailable
           ? result.goldUnlocked
             ? '★ GOLD RUSH · OPEN'
-            : '★ GOLDEN TICKET · TODAY'
+            : '★ GOLDEN TICKET · 1 TRY'
           : '🔒 GOLD RUSH · ' + result.roundsPlayed + '/12',
     );
     profileText(result ? 'LV ' + result.level + ' · PROFILE' : 'TG PROFILE');
@@ -170,8 +179,8 @@ export function showProfile(
     const gold = profile.goldUnlocked
       ? 'GOLD RUSH UNLOCKED'
       : profile.goldTicketEligible
-        ? 'GOLDEN TICKET AVAILABLE TODAY'
-        : 'GOLD RUSH: ' + profile.roundsPlayed + '/12 ROUNDS · 2 DAYS';
+        ? 'GOLDEN TICKET: ONE START PER DAY'
+        : 'GOLD RUSH: ' + profile.roundsPlayed + '/12 ROUNDS · ' + profile.activeDays + '/2 DAYS';
     add(base + 265, gold, '#ffdd88');
     add(
       base + 309,

@@ -536,12 +536,14 @@ export class MobilePlayScene extends Phaser.Scene {
   }
   private shoot(pointer: Phaser.Input.Pointer) {
     const aim = { x: pointer.x, y: pointer.y };
-    if (this.roundOver || this.shooting) return;
+    if (this.roundOver) return;
+    // Never discard a legitimate golden pickup while an ordinary shot is flying.
     if (
       getSelectedGameMode() === 'classic' &&
       this.golden.tryCollect(aim.x, aim.y, this.roundElapsedMs)
     )
       return;
+    if (this.shooting) return;
     if (!this.activeTarget || aim.y < HUD_BOTTOM || aim.y > SELECTOR_TOP) return;
     const shotIsGolden =
       getSelectedGameMode() === 'classic' &&
