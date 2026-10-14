@@ -102,7 +102,7 @@ class MemoryD1 {
       };
     }};
   }
-  async batch(statements) { return statements.map(()=>({success:true})); }
+  async batch(statements) { return Promise.all(statements.map(statement => statement.run())); }
 }
 
 test('Telegram callback session, idempotency and Tehran weekly ranking', async () => {
