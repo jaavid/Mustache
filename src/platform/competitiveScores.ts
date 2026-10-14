@@ -54,6 +54,8 @@ export type PlayerProfile = {
   roundsPlayed: number;
   activeDays: number;
   bestScore: number;
+  bestClassic: number;
+  bestGoldRush: number;
   goldenPerfects: number;
   dailyInvites: number;
   goldUnlocked: boolean;

@@ -116,7 +116,14 @@ export function showLeaderboardOverlay(
     portrait ? 25 : 26,
     '#ffda90',
   );
-  addText(w / 2, portrait ? 163 : 82, 'YOUR ROUND: ' + number(args.score), 23, '#f7fff2');
+  const ranked =
+    args.submission.state === 'saved' &&
+    args.submission.rankedScore !== undefined &&
+    args.submission.rankedScore !== args.score;
+  const roundText = ranked
+    ? 'RAW ' + number(args.score) + ' · RANKED ' + number(args.submission.rankedScore!)
+    : 'YOUR ROUND: ' + number(args.score);
+  addText(w / 2, portrait ? 163 : 82, roundText, portrait && ranked ? 18 : 23, '#f7fff2');
   const stateLine =
     args.submission.state === 'saved'
       ? telegramMessage(args.submission.telegramState)
