@@ -19,7 +19,7 @@
     "test:bot": "node --test bot/tests/*.test.mjs"
   },
   "dependencies": {
-    "phaser": "^3.90.0"
+    "phaser": "^4.2.1"
   },
   "devDependencies": {
     "typescript": "~5.8.3",
