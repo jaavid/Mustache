@@ -187,9 +187,22 @@ export function showProfile(
     );
     const finished = profile.missions.filter((mission) => mission.done).length;
     add(base + 345, 'DAILY MISSIONS ' + finished + '/3', '#ffe5a4', 17);
-    add(base + 390, profile.missions.map((mission) =>
-      (mission.done ? '✓ ' : '• ') + mission.title + ' ' + mission.current + '/' + mission.target
-    ).join('\n'), '#d5f2e0', portrait ? 15 : 14);
+    add(
+      base + 390,
+      profile.missions
+        .map(
+          (mission) =>
+            (mission.done ? '✓ ' : '• ') +
+            mission.title +
+            ' ' +
+            mission.current +
+            '/' +
+            mission.target,
+        )
+        .join('\n'),
+      '#d5f2e0',
+      portrait ? 15 : 14,
+    );
   } else {
     add(base + 125, 'PLAY THROUGH @RJTtobot TO SAVE XP');
     add(base + 184, 'BROWSER PRACTICE IS LOCAL ONLY');
