@@ -22,7 +22,14 @@ type Trace = {
   goldenShot?: boolean;
 };
 type GoldenPickup = { index: number; tMs: number; aim: Aim };
-export type Leader = { rank: number; name: string; score: number; goldenPerfect?: number; baseScore?: number; boostPoints?: number };
+export type Leader = {
+  rank: number;
+  name: string;
+  score: number;
+  goldenPerfect?: number;
+  baseScore?: number;
+  boostPoints?: number;
+};
 export type Period = 'day' | 'week' | 'month' | 'all';
 export type Board = {
   mode?: GameMode;
@@ -40,10 +47,22 @@ export type Board = {
   me?: Leader | null;
 };
 export type PlayerProfile = {
-  name: string; xp: number; level: number; nextLevelXp: number; roundsPlayed: number;
-  activeDays: number; bestScore: number; goldenPerfects: number; dailyInvites: number;
-  goldUnlocked: boolean; goldTicketEligible: boolean; goldRushAvailable: boolean;
-  rank: number | null; weeklyScore?: number; rival?: Leader | null; inviteUrl: string;
+  name: string;
+  xp: number;
+  level: number;
+  nextLevelXp: number;
+  roundsPlayed: number;
+  activeDays: number;
+  bestScore: number;
+  goldenPerfects: number;
+  dailyInvites: number;
+  goldUnlocked: boolean;
+  goldTicketEligible: boolean;
+  goldRushAvailable: boolean;
+  rank: number | null;
+  weeklyScore?: number;
+  rival?: Leader | null;
+  inviteUrl: string;
 };
 export type Submission = {
   mode?: GameMode;
@@ -213,7 +232,8 @@ export async function getPlayerProfile(): Promise<PlayerProfile | null> {
   if (!sessionToken) return null;
   try {
     const response = await requestScoreApi('/api/profile', {
-      headers: { authorization: 'Bearer ' + sessionToken }, cache: 'no-store',
+      headers: { authorization: 'Bearer ' + sessionToken },
+      cache: 'no-store',
     });
     if (!response.ok) return null;
     return (await response.json()) as PlayerProfile;

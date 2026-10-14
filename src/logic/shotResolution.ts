@@ -41,8 +41,10 @@ export function resolveRoundShot(context: ShotContext): ResolvedShot {
   const reward = variantReward(context.variant, result.grade);
   const goldenPerfect = context.goldenShot === true && result.grade === 'perfect';
   const perfectStreak = result.grade === 'perfect' ? (context.perfectStreakBefore || 0) + 1 : 0;
-  const goldRushBonus = context.mode === 'goldRush' ? goldRushShotBonus(result.grade, perfectStreak) : 0;
-  const gained = result.points + reward.bonus + (goldenPerfect ? GOLDEN_PERFECT_BONUS : 0) + goldRushBonus;
+  const goldRushBonus =
+    context.mode === 'goldRush' ? goldRushShotBonus(result.grade, perfectStreak) : 0;
+  const gained =
+    result.points + reward.bonus + (goldenPerfect ? GOLDEN_PERFECT_BONUS : 0) + goldRushBonus;
 
   return {
     result,

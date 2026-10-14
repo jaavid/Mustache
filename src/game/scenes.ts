@@ -440,7 +440,10 @@ export class PlayScene extends Phaser.Scene {
         },
       );
       this.styleIcons.push(
-        this.add.image(x, 498, mustacheTexture(i, getSelectedGameMode() === 'goldRush')).setDisplaySize(86, 40).setDepth(74),
+        this.add
+          .image(x, 498, mustacheTexture(i, getSelectedGameMode() === 'goldRush'))
+          .setDisplaySize(86, 40)
+          .setDepth(74),
       );
       this.styleLabels.push(label(this, x - 43, 472, String(i + 1), 12, '#fbd88e'));
       this.styleMarkers.push(mark);
@@ -452,7 +455,8 @@ export class PlayScene extends Phaser.Scene {
   private selectStyle(style: number) {
     this.selectedStyle = style;
     // Reselect slot 2 after charging to arm the special shot; never auto-arm.
-    this.goldenArmed = getSelectedGameMode() === 'classic' && armGoldenForSelection(style, this.golden.ready);
+    this.goldenArmed =
+      getSelectedGameMode() === 'classic' && armGoldenForSelection(style, this.golden.ready);
     this.refreshSelector();
   }
   private updateGoldenSelector(ready: boolean) {
@@ -596,7 +600,11 @@ export class PlayScene extends Phaser.Scene {
   }
   private handlePointer(pointer: Phaser.Input.Pointer) {
     if (this.roundOver || this.shooting) return;
-    if (getSelectedGameMode() === 'classic' && this.golden.tryCollect(pointer.x, pointer.y, this.roundElapsedMs)) return;
+    if (
+      getSelectedGameMode() === 'classic' &&
+      this.golden.tryCollect(pointer.x, pointer.y, this.roundElapsedMs)
+    )
+      return;
     if (!this.active || pointer.y < 125 || pointer.y > 450) return;
     const aim = { x: pointer.x, y: pointer.y };
     const shotIsGolden =
@@ -671,7 +679,9 @@ export class PlayScene extends Phaser.Scene {
           playSfx(result.grade === 'perfect' ? 'perfect' : 'good');
           applyRaminMood(this.hero, 'surprised');
           this.sticker
-            .setTexture(mustacheTexture(chosenStyle, shotIsGolden || getSelectedGameMode() === 'goldRush'))
+            .setTexture(
+              mustacheTexture(chosenStyle, shotIsGolden || getSelectedGameMode() === 'goldRush'),
+            )
             .setPosition(aim.x, aim.y)
             .setRotation(this.hero.rotation)
             .setVisible(true);
@@ -688,7 +698,8 @@ export class PlayScene extends Phaser.Scene {
             result.grade === 'perfect' ? '#ffd16c' : '#a7efc0',
           );
           if (goldenPerfect) this.varietyNotice('GOLDEN PERFECT +350!', '#ffe085');
-          else if (goldRushBonus) this.varietyNotice('GOLD RUSH +' + goldRushBonus + '!', '#ffe085');
+          else if (goldRushBonus)
+            this.varietyNotice('GOLD RUSH +' + goldRushBonus + '!', '#ffe085');
           else if (reward.bonus > 0) this.varietyNotice(reward.label, '#ffe291');
           if (result.grade === 'perfect' && this.combo >= 3 && Math.random() < 0.3) {
             applyRaminMood(this.hero, 'victory');

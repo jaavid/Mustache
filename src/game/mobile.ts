@@ -383,7 +383,10 @@ export class MobilePlayScene extends Phaser.Scene {
         },
       );
       this.styleIcons.push(
-        this.add.image(x, 869, mustacheTexture(i, getSelectedGameMode() === 'goldRush')).setDisplaySize(115, 54).setDepth(80),
+        this.add
+          .image(x, 869, mustacheTexture(i, getSelectedGameMode() === 'goldRush'))
+          .setDisplaySize(115, 54)
+          .setDepth(80),
       );
       this.styleLabels.push(text(this, x - 53, 833, String(i + 1), 19, '#fff2bb'));
       this.selector.push(hit);
@@ -395,7 +398,8 @@ export class MobilePlayScene extends Phaser.Scene {
     this.selectedStyle = i;
     // Only a deliberate selection AFTER charging equips the special shot.
     // Completing the third pickup never changes an existing style selection.
-    this.goldenArmed = getSelectedGameMode() === 'classic' && armGoldenForSelection(i, this.golden.ready);
+    this.goldenArmed =
+      getSelectedGameMode() === 'classic' && armGoldenForSelection(i, this.golden.ready);
     this.refreshSelector();
   }
   private updateGoldenSelector(ready: boolean) {
@@ -528,7 +532,11 @@ export class MobilePlayScene extends Phaser.Scene {
   private shoot(pointer: Phaser.Input.Pointer) {
     const aim = { x: pointer.x, y: pointer.y };
     if (this.roundOver || this.shooting) return;
-    if (getSelectedGameMode() === 'classic' && this.golden.tryCollect(aim.x, aim.y, this.roundElapsedMs)) return;
+    if (
+      getSelectedGameMode() === 'classic' &&
+      this.golden.tryCollect(aim.x, aim.y, this.roundElapsedMs)
+    )
+      return;
     if (!this.activeTarget || aim.y < HUD_BOTTOM || aim.y > SELECTOR_TOP) return;
     const shotIsGolden =
       getSelectedGameMode() === 'classic' &&
@@ -602,7 +610,9 @@ export class MobilePlayScene extends Phaser.Scene {
           playSfx(result.grade === 'perfect' ? 'perfect' : 'good');
           applyRaminMood(this.hero, 'surprised');
           this.sticker
-            .setTexture(mustacheTexture(style, shotIsGolden || getSelectedGameMode() === 'goldRush'))
+            .setTexture(
+              mustacheTexture(style, shotIsGolden || getSelectedGameMode() === 'goldRush'),
+            )
             .setPosition(aim.x, aim.y)
             .setRotation(this.hero.rotation)
             .setVisible(true);
@@ -619,7 +629,8 @@ export class MobilePlayScene extends Phaser.Scene {
             result.grade === 'perfect' ? '#ffe083' : '#aaf3d4',
           );
           if (goldenPerfect) this.varietyNotice('GOLDEN PERFECT +350!', '#ffe085');
-          else if (goldRushBonus) this.varietyNotice('GOLD RUSH +' + goldRushBonus + '!', '#ffe085');
+          else if (goldRushBonus)
+            this.varietyNotice('GOLD RUSH +' + goldRushBonus + '!', '#ffe085');
           else if (reward.bonus > 0) this.varietyNotice(reward.label, '#ffe291');
           if (result.grade === 'perfect' && this.combo >= 3 && Math.random() < 0.3) {
             applyRaminMood(this.hero, 'victory');

@@ -31,8 +31,15 @@ export function addGoldVault(scene: Phaser.Scene, portrait: boolean): void {
     g.fillRect(Math.round(x), Math.round(y), i % 3 === 0 ? 6 : 3, i % 3 === 0 ? 6 : 3);
   }
   scene.add.rectangle(w / 2, h / 2, w, h, 0xffc34f, 0.16).setDepth(40.5);
-  scene.add.text(w / 2, portrait ? 247 : 137, '★ GOLD RUSH ★', {
-    fontFamily: '"Courier New", monospace', fontSize: portrait ? '26px' : '24px',
-    color: '#ffe3a0', fontStyle: 'bold', stroke: '#341825', strokeThickness: 5,
-  }).setOrigin(0.5).setDepth(48);
+  scene.add
+    .text(w / 2, portrait ? 247 : 137, '★ GOLD RUSH ★', {
+      fontFamily: '"Courier New", monospace',
+      fontSize: portrait ? '26px' : '24px',
+      color: '#ffe3a0',
+      fontStyle: 'bold',
+      stroke: '#341825',
+      strokeThickness: 5,
+    })
+    .setOrigin(0.5)
+    .setDepth(48);
 }

@@ -15,15 +15,22 @@ describe('Gold Rush client/server rules', () => {
 
   it('does not change the original classic scoring path', () => {
     const base = {
-      aim: { x: 300, y: 250 }, lip: { x: 300, y: 250 },
-      score: 0, combo: 0, stats: emptyStats, variant: 'normal' as const, portrait: false,
+      aim: { x: 300, y: 250 },
+      lip: { x: 300, y: 250 },
+      score: 0,
+      combo: 0,
+      stats: emptyStats,
+      variant: 'normal' as const,
+      portrait: false,
     };
     const classic = resolveRoundShot(base);
     const gold = resolveRoundShot({ ...base, mode: 'goldRush', perfectStreakBefore: 2 });
     expect(classic.gained).toBe(100);
     expect(gold.gained).toBe(300);
     expect(gold.perfectStreak).toBe(3);
-    expect(resolveRoundShot({ ...base, mode: 'goldRush', aim: { x: 0, y: 0 },
-      perfectStreakBefore: 2 }).perfectStreak).toBe(0);
+    expect(
+      resolveRoundShot({ ...base, mode: 'goldRush', aim: { x: 0, y: 0 }, perfectStreakBefore: 2 })
+        .perfectStreak,
+    ).toBe(0);
   });
 });

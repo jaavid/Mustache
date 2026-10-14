@@ -109,7 +109,13 @@ export function showLeaderboardOverlay(
       },
     );
   };
-  addText(w / 2, portrait ? 116 : 42, getSelectedGameMode() === 'goldRush' ? 'GOLD RUSH · LEADERBOARDS' : 'MUSTACHE · LEADERBOARDS', portrait ? 25 : 26, '#ffda90');
+  addText(
+    w / 2,
+    portrait ? 116 : 42,
+    getSelectedGameMode() === 'goldRush' ? 'GOLD RUSH · LEADERBOARDS' : 'MUSTACHE · LEADERBOARDS',
+    portrait ? 25 : 26,
+    '#ffda90',
+  );
   addText(w / 2, portrait ? 163 : 82, 'YOUR ROUND: ' + number(args.score), 23, '#f7fff2');
   const stateLine =
     args.submission.state === 'saved'
@@ -178,15 +184,25 @@ export function showLeaderboardOverlay(
             number(current.me.rank) +
             ' · ' +
             number(current.me.score) +
-            ' PTS' + (current.me.boostPoints ? ' (+' + number(current.me.boostPoints) + ' INVITE)' : '') +
+            ' PTS' +
+            (current.me.boostPoints ? ' (+' + number(current.me.boostPoints) + ' INVITE)' : '') +
             (current.me.goldenPerfect ? ' ★ GOLD' : '')
         : 'YOUR RANK: NO RECORDED SCORE',
     );
     const left = current.remainingSeconds;
     const remaining = left !== null ? ' · ' + Math.max(0, Math.ceil(left / 3600)) + 'H LEFT' : '';
-    infoLine.setText(number(current.playerCount) + ' PLAYERS · ASIA/TEHRAN' + remaining +
-      (current.rival && current.me ? ' · BEAT #' + current.rival.rank + ' IN ' +
-      Math.max(0, current.rival.score - current.me.score + 1) + ' PTS' : ''));
+    infoLine.setText(
+      number(current.playerCount) +
+        ' PLAYERS · ASIA/TEHRAN' +
+        remaining +
+        (current.rival && current.me
+          ? ' · BEAT #' +
+            current.rival.rank +
+            ' IN ' +
+            Math.max(0, current.rival.score - current.me.score + 1) +
+            ' PTS'
+          : ''),
+    );
   }
   function formatRow(row: Leader): string {
     return (
@@ -211,7 +227,8 @@ export function showLeaderboardOverlay(
     else current = args.initialBoard;
     loading = !current;
     render();
-    const board = current || (await getLeaderboard(tab, offset, args.submission.mode || getSelectedGameMode()));
+    const board =
+      current || (await getLeaderboard(tab, offset, args.submission.mode || getSelectedGameMode()));
     if (seq !== requestNumber || !sheet.active) return;
     current = board;
     loading = false;
