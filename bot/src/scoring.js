@@ -1,4 +1,5 @@
 import { goldenHit, GOLDEN_REQUIRED, GOLDEN_PERFECT_BONUS, GOLDEN_SPAWN_MS } from '../../shared/goldenRules.js';
+import { goldRushShotBonus } from '../../shared/modeRules.js';
 
 /**
  * Recalculates points from individual impact geometry, never from client totals.
@@ -11,7 +12,9 @@ export function mondayUtc(ms) {
   return midnight - ((day.getUTCDay() + 6) % 7) * 86400000;
 }
 
-export function verifyRoundShots(shots, portrait, clientScore, goldenPickups = []) {
+export function verifyRoundShots(shots, portrait, clientScore, goldenPickups = [], mode = 'classic') {
+  if (!['classic', 'goldRush'].includes(mode)) throw new Error('INVALID_MODE');
+  if (mode === 'goldRush' && goldenPickups.length) throw new Error('INVALID_GOLDEN_PICKUPS');
   if (!Array.isArray(shots) || shots.length > 80 || !Number.isInteger(clientScore) || clientScore < 0) {
     throw new Error('INVALID_ROUND');
   }
@@ -45,6 +48,7 @@ export function verifyRoundShots(shots, portrait, clientScore, goldenPickups = [
   let pickupCursor = 0;
   let goldenUsed = false;
   let goldenPerfect = 0;
+  let perfectStreak = 0;
   for (const shot of shots) {
     if (!shot || typeof shot !== 'object') throw new Error('INVALID_SHOT');
     const { tMs, aim, lip, variant, comboBefore, goldenShot } = shot;
@@ -67,10 +71,12 @@ export function verifyRoundShots(shots, portrait, clientScore, goldenPickups = [
     // The charge can be held across any number of ordinary shots. Spend it only
     // when the player explicitly chooses the middle golden selector.
     if (goldenShot === true) goldenUsed = true;
+    if (mode === 'goldRush' && goldenShot === true) throw new Error('INVALID_GOLDEN_SHOT');
     const dx = aim.x - lip.x, dy = aim.y - lip.y;
     const perfect = (dx / radii[0]) ** 2 + (dy / radii[1]) ** 2 <= 1;
     const good = (dx / radii[2]) ** 2 + (dy / radii[3]) ** 2 <= 1;
     combo = good ? comboBefore + 1 : 0;
+    perfectStreak = perfect ? perfectStreak + 1 : 0;
     if (good) {
       score += (perfect ? 100 : 50) + Math.min(50, Math.max(0, combo - 1) * 10);
       if (variant === 'gold') score += 50;
@@ -79,6 +85,7 @@ export function verifyRoundShots(shots, portrait, clientScore, goldenPickups = [
         score += GOLDEN_PERFECT_BONUS;
         goldenPerfect = 1;
       }
+      if (mode === 'goldRush') score += goldRushShotBonus(perfect ? 'perfect' : 'good', perfectStreak);
     }
     prevTime = tMs;
   }

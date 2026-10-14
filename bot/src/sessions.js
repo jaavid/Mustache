@@ -1,5 +1,6 @@
 import { verifyRoundShots } from './scoring.js';
 import { periodBounds, tehranWeekStart } from './periods.js';
+import { dailyReferralCount, referralBonus, permitGoldRound, completedRoundStatements, recordCompletedRound } from './progression.js';
 
 const SESSION_TTL_MS = 60 * 60 * 1000;
 const ROUND_TTL_MS = 3 * 60 * 1000;
@@ -48,33 +49,62 @@ export async function authenticate(db, request, now = Date.now()) {
   return session || null;
 }
 
-export async function startRound(db, session, portrait, now = Date.now()) {
+/** Create a round and, for catch-up entry, consume the daily ticket atomically. */
+export async function startRound(db, session, portrait, now = Date.now(), mode = 'classic') {
   if (typeof portrait !== 'boolean') throw new Error('INVALID_LAYOUT');
+  if (!['classic', 'goldRush'].includes(mode)) throw new Error('INVALID_MODE');
+  const ticket = mode === 'goldRush'
+    ? await permitGoldRound(db, session.user_id, await leaderboard(db, now, { userId: session.user_id }), now)
+    : null;
   const roundId = crypto.randomUUID();
-  await db.prepare('INSERT INTO game_rounds (id, token_hash, user_id, portrait, started_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)').bind(
-    roundId, session.token_hash, session.user_id, portrait ? 1 : 0, now, now + ROUND_TTL_MS,
-  ).run();
-  return { roundId };
+  const insert = db.prepare(
+    'INSERT INTO game_rounds (id, token_hash, user_id, portrait, started_at, expires_at, mode) ' +
+    'VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).bind(roundId, session.token_hash, session.user_id, portrait ? 1 : 0, now, now + ROUND_TTL_MS, mode);
+  try {
+    if (ticket) await db.batch([ticket, insert]);
+    else await insert.run();
+  } catch (error) {
+    // Only a ticket unique-constraint error becomes GOLD_TICKET_USED;
+    // a failed round insert must surface as a real DB error, after rollback.
+    if (ticket && /(?:UNIQUE constraint failed|PRIMARY KEY constraint failed): game_gold_tickets\./i.test(String(error?.message))) {
+      throw new Error('GOLD_TICKET_USED');
+    }
+    throw error;
+  }
+  return { roundId, mode };
 }
 
 export async function finishRound(db, session, data, now = Date.now()) {
   if (!data || typeof data.roundId !== 'string' || !/^[a-f0-9-]{36}$/.test(data.roundId)) throw new Error('INVALID_ROUND_ID');
-  const round = await db.prepare('SELECT id, portrait, started_at, expires_at, score, week_start FROM game_rounds WHERE id=? AND token_hash=? AND user_id=?').bind(data.roundId, session.token_hash, session.user_id).first();
+  const round = await db.prepare('SELECT id, portrait, started_at, expires_at, score, week_start, mode, ranked_score FROM game_rounds WHERE id=? AND token_hash=? AND user_id=?').bind(data.roundId, session.token_hash, session.user_id).first();
   if (!round) throw new Error('UNKNOWN_ROUND');
-  if (round.score !== null) return { score: round.score, weekStart: round.week_start, duplicate: true };
+  if (round.score !== null) {
+    await recordCompletedRound(db, round.id, session.user_id, round.score, now);
+    return { score: round.score, rankedScore: round.ranked_score ?? round.score, weekStart: round.week_start, mode: round.mode || 'classic', duplicate: true };
+  }
   const duration = now - round.started_at;
   if (duration < 35000 || now > round.expires_at) throw new Error('INVALID_ROUND_DURATION');
-  const { score, goldenPerfect } = verifyRoundShots(data.shots, !!round.portrait, data.score, data.goldenPickups ?? []);
+  const { score, goldenPerfect } = verifyRoundShots(data.shots, !!round.portrait, data.score, data.goldenPickups ?? [], round.mode || 'classic');
   const weekStart = tehranWeekStart(now);
-  const result = await db.prepare('UPDATE game_rounds SET score=?, week_start=?, finished_at=?, golden_perfect=? WHERE id=? AND token_hash=? AND score IS NULL AND expires_at>=?').bind(
-    score, weekStart, now, goldenPerfect, round.id, session.token_hash, now,
-  ).run();
+  const activeInvites = (round.mode || 'classic') === 'classic' ? await dailyReferralCount(db, session.user_id, now) : 0;
+  const bonus = Math.min(referralBonus(score, activeInvites), 15000 - score);
+  const rankedScore = score + bonus;
+  // D1 batch runs all statements in a single transaction: a failure at XP,
+  // idempotency marking or referral qualification rolls back the score too.
+  const [result] = await db.batch([
+    db.prepare(
+      'UPDATE game_rounds SET score=?, week_start=?, finished_at=?, golden_perfect=?, ranked_score=? ' +
+      'WHERE id=? AND token_hash=? AND score IS NULL AND expires_at>=?'
+    ).bind(score, weekStart, now, goldenPerfect, rankedScore, round.id, session.token_hash, now),
+    ...completedRoundStatements(db, round.id, session.user_id, score, now, true),
+  ]);
   if (result.meta.changes !== 1) {
-    const saved = await db.prepare('SELECT score, week_start FROM game_rounds WHERE id=?').bind(round.id).first();
-    if (saved?.score !== null && saved?.score !== undefined) return { score: saved.score, weekStart: saved.week_start, duplicate: true };
+    const saved = await db.prepare('SELECT score, week_start, mode, ranked_score FROM game_rounds WHERE id=?').bind(round.id).first();
+    if (saved?.score !== null && saved?.score !== undefined) return { score: saved.score, rankedScore: saved.ranked_score ?? saved.score, weekStart: saved.week_start, mode: saved.mode || 'classic', duplicate: true };
     throw new Error('ROUND_ALREADY_PROCESSED');
   }
-  return { score, weekStart, duplicate: false };
+  return { score, rankedScore, referralBonus: bonus, weekStart, mode: round.mode || 'classic', duplicate: false };
 }
 
 /** Rankings use finished_at rather than the legacy UTC-Monday week_start column.
@@ -82,40 +112,52 @@ export async function finishRound(db, session, data, now = Date.now()) {
  */
 export async function leaderboard(db, now = Date.now(), options = {}) {
   const period = options.period || 'week';
+  const mode = options.mode || 'classic';
+  if (!['classic', 'goldRush'].includes(mode)) throw new Error('INVALID_MODE');
   const offset = options.offset ?? 0;
   const bounds = periodBounds(now, period, offset);
   const viewer = Number.isSafeInteger(options.userId) && options.userId > 0 ? options.userId : 0;
   const range = bounds.start === null ? '' : ' AND finished_at >= ? AND finished_at < ?';
+  // Temporary referral power-ups affect only day/week boards. Month/all-time
+  // preserve raw historical records and cannot be inflated with invites.
+  const rankedPoints = period === 'day' || period === 'week'
+    ? 'COALESCE(ranked_score, score)' : 'score';
+  const boostPoints = period === 'day' || period === 'week'
+    ? 'COALESCE(ranked_score, score)-score' : '0';
   const sql = [
     'WITH per_round AS (',
-    ' SELECT user_id, score, golden_perfect, finished_at, id,',
-    ' ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY score DESC, golden_perfect DESC, finished_at ASC, id ASC) AS own_rank',
-    ' FROM game_rounds WHERE score IS NOT NULL' + range,
+    ' SELECT user_id, ' + rankedPoints + ' AS score, score AS base_score,',
+    ' ' + boostPoints + ' AS boost_points, golden_perfect, finished_at, id,',
+    ' ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY ' + rankedPoints + ' DESC, golden_perfect DESC, finished_at ASC, id ASC) AS own_rank',
+    " FROM game_rounds WHERE score IS NOT NULL AND mode='" + mode + "'" + range,
     '), highs AS (',
-    ' SELECT user_id, score, golden_perfect FROM per_round WHERE own_rank=1',
+    ' SELECT user_id, score, base_score, boost_points, golden_perfect FROM per_round WHERE own_rank=1',
     '), ranked AS (',
-    ' SELECT h.user_id, u.display_name, h.score, h.golden_perfect,',
+    ' SELECT h.user_id, u.display_name, h.score, h.base_score, h.boost_points, h.golden_perfect,',
     ' ROW_NUMBER() OVER (ORDER BY h.score DESC, h.golden_perfect DESC, h.user_id ASC) AS rank,',
     ' COUNT(*) OVER () AS player_count',
     ' FROM highs h JOIN game_users u ON u.user_id=h.user_id',
     ')',
-    'SELECT user_id, display_name, score, golden_perfect, rank, player_count FROM ranked',
-    'WHERE rank <= 10 OR user_id = ? ORDER BY rank',
+    'SELECT user_id, display_name, score, base_score, boost_points, golden_perfect, rank, player_count FROM ranked',
+    'WHERE rank <= 10 OR user_id = ? OR rank = (SELECT rank - 1 FROM ranked WHERE user_id = ?) ORDER BY rank',
   ].join(' ');
-  const bindings = bounds.start === null ? [viewer] : [bounds.start, bounds.end, viewer];
+  const bindings = bounds.start === null ? [viewer, viewer] : [bounds.start, bounds.end, viewer, viewer];
   const list = await db.prepare(sql).bind(...bindings).all();
   const rows = list.results || [];
   const mapEntry = row => ({
     rank: Number(row.rank), name: row.display_name, score: Number(row.score),
     goldenPerfect: Number(row.golden_perfect || 0),
+    baseScore: Number(row.base_score ?? row.score), boostPoints: Number(row.boost_points || 0),
   });
   const result = {
-    ...bounds, playerCount: rows.length ? Number(rows[0].player_count) : 0,
+    ...bounds, mode, playerCount: rows.length ? Number(rows[0].player_count) : 0,
     players: rows.filter(row => Number(row.rank) <= 10).map(mapEntry),
   };
   if (viewer) {
     const self = rows.find(row => Number(row.user_id) === viewer);
     result.me = self ? mapEntry(self) : null;
+    const next = rows.find(row => Number(row.rank) === Number(self?.rank) - 1);
+    result.rival = next ? mapEntry(next) : null;
   }
   return result;
 }

@@ -3,6 +3,7 @@
  */
 import { issueSession, authenticate, startRound, finishRound, leaderboard } from './sessions.js';
 import { parseLeaderboardCallback, formatLeaderboardMessage } from './leaderboardMenu.js';
+import { registerReferral, playerProfile, goldCatchUpEligible } from './progression.js';
 export const DEFAULT_GAME_URL = 'https://mustache.alexa.ir/';
 export const DEFAULT_GAME_SHORT_NAME = 'mustache';
 export const DEFAULT_BOT_USERNAME = 'rjttobot';
@@ -21,7 +22,7 @@ export function isSameSecret(actual, expected) {
 
 export function parseGameCommand(input, botUsername = DEFAULT_BOT_USERNAME) {
   const first = String(input ?? '').trim().split(/\s+/)[0];
-  const match = /^\/(start|play|help|top|score|leaderboard)(?:@([a-zA-Z0-9_]+))?$/i.exec(first);
+  const match = /^\/(start|play|help|top|score|leaderboard|profile|invite)(?:@([a-zA-Z0-9_]+))?$/i.exec(first);
   if (!match) return null;
   if (match[2] && match[2].toLowerCase() !== botUsername.toLowerCase()) return null;
   return match[1].toLowerCase();
@@ -45,11 +46,21 @@ export async function handleTelegramUpdate(update, env, send) {
     const message = update.message;
     const command = parseGameCommand(message.text, botUsername);
     if (command === 'start' || command === 'play') {
+      if (command === 'start' && env.DB && message.from) await registerReferral(env.DB, message.from, message.text);
       await send('sendGame', { chat_id: message.chat.id, game_short_name: gameShortName });
+    } else if (command === 'profile' || command === 'invite') {
+      if (!env.DB || !Number.isSafeInteger(message.from?.id)) return;
+      await env.DB.prepare('INSERT INTO game_users(user_id, display_name, updated_at) VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET display_name=excluded.display_name, updated_at=excluded.updated_at')
+        .bind(message.from.id, String(message.from.first_name || 'Player').slice(0, 48), Date.now()).run();
+      const profile = await playerProfile(env.DB, message.from.id, botUsername);
+      const output = command === 'invite'
+        ? '〰️ لینک دعوت شما:\n' + profile.inviteUrl + '\n\nهر دوست جدید پس از تکمیل اولین بازی معتبر ۵٪ بوست روزانه (حداکثر ۳ نفر و ۲۰۰ امتیاز در هر راند) فعال می‌کند.'
+        : '〰️ پروفایل ' + profile.name + '\nLevel ' + profile.level + ' · XP ' + profile.xp + '\nراندها: ' + profile.roundsPlayed + ' · روزهای فعال: ' + profile.activeDays + '\nGold Rush: ' + (profile.goldUnlocked ? 'باز شده' : profile.roundsPlayed + '/12 راند · حداقل ۲ روز') + '\nدعوت‌های امروز: ' + profile.dailyInvites + '/3';
+      await send('sendMessage', { chat_id: message.chat.id, text: output });
     } else if (command === 'help') {
       await send('sendMessage', {
         chat_id: message.chat.id,
-        text: '〰️ به جنگل سیبیل خوش اومدی! 🎩\n\n🎯 /play — بزن سیبیل رو بنشون سر جاش!\n🏆 /leaderboard — سیبیل‌سالارها رو پیدا کن\n👑 /top — ده نفر برتر جنگل\n📈 /score — ببین سیبیلات چند امتیاز آوردن\n🧭 /help — همین راهنمای سیبیلی\n\n🗓 رقابت هفتگی: شنبه تا شنبه به وقت تهران\n⚠️ جایزه توکنی هنوز فعال نیست.',
+        text: '〰️ به جنگل سیبیل خوش اومدی! 🎩\n\n🎯 /play — بزن سیبیل رو بنشون سر جاش!\n👤 /profile — سطح و کارنامه سیبیلی\n〰️ /invite — دعوت دوستان و بوست روزانه\n🏆 /leaderboard — سیبیل‌سالارها رو پیدا کن\n👑 /top — ده نفر برتر جنگل\n📈 /score — ببین سیبیلات چند امتیاز آوردن\n🧭 /help — همین راهنمای سیبیلی\n\n🗓 رقابت هفتگی: شنبه تا شنبه به وقت تهران\n⚠️ جایزه توکنی هنوز فعال نیست.',
       });
     } else if (command === 'top' || command === 'score' || command === 'leaderboard') {
       if (!env.DB) throw new Error('D1_NOT_CONFIGURED');
@@ -209,6 +220,16 @@ async function gameApi(request, env, url) {
         roundsScored: Number(counts?.rounds_scored || 0),
       }, 200, cors);
     }
+    if (api === '/api/profile' && request.method === 'GET') {
+      const session = await authenticate(env.DB, request);
+      if (!session) return jsonReply({ error: 'UNAUTHORIZED' }, 401, cors);
+      const now = Date.now();
+      const result = await playerProfile(env.DB, session.user_id, env.BOT_USERNAME || DEFAULT_BOT_USERNAME, now);
+      const board = await leaderboard(env.DB, now, { userId: session.user_id });
+      return jsonReply({ ...result, rank: board.me?.rank ?? null, weeklyScore: board.me?.score ?? 0, rival: board.rival ?? null,
+        goldTicketEligible: goldCatchUpEligible(result, board),
+        goldRushAvailable: result.goldUnlocked || goldCatchUpEligible(result, board) }, 200, cors);
+    }
     if (api === '/api/leaderboard' && request.method === 'GET') {
       const period = url.searchParams.get('period') || 'week';
       const offset = Number(url.searchParams.get('offset') || 0);
@@ -217,7 +238,7 @@ async function gameApi(request, env, url) {
         return jsonReply({ error: 'UNAUTHORIZED' }, 401, cors);
       }
       return jsonReply(await leaderboard(env.DB, Date.now(), {
-        period, offset, userId: session?.user_id,
+        period, offset, mode: url.searchParams.get('mode') || 'classic', userId: session?.user_id,
       }), 200, cors);
     }
     if ((api === '/api/round/start' || api === '/api/round/finish') && request.method === 'POST') {
@@ -228,7 +249,7 @@ async function gameApi(request, env, url) {
       if (raw.length > 32768) return jsonReply({ error: 'TOO_LARGE' }, 413, cors);
       const body = JSON.parse(raw);
       if (api === '/api/round/start') {
-        return jsonReply(await startRound(env.DB, session, body.portrait), 200, cors);
+        return jsonReply(await startRound(env.DB, session, body.portrait, Date.now(), body.mode || 'classic'), 200, cors);
       }
       const result = await finishRound(env.DB, session, body);
       // Always preserve the accepted D1 score. Telegram's Game Card scoreboard
@@ -274,13 +295,13 @@ async function gameApi(request, env, url) {
       return jsonReply({
         ...result, telegramSynced: telegramState === 'updated',
         telegramState, telegramScores,
-        leaderboard: await leaderboard(env.DB, Date.now(), { userId: session.user_id }),
+        leaderboard: await leaderboard(env.DB, Date.now(), { userId: session.user_id, mode: result.mode || 'classic' }),
       }, 200, cors);
     }
     return jsonReply({ error: 'NOT_FOUND' }, 404, cors);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'SERVER_ERROR';
-    const safe = /^(INVALID_|UNKNOWN_ROUND|ROUND_ALREADY_PROCESSED|SCORE_MISMATCH|IMPOSSIBLE_SHOT_RATE)/.test(message);
+    const safe = /^(INVALID_|UNKNOWN_ROUND|ROUND_ALREADY_PROCESSED|SCORE_MISMATCH|IMPOSSIBLE_SHOT_RATE|GOLD_)/.test(message);
     // Include only the short error code and route; no player data, scores or tokens.
     if (safe) console.warn('Score API validation rejected', { route: api, code: message });
     else console.error('Score API internal failure', { route: api, code: 'SERVER_ERROR' });

@@ -50,6 +50,9 @@ import { RaminMomentController } from './raminMoments';
 import { GoldenFlyer } from './goldenFlyer';
 import { characterName, mustacheTexture } from './characterChoice';
 import { armGoldenForSelection, shouldLaunchGolden } from '../logic/goldenSelection';
+import { getSelectedGameMode, setSelectedGameMode } from '../logic/gameMode';
+import { addProgressionMenu } from './progressionUi';
+import { addGoldVault } from './goldVault';
 
 /** Dedicated 540 × 960 portrait experience. Desktop scenes remain unchanged. */
 const W = 540;
@@ -202,18 +205,24 @@ export class MobileMenuScene extends Phaser.Scene {
     addSoundToggle(this, 468, 38, 118);
     addMusicToggle(this, 72, 38, 118);
     const start = () => {
+      setSelectedGameMode('classic');
       playSfx('start');
       this.scene.start('CharacterSelect');
     };
-    largeButton(this, 270, 792, '▶ PLAY NOW', start);
-    text(this, 270, 871, '45 SEC  ·  3 MISSIONS  ·  COMBOS', 17, '#decbea');
-    text(this, 270, 924, 'Tap just below his nose!', 18, '#b0efcf');
+    largeButton(this, 270, 792, '▶ FOREST', start);
+    addProgressionMenu(this, true, () => {
+      setSelectedGameMode('goldRush');
+      playSfx('start');
+      this.scene.start('CharacterSelect');
+    });
+    // Progression actions replace the previous static menu hints.
     this.input.keyboard?.once('keydown-ENTER', start);
   }
 }
 
 export class MobilePlayScene extends Phaser.Scene {
   private score = 0;
+  private perfectStreak = 0;
   private roundElapsedMs = 0;
   private scoreRoundStarted = false;
   private combo = 0;
@@ -251,6 +260,7 @@ export class MobilePlayScene extends Phaser.Scene {
   }
   create() {
     this.score = 0;
+    this.perfectStreak = 0;
     this.roundElapsedMs = 0;
     this.scoreRoundStarted = false;
     this.combo = 0;
@@ -268,6 +278,7 @@ export class MobilePlayScene extends Phaser.Scene {
     this.stats = { ...emptyStats };
     this.stickerAnchor = null;
     portraitBackdrop(this);
+    if (getSelectedGameMode() === 'goldRush') addGoldVault(this, true);
     trees(this);
     addArcadeAccents(this, true);
     const lighting = addLivingForest(this, true);
@@ -283,7 +294,7 @@ export class MobilePlayScene extends Phaser.Scene {
     this.accessory = makeAccessory(this);
     this.moments = new RaminMomentController(this, this.hero, this.accessory, true);
     this.sticker = this.add
-      .image(-300, FACE_Y, mustacheTexture(0))
+      .image(-300, FACE_Y, mustacheTexture(0, getSelectedGameMode() === 'goldRush'))
       .setDisplaySize(82, 46)
       .setDepth(31)
       .setVisible(false);
@@ -372,7 +383,10 @@ export class MobilePlayScene extends Phaser.Scene {
         },
       );
       this.styleIcons.push(
-        this.add.image(x, 869, mustacheTexture(i)).setDisplaySize(115, 54).setDepth(80),
+        this.add
+          .image(x, 869, mustacheTexture(i, getSelectedGameMode() === 'goldRush'))
+          .setDisplaySize(115, 54)
+          .setDepth(80),
       );
       this.styleLabels.push(text(this, x - 53, 833, String(i + 1), 19, '#fff2bb'));
       this.selector.push(hit);
@@ -384,14 +398,15 @@ export class MobilePlayScene extends Phaser.Scene {
     this.selectedStyle = i;
     // Only a deliberate selection AFTER charging equips the special shot.
     // Completing the third pickup never changes an existing style selection.
-    this.goldenArmed = armGoldenForSelection(i, this.golden.ready);
+    this.goldenArmed =
+      getSelectedGameMode() === 'classic' && armGoldenForSelection(i, this.golden.ready);
     this.refreshSelector();
   }
   private updateGoldenSelector(ready: boolean) {
     this.goldenArmed = false;
     const icon = this.styleIcons[1];
     this.tweens.killTweensOf(icon);
-    icon.setAlpha(1).setTexture(mustacheTexture(1, ready));
+    icon.setAlpha(1).setTexture(mustacheTexture(1, ready || getSelectedGameMode() === 'goldRush'));
     this.styleLabels[1].setText(ready ? 'GOLD' : '2').setColor(ready ? '#ffe291' : '#fff2bb');
     if (ready) {
       this.tweens.add({ targets: icon, alpha: 0.66, duration: 480, yoyo: true, repeat: -1 });
@@ -434,6 +449,10 @@ export class MobilePlayScene extends Phaser.Scene {
       popPlan(ROUND_LENGTH_SECONDS - this.remaining, Math.random()),
       ROUND_LENGTH_SECONDS - this.remaining,
     );
+    if (getSelectedGameMode() === 'goldRush') {
+      plan.visibleMs = Math.max(850, Math.round(plan.visibleMs * 0.85));
+      plan.pauseMs = Math.max(100, Math.round(plan.pauseMs * 0.8));
+    }
     plan.side = chooseSpawnSide(slot, MOBILE_TREE_CENTERS.length, plan.side);
     plan.shift = MOBILE_PEEK_DISTANCE;
     if (event === 'fake-out') plan.visibleMs = 350;
@@ -517,9 +536,14 @@ export class MobilePlayScene extends Phaser.Scene {
   private shoot(pointer: Phaser.Input.Pointer) {
     const aim = { x: pointer.x, y: pointer.y };
     if (this.roundOver || this.shooting) return;
-    if (this.golden.tryCollect(aim.x, aim.y, this.roundElapsedMs)) return;
+    if (
+      getSelectedGameMode() === 'classic' &&
+      this.golden.tryCollect(aim.x, aim.y, this.roundElapsedMs)
+    )
+      return;
     if (!this.activeTarget || aim.y < HUD_BOTTOM || aim.y > SELECTOR_TOP) return;
     const shotIsGolden =
+      getSelectedGameMode() === 'classic' &&
       shouldLaunchGolden(this.selectedStyle, this.goldenArmed, this.golden.ready) &&
       this.golden.consume();
     this.goldenArmed = false;
@@ -532,7 +556,7 @@ export class MobilePlayScene extends Phaser.Scene {
     playSfx('shot');
     launchMustache(
       this,
-      mustacheTexture(style, shotIsGolden),
+      mustacheTexture(style, shotIsGolden || getSelectedGameMode() === 'goldRush'),
       { x: 270, y: 772 },
       aim,
       { width: 100, height: 49 },
@@ -550,8 +574,11 @@ export class MobilePlayScene extends Phaser.Scene {
           variant,
           portrait: true,
           goldenShot: shotIsGolden,
+          mode: getSelectedGameMode(),
+          perfectStreakBefore: this.perfectStreak,
         });
-        const { result, reward, gained, goldenPerfect } = outcome;
+        const { result, reward, gained, goldenPerfect, goldRushBonus } = outcome;
+        this.perfectStreak = outcome.perfectStreak;
         recordCompetitiveShot({
           tMs: Math.min(46000, Math.round(this.roundElapsedMs)),
           aim,
@@ -572,7 +599,7 @@ export class MobilePlayScene extends Phaser.Scene {
           this.feedback(aim.x, aim.y, 'MISS!', '#ff8eaa');
           resolveMissImpact(
             this,
-            mustacheTexture(style, shotIsGolden),
+            mustacheTexture(style, shotIsGolden || getSelectedGameMode() === 'goldRush'),
             aim,
             { centers: MOBILE_TREE_CENTERS, centerY: 552, halfWidth: 23, top: 395, bottom: 738 },
             84,
@@ -587,7 +614,9 @@ export class MobilePlayScene extends Phaser.Scene {
           playSfx(result.grade === 'perfect' ? 'perfect' : 'good');
           applyRaminMood(this.hero, 'surprised');
           this.sticker
-            .setTexture(mustacheTexture(style, shotIsGolden))
+            .setTexture(
+              mustacheTexture(style, shotIsGolden || getSelectedGameMode() === 'goldRush'),
+            )
             .setPosition(aim.x, aim.y)
             .setRotation(this.hero.rotation)
             .setVisible(true);
@@ -604,6 +633,8 @@ export class MobilePlayScene extends Phaser.Scene {
             result.grade === 'perfect' ? '#ffe083' : '#aaf3d4',
           );
           if (goldenPerfect) this.varietyNotice('GOLDEN PERFECT +350!', '#ffe085');
+          else if (goldRushBonus)
+            this.varietyNotice('GOLD RUSH +' + goldRushBonus + '!', '#ffe085');
           else if (reward.bonus > 0) this.varietyNotice(reward.label, '#ffe291');
           if (result.grade === 'perfect' && this.combo >= 3 && Math.random() < 0.3) {
             applyRaminMood(this.hero, 'victory');
@@ -629,10 +660,10 @@ export class MobilePlayScene extends Phaser.Scene {
     // gameplay is active, so count its frame deltas instead.
     if (!this.scoreRoundStarted) {
       this.scoreRoundStarted = true;
-      startCompetitiveRound(true);
+      startCompetitiveRound(true, getSelectedGameMode());
     }
     this.roundElapsedMs = accumulateActiveRoundMs(this.roundElapsedMs, delta);
-    this.golden.update(this.roundElapsedMs);
+    if (getSelectedGameMode() === 'classic') this.golden.update(this.roundElapsedMs);
     if (this.hero?.active) this.followLighting(this.hero);
     if (this.hero?.active && this.accessory?.active) syncAccessory(this.hero, this.accessory);
     if (this.moments) this.moments.update();

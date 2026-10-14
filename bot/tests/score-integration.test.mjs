@@ -36,12 +36,12 @@ class FakeD1 {
               return { meta: { changes: 1 } };
             }
             if (sql.startsWith('UPDATE game_rounds SET score=')) {
-              const [score, week_start, finished_at, golden_perfect, id, token_hash, at] = args;
+              const [score, week_start, finished_at, golden_perfect, ranked_score, id, token_hash, at] = args;
               const row = db.rounds.get(id);
               if (!row || row.token_hash !== token_hash || row.score !== null || row.expires_at < at) {
                 return { meta: { changes: 0 } };
               }
-              Object.assign(row, { score, week_start, finished_at, golden_perfect });
+              Object.assign(row, { score, week_start, finished_at, golden_perfect, ranked_score });
               return { meta: { changes: 1 } };
             }
             if (sql.startsWith('UPDATE game_rounds SET telegram_state=')) {
