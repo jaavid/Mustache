@@ -720,7 +720,14 @@ export class MobileResultsScene extends Phaser.Scene {
     portraitBackdrop(this);
     addArcadeAccents(this, true);
     panel(this, 270, 481, 512, 902, 0x132137, 0.96, 50);
-    text(this, 270, 108, getSelectedGameMode() === 'goldRush' ? 'GOLD RUSH COMPLETE!' : 'ROUND COMPLETE!', 38, '#ffd281');
+    text(
+      this,
+      270,
+      108,
+      getSelectedGameMode() === 'goldRush' ? 'GOLD RUSH COMPLETE!' : 'ROUND COMPLETE!',
+      38,
+      '#ffd281',
+    );
     addSoundToggle(this, 460, 58, 112);
     addMusicToggle(this, 70, 58, 112);
     const hero = makeRamin(this, 270, 382, RAMIN_MOBILE_SCALE * 1.06, 'victory').setDepth(55);
@@ -775,15 +782,21 @@ export class MobileResultsScene extends Phaser.Scene {
       '#cbebdd',
     );
     addResultsExtras(this, true, this.score, this.summary);
-    const replay = this.add.rectangle(157, 842, 272, 66, 0x9b6bef)
-      .setStrokeStyle(4, 0x463064).setDepth(81).setInteractive({ useHandCursor: true });
+    const replay = this.add
+      .rectangle(157, 842, 272, 66, 0x9b6bef)
+      .setStrokeStyle(4, 0x463064)
+      .setDepth(81)
+      .setInteractive({ useHandCursor: true });
     text(this, 157, 842, '↻ PLAY AGAIN', 22, '#ffffff');
     replay.on('pointerdown', () => {
       playSfx('start');
       this.scene.start('Play');
     });
-    const changeHero = this.add.rectangle(413, 842, 216, 66, 0x36495b)
-      .setStrokeStyle(4, 0xb39fda).setDepth(81).setInteractive({ useHandCursor: true });
+    const changeHero = this.add
+      .rectangle(413, 842, 216, 66, 0x36495b)
+      .setStrokeStyle(4, 0xb39fda)
+      .setDepth(81)
+      .setInteractive({ useHandCursor: true });
     text(this, 413, 842, 'CHANGE HERO', 19, '#ffffff');
     changeHero.on('pointerdown', () => this.scene.start('CharacterSelect'));
     this.input.keyboard?.once('keydown-ENTER', () => this.scene.start('Play'));

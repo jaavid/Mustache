@@ -798,7 +798,14 @@ export class ResultsScene extends Phaser.Scene {
     addArcadeAccents(this, false);
     this.add.rectangle(500, 271, 885, 445, 0x142036, 0.94).setStrokeStyle(7, 0x806048).setDepth(40);
     this.add.rectangle(501, 59, 860, 10, 0xc49c65).setDepth(41);
-    label(this, 466, 118, getSelectedGameMode() === 'goldRush' ? 'GOLD RUSH COMPLETE!' : 'ROUND COMPLETE!', 43, '#ffcb6e');
+    label(
+      this,
+      466,
+      118,
+      getSelectedGameMode() === 'goldRush' ? 'GOLD RUSH COMPLETE!' : 'ROUND COMPLETE!',
+      43,
+      '#ffcb6e',
+    );
     addSoundToggle(this, 861, 79);
     addMusicToggle(this, 861, 133, 110);
     const resultsHero = makeRamin(this, 220, 318, RAMIN_DESKTOP_SCALE, 'victory').setDepth(53);

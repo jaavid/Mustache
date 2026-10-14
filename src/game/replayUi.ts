@@ -86,9 +86,12 @@ export function addResultsExtras(
         : result.state === 'local'
           ? 'PRACTICE · LOCAL SCORE'
           : 'SCORE NOT SAVED · ' + (result.error || 'UNKNOWN_ERROR');
-    const ranked = result.state === 'saved' && result.rankedScore !== undefined && result.rankedScore !== score
-      ? ' · RANKED ' + result.rankedScore
-      : '';
+    const ranked =
+      result.state === 'saved' &&
+      result.rankedScore !== undefined &&
+      result.rankedScore !== score
+        ? ' · RANKED ' + result.rankedScore
+        : '';
     statusText.setText(missionLine + '\n' + status + ranked + ' · VIEW TOP 10');
     displayBoard = () =>
       showLeaderboardOverlay(scene, portrait, {

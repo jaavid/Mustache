@@ -116,8 +116,10 @@ export function showLeaderboardOverlay(
     portrait ? 25 : 26,
     '#ffda90',
   );
-  const ranked = args.submission.state === 'saved' && args.submission.rankedScore !== undefined
-    && args.submission.rankedScore !== args.score;
+  const ranked =
+    args.submission.state === 'saved' &&
+    args.submission.rankedScore !== undefined &&
+    args.submission.rankedScore !== args.score;
   const roundText = ranked
     ? 'RAW ' + number(args.score) + ' · RANKED ' + number(args.submission.rankedScore!)
     : 'YOUR ROUND: ' + number(args.score);
