@@ -1,6 +1,6 @@
 import { verifyRoundShots } from './scoring.js';
 import { periodBounds, tehranWeekStart } from './periods.js';
-import { dailyReferralCount, referralBonus, permitGoldRound, recordCompletedRound } from './progression.js';
+import { dailyReferralCount, referralBonus, permitGoldRound, completedRoundStatements, recordCompletedRound } from './progression.js';
 
 const SESSION_TTL_MS = 60 * 60 * 1000;
 const ROUND_TTL_MS = 3 * 60 * 1000;
@@ -49,14 +49,29 @@ export async function authenticate(db, request, now = Date.now()) {
   return session || null;
 }
 
+/** Create a round and, for catch-up entry, consume the daily ticket atomically. */
 export async function startRound(db, session, portrait, now = Date.now(), mode = 'classic') {
   if (typeof portrait !== 'boolean') throw new Error('INVALID_LAYOUT');
   if (!['classic', 'goldRush'].includes(mode)) throw new Error('INVALID_MODE');
-  if (mode === 'goldRush') await permitGoldRound(db, session.user_id, await leaderboard(db, now, { userId: session.user_id }), now);
+  const ticket = mode === 'goldRush'
+    ? await permitGoldRound(db, session.user_id, await leaderboard(db, now, { userId: session.user_id }), now)
+    : null;
   const roundId = crypto.randomUUID();
-  await db.prepare('INSERT INTO game_rounds (id, token_hash, user_id, portrait, started_at, expires_at, mode) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(
-    roundId, session.token_hash, session.user_id, portrait ? 1 : 0, now, now + ROUND_TTL_MS, mode,
-  ).run();
+  const insert = db.prepare(
+    'INSERT INTO game_rounds (id, token_hash, user_id, portrait, started_at, expires_at, mode) ' +
+    'VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).bind(roundId, session.token_hash, session.user_id, portrait ? 1 : 0, now, now + ROUND_TTL_MS, mode);
+  try {
+    if (ticket) await db.batch([ticket, insert]);
+    else await insert.run();
+  } catch (error) {
+    // Only a ticket unique-constraint error becomes GOLD_TICKET_USED;
+    // a failed round insert must surface as a real DB error, after rollback.
+    if (ticket && /(?:UNIQUE constraint failed|PRIMARY KEY constraint failed): game_gold_tickets\./i.test(String(error?.message))) {
+      throw new Error('GOLD_TICKET_USED');
+    }
+    throw error;
+  }
   return { roundId, mode };
 }
 
@@ -75,15 +90,20 @@ export async function finishRound(db, session, data, now = Date.now()) {
   const activeInvites = (round.mode || 'classic') === 'classic' ? await dailyReferralCount(db, session.user_id, now) : 0;
   const bonus = Math.min(referralBonus(score, activeInvites), 15000 - score);
   const rankedScore = score + bonus;
-  const result = await db.prepare('UPDATE game_rounds SET score=?, week_start=?, finished_at=?, golden_perfect=?, ranked_score=? WHERE id=? AND token_hash=? AND score IS NULL AND expires_at>=?').bind(
-    score, weekStart, now, goldenPerfect, rankedScore, round.id, session.token_hash, now,
-  ).run();
+  // D1 batch runs all statements in a single transaction: a failure at XP,
+  // idempotency marking or referral qualification rolls back the score too.
+  const [result] = await db.batch([
+    db.prepare(
+      'UPDATE game_rounds SET score=?, week_start=?, finished_at=?, golden_perfect=?, ranked_score=? ' +
+      'WHERE id=? AND token_hash=? AND score IS NULL AND expires_at>=?'
+    ).bind(score, weekStart, now, goldenPerfect, rankedScore, round.id, session.token_hash, now),
+    ...completedRoundStatements(db, round.id, session.user_id, score, now, true),
+  ]);
   if (result.meta.changes !== 1) {
     const saved = await db.prepare('SELECT score, week_start, mode, ranked_score FROM game_rounds WHERE id=?').bind(round.id).first();
     if (saved?.score !== null && saved?.score !== undefined) return { score: saved.score, rankedScore: saved.ranked_score ?? saved.score, weekStart: saved.week_start, mode: saved.mode || 'classic', duplicate: true };
     throw new Error('ROUND_ALREADY_PROCESSED');
   }
-  await recordCompletedRound(db, round.id, session.user_id, score, now);
   return { score, rankedScore, referralBonus: bonus, weekStart, mode: round.mode || 'classic', duplicate: false };
 }
 

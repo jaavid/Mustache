@@ -22,8 +22,10 @@ that authorizes /api/profile and the competitive round API.
 
 Players with at least five verified rounds can play **one** Gold Rush round per Tehran
 day while in the bottom 30% of a weekly classic ranking with at least 20 players.
-The Worker computes entitlement; an atomic D1 uniqueness constraint
-(user_id, tehran_day) prevents duplicate ticket consumption. Once unlocked
+The Worker computes entitlement; a D1 transaction reserves the daily ticket
+and creates its round together. An SQL uniqueness constraint
+(user_id, tehran_day) prevents duplicate consumption. A failed round insert
+rolls back the reservation. Once unlocked
 permanently the daily limit disappears.
 
 ## Gold Rush game mode
@@ -54,6 +56,11 @@ round score; it does not understand our per-mode or referral standings.
 5. The Worker calculates and persists game_rounds.ranked_score; original
    score remains unchanged for Telegram Game Cards and player raw records.
    Gold Rush never receives referral multipliers.
+
+
+The Worker also persists the accepted score, XP, progress marker and referral
+qualification in **one D1 batch transaction**. A failure in any write rolls
+back the entire finish, and retrying a completed round cannot grant XP twice.
 
 This throttles gaming but is not a complete Sybil defense. Multiple legitimate-looking
 Telegram identities remain possible. No monetary/token prizes may be awarded on

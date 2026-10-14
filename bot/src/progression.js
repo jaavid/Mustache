@@ -69,39 +69,54 @@ export function goldCatchUpEligible(progress, board) {
     !!board.me && board.me.rank > board.playerCount * 0.7;
 }
 
-/** Evaluate the weekly catch-up entitlement using server-side ranking. */
+/** Prepare a one-use ticket reservation. The caller MUST batch it with round creation,
+ * so a failed game_rounds insert cannot consume the player's daily ticket.
+ */
 export async function permitGoldRound(db, userId, board, now = Date.now()) {
   const progress = await getProgress(db, userId, now);
-  if (progress.goldUnlocked) return;
+  if (progress.goldUnlocked) return null;
   if (!goldCatchUpEligible(progress, board)) throw new Error('GOLD_RUSH_LOCKED');
-  const result = await db.prepare(
-    'INSERT OR IGNORE INTO game_gold_tickets (user_id, tehran_day) VALUES (?, ?)'
-  ).bind(userId, periodBounds(now, 'day').start).run();
-  if (result.meta.changes !== 1) throw new Error('GOLD_TICKET_USED');
+  // A plain INSERT (not OR IGNORE) makes a competing start fail and rolls back
+  // the entire D1 batch, preserving the single daily attempt.
+  return db.prepare(
+    'INSERT INTO game_gold_tickets (user_id, tehran_day) VALUES (?, ?)'
+  ).bind(userId, periodBounds(now, 'day').start);
 }
 
-/** Idempotent after a completed round, including retries of a saved round.
- * D1 batch executes the insert and marker update in one transaction.
+/** Build the XP, idempotency marker and referral writes for ONE D1 batch.
+ * SQLite changes() gates each step on the preceding successful write. For a
+ * fresh finish, it also gates XP on acceptance of the score UPDATE. This keeps
+ * concurrent duplicate submissions from updating someone else's progress.
  */
-export async function recordCompletedRound(db, roundId, userId, score, now = Date.now()) {
+export function completedRoundStatements(db, roundId, userId, score, now = Date.now(), fresh = false) {
   const { start } = periodBounds(now, 'day');
   const xp = 40 + Math.min(20, Math.floor(score / 100));
-  await db.batch([
+  return [
     db.prepare(
       'INSERT INTO game_progress (user_id, xp, rounds_played, active_days, last_active_day, updated_at) ' +
       'SELECT user_id, ?, 1, 1, ?, ? FROM game_rounds ' +
       'WHERE id=? AND user_id=? AND score IS NOT NULL AND progress_recorded=0 ' +
+      (fresh ? 'AND changes()=1 ' : '') +
       'ON CONFLICT(user_id) DO UPDATE SET xp=game_progress.xp+excluded.xp, ' +
       'rounds_played=game_progress.rounds_played+1, ' +
       'active_days=game_progress.active_days+CASE WHEN game_progress.last_active_day=excluded.last_active_day THEN 0 ELSE 1 END, ' +
       'last_active_day=excluded.last_active_day, updated_at=excluded.updated_at'
     ).bind(xp, start, now, roundId, userId),
-    db.prepare('UPDATE game_rounds SET progress_recorded=1 WHERE id=? AND user_id=? AND progress_recorded=0')
-      .bind(roundId, userId),
-  ]);
-  await db.prepare(
-    'UPDATE game_referrals SET qualified_at=? WHERE referred_user_id=? AND qualified_at IS NULL'
-  ).bind(now, userId).run();
+    db.prepare(
+      'UPDATE game_rounds SET progress_recorded=1 ' +
+      'WHERE id=? AND user_id=? AND score IS NOT NULL AND progress_recorded=0 AND changes()=1'
+    ).bind(roundId, userId),
+    db.prepare(
+      'UPDATE game_referrals SET qualified_at=? WHERE referred_user_id=? AND qualified_at IS NULL ' +
+      'AND changes()=1 AND EXISTS (SELECT 1 FROM game_rounds ' +
+      'WHERE id=? AND user_id=? AND score IS NOT NULL AND progress_recorded=1)'
+    ).bind(now, userId, roundId, userId),
+  ];
+}
+
+/** Repair only legacy/incomplete rounds on repeat /finish. Never grant XP twice. */
+export async function recordCompletedRound(db, roundId, userId, score, now = Date.now()) {
+  await db.batch(completedRoundStatements(db, roundId, userId, score, now));
 }
 
 export async function dailyMissions(db, userId, now = Date.now()) {
