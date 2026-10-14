@@ -30,8 +30,8 @@ async function dispatch(update, db = mockDB()) {
 }
 
 test('all managed Telegram command descriptions carry the 〰️ moustache and fun copy', () => {
-  assert.equal(GAME_COMMANDS.length, 5);
-  const expected = new Set(['play', 'leaderboard', 'top', 'score', 'help']);
+  assert.equal(GAME_COMMANDS.length, 7);
+  const expected = new Set(['play', 'leaderboard', 'top', 'score', 'profile', 'invite', 'help']);
   for (const item of GAME_COMMANDS) {
     assert.ok(expected.has(item.command), item.command);
     assert.match(item.description, /〰️/);
@@ -74,7 +74,7 @@ test('callback changes the same message instead of flooding the chat', async () 
   assert.equal(calls[0].payload.message_id, 4);
   assert.match(calls[0].payload.text, /ماه شمسی/);
   assert.match(calls[0].payload.text, /رتبه شما: 11/);
-  assert.equal(db.binds[0].length, 3);
+  assert.equal(db.binds[0].length, 4);
 });
 
 test('week navigation and invalid callbacks are tightly bounded', async () => {
