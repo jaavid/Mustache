@@ -86,7 +86,10 @@ export function addResultsExtras(
         : result.state === 'local'
           ? 'PRACTICE · LOCAL SCORE'
           : 'SCORE NOT SAVED · ' + (result.error || 'UNKNOWN_ERROR');
-    statusText.setText(missionLine + '\n' + status + ' · VIEW TOP 10');
+    const ranked = result.state === 'saved' && result.rankedScore !== undefined && result.rankedScore !== score
+      ? ' · RANKED ' + result.rankedScore
+      : '';
+    statusText.setText(missionLine + '\n' + status + ranked + ' · VIEW TOP 10');
     displayBoard = () =>
       showLeaderboardOverlay(scene, portrait, {
         score,
@@ -94,7 +97,7 @@ export function addResultsExtras(
         initialBoard: board,
       });
     // For official Telegram rounds, show the scoreboard without requiring an extra tap.
-    if (result.state !== 'local') displayBoard();
+    if (result.state === 'saved') displayBoard();
   });
   addShareButton(
     scene,

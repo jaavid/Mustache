@@ -1,3 +1,5 @@
+import type { GameMode } from './gameMode';
+
 export type Grade = 'perfect' | 'good' | 'miss';
 export type ShotResult = { grade: Grade; points: number; combo: number; distance: number };
 
@@ -51,17 +53,21 @@ export function evaluateAim(
 export const ROUND_LENGTH_SECONDS = 45;
 export const BEST_SCORE_KEY = 'n5-mustache-mayhem-best-v1';
 
-export function readBestScore(): number {
+function bestKey(mode: GameMode): string {
+  return mode === 'goldRush' ? BEST_SCORE_KEY + '-gold-rush' : BEST_SCORE_KEY;
+}
+
+export function readBestScore(mode: GameMode = 'classic'): number {
   try {
-    const score = Number(localStorage.getItem(BEST_SCORE_KEY));
+    const score = Number(localStorage.getItem(bestKey(mode)));
     return Number.isFinite(score) && score >= 0 ? score : 0;
   } catch {
     return 0;
   }
 }
-export function saveBestScore(score: number): void {
+export function saveBestScore(score: number, mode: GameMode = 'classic'): void {
   try {
-    localStorage.setItem(BEST_SCORE_KEY, String(Math.max(0, Math.floor(score))));
+    localStorage.setItem(bestKey(mode), String(Math.max(0, Math.floor(score))));
   } catch {
     /* storage optional */
   }

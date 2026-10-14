@@ -161,7 +161,7 @@ export function showProfile(
     add(base + 137, 'ROUNDS ' + profile.roundsPlayed + '   ·   ACTIVE DAYS ' + profile.activeDays);
     add(
       base + 177,
-      'BEST ' + profile.bestScore + '   ·   GOLDEN PERFECT ' + profile.goldenPerfects,
+      'BEST CLASSIC ' + profile.bestClassic + '   ·   GOLD RUSH ' + profile.bestGoldRush,
     );
     add(
       base + 217,

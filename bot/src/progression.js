@@ -140,12 +140,16 @@ export async function playerProfile(db, userId, botUsername = 'RJTtobot', now = 
   const [user, stats, missions] = await Promise.all([
     db.prepare('SELECT display_name FROM game_users WHERE user_id=?').bind(userId).first(),
     db.prepare(
-      'SELECT COUNT(*) AS rounds, MAX(score) AS best, SUM(golden_perfect) AS golden_perfects ' +
+      'SELECT COUNT(*) AS rounds, MAX(score) AS best, ' +
+      "MAX(CASE WHEN mode='classic' THEN score END) AS best_classic, " +
+      "MAX(CASE WHEN mode='goldRush' THEN score END) AS best_gold_rush, " +
+      'SUM(golden_perfect) AS golden_perfects ' +
       'FROM game_rounds WHERE user_id=? AND score IS NOT NULL'
     ).bind(userId).first(),
     dailyMissions(db, userId, now),
   ]);
   return { ...progress, missions, name: user?.display_name || 'Player', bestScore: Number(stats?.best || 0),
+    bestClassic: Number(stats?.best_classic || 0), bestGoldRush: Number(stats?.best_gold_rush || 0),
     goldenPerfects: Number(stats?.golden_perfects || 0),
     inviteUrl: 'https://t.me/' + botUsername + '?start=ref_' + userId.toString(36) };
 }

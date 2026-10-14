@@ -773,8 +773,8 @@ export class PlayScene extends Phaser.Scene {
     this.input.enabled = false;
     playSfx('finish');
     stopMusic();
-    const best = Math.max(this.score, readBestScore());
-    saveBestScore(best);
+    const best = Math.max(this.score, readBestScore(getSelectedGameMode()));
+    saveBestScore(best, getSelectedGameMode());
     const summary = summarizeRound(this.stats, this.score);
     this.scene.start('Results', { score: this.score, best, summary });
   }
@@ -798,7 +798,7 @@ export class ResultsScene extends Phaser.Scene {
     addArcadeAccents(this, false);
     this.add.rectangle(500, 271, 885, 445, 0x142036, 0.94).setStrokeStyle(7, 0x806048).setDepth(40);
     this.add.rectangle(501, 59, 860, 10, 0xc49c65).setDepth(41);
-    label(this, 466, 118, 'ROUND COMPLETE!', 43, '#ffcb6e');
+    label(this, 466, 118, getSelectedGameMode() === 'goldRush' ? 'GOLD RUSH COMPLETE!' : 'ROUND COMPLETE!', 43, '#ffcb6e');
     addSoundToggle(this, 861, 79);
     addMusicToggle(this, 861, 133, 110);
     const resultsHero = makeRamin(this, 220, 318, RAMIN_DESKTOP_SCALE, 'victory').setDepth(53);
@@ -855,10 +855,10 @@ export class ResultsScene extends Phaser.Scene {
     addResultsExtras(this, false, this.finalScore, this.summary);
     const again = () => {
       playSfx('start');
-      this.scene.start('CharacterSelect');
+      this.scene.start('Play');
     };
-    button(this, 642, 452, 324, 67, '↻  PLAY AGAIN', again);
-    label(this, 493, 511, 'NO REAL TOKENS · PRACTICE MODE', 16, '#d1bbdb');
+    button(this, 642, 443, 324, 58, '↻  PLAY AGAIN', again);
+    button(this, 642, 506, 262, 35, 'CHANGE HERO', () => this.scene.start('CharacterSelect'));
     this.input.keyboard?.once('keydown-ENTER', again);
     this.input.keyboard?.once('keydown-SPACE', again);
   }
