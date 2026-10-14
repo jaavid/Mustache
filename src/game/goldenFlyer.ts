@@ -51,16 +51,21 @@ export class GoldenFlyer {
       repeat: -1,
     });
     this.hud = scene.add
-      .text(portrait ? 270 : 480, portrait ? 218 : 144, goldRush ? 'PERFECT 0/3 · +150' : 'GOLD 0/3', {
-        fontFamily: '"Courier New", monospace',
-        fontSize: portrait ? '20px' : '18px',
-        fontStyle: 'bold',
-        color: '#ffe69b',
-        backgroundColor: '#172038',
-        stroke: '#322345',
-        strokeThickness: 3,
-        padding: { x: 9, y: 5 },
-      })
+      .text(
+        portrait ? 270 : 480,
+        portrait ? 218 : 144,
+        goldRush ? 'PERFECT 0/3 · +150' : 'GOLD 0/3',
+        {
+          fontFamily: '"Courier New", monospace',
+          fontSize: portrait ? '20px' : '18px',
+          fontStyle: 'bold',
+          color: '#ffe69b',
+          backgroundColor: '#172038',
+          stroke: '#322345',
+          strokeThickness: 3,
+          padding: { x: 9, y: 5 },
+        },
+      )
       .setOrigin(0.5)
       .setDepth(119);
   }
