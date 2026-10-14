@@ -55,7 +55,7 @@ test('slash commands show weekly top ten, own rank, all tabs and game URL', asyn
     assert.equal(out.chat_id, 43);
     assert.match(out.text, /رتبه شما: 11/);
     const buttons = out.reply_markup.inline_keyboard.flat();
-    for (const key of ['lb:d:0', 'lb:w:0', 'lb:m:0', 'lb:a:0']) {
+    for (const key of ['lb:c:d:0', 'lb:c:w:0', 'lb:c:m:0', 'lb:c:a:0', 'lb:g:w:0']) {
       assert.ok(buttons.some(b => b.callback_data === key));
     }
     assert.ok(buttons.some(b => b.url === 'https://t.me/RJTtobot?game=mustache'));
@@ -83,17 +83,19 @@ test('week navigation and invalid callbacks are tightly bounded', async () => {
       message: { message_id: 2, chat: { id: 44 } } },
   });
   const buttons = calls[0].payload.reply_markup.inline_keyboard.flat().map(b => b.callback_data);
-  assert.ok(buttons.includes('lb:w:2'));
-  assert.ok(buttons.includes('lb:w:0'));
+  assert.ok(buttons.includes('lb:c:w:2'));
+  assert.ok(buttons.includes('lb:c:w:0'));
+  assert.equal(parseLeaderboardCallback('lb:w:0').mode, 'classic');
+  assert.deepEqual(parseLeaderboardCallback('lb:g:w:1'), { period: 'week', offset: 1, mode: 'goldRush' });
   assert.equal(parseLeaderboardCallback('lb:w:12').offset, 12);
-  for (const value of ['lb:w:13', 'lb:w:-1', 'lb:a:1', 'lb:x:0', 'lb:w:1;DROP TABLE']) {
+  for (const value of ['lb:w:13', 'lb:w:-1', 'lb:a:1', 'lb:x:0', 'lb:w:1;DROP TABLE', 'lb:g:a:1', 'lb:x:w:0', 'lb:g:w:13']) {
     assert.equal(parseLeaderboardCallback(value), null);
     const invalid = await dispatch({ callback_query: { id: 'bad', data: value } });
     assert.equal(invalid.calls.length, 1);
     assert.equal(invalid.calls[0].method, 'answerCallbackQuery');
     assert.equal(invalid.calls[0].payload.show_alert, true);
   }
-  assert.ok(!leaderboardKeyboard('week', 12).inline_keyboard.flat().some(b => b.callback_data === 'lb:w:13'));
+  assert.ok(!leaderboardKeyboard('week', 12).inline_keyboard.flat().some(b => b.callback_data === 'lb:c:w:13'));
 });
 
 test('inline callbacks and stale messages are safe', async () => {
@@ -140,4 +142,19 @@ test('command picker preserves unrelated commands and avoids redundant updates',
   assert.deepEqual(calls.map(c => c.method), ['getMyCommands', 'setMyCommands']);
   assert.deepEqual(calls[1].body.commands.at(-1), others[0]);
   await assert.rejects(syncBotCommands('invalid', fetcher), /INVALID_BOT_TOKEN/);
+});
+
+test('Gold Rush tabs keep mode through period and past-week navigation', async () => {
+  const { calls } = await dispatch({ callback_query: {
+    id: 'gold', data: 'lb:g:w:2', from: { id: 999 },
+    message: { message_id: 8, chat: { id: 44 } },
+  } });
+  assert.equal(calls[0].method, 'editMessageText');
+  assert.match(calls[0].payload.text, /Gold Rush/);
+  assert.match(calls[0].payload.text, /بازیکنان دارای امتیاز معتبر/);
+  const buttons = calls[0].payload.reply_markup.inline_keyboard.flat();
+  assert.ok(buttons.some(item => item.callback_data === 'lb:g:w:3'));
+  assert.ok(buttons.some(item => item.callback_data === 'lb:g:d:0'));
+  assert.ok(buttons.some(item => item.callback_data === 'lb:c:w:2'));
+  assert.ok(buttons.every(item => !item.callback_data || item.callback_data.length <= 64));
 });
