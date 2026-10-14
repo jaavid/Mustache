@@ -148,7 +148,8 @@ for (const failurePoint of ['INSERT INTO game_progress', 'UPDATE game_referrals 
       assert.equal(progress.active_days, 1);
       assert.equal(db.read('SELECT progress_recorded FROM game_rounds WHERE id=?', started.roundId).progress_recorded, 1);
       assert.equal(db.read('SELECT qualified_at FROM game_referrals WHERE referred_user_id=27').qualified_at, now + 100);
-      assert.deepEqual(db.read('SELECT shots, perfect, good, misses, max_combo, golden_pickups FROM game_round_metrics WHERE round_id=?', started.roundId),
+      const totals = db.read('SELECT shots, perfect, good, misses, max_combo, golden_pickups FROM game_round_metrics WHERE round_id=?', started.roundId);
+      assert.deepEqual({ ...totals },
         { shots: 1, perfect: 1, good: 0, misses: 0, max_combo: 1, golden_pickups: 0 });
 
       const replay = await finishRound(db, player, { ...data, score: 9000, shots: [] }, now + 200);
