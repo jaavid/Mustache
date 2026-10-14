@@ -16,6 +16,8 @@ on:
       - 'package.json'
       - 'README.md'
       - '.github/workflows/telegram-game-checks.yml'
+      - '.github/workflows/browser-smoke.yml'
+      - '.github/workflows/pages.yml'
       - '.github/workflows/deploy-cloudflare-worker.yml'
   workflow_dispatch:
 
