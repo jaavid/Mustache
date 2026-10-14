@@ -178,14 +178,7 @@ function paintForest(c: Ctx, width: number, height: number, seed: number) {
         const reach = 17 + r() * 40;
         const bx = side === 0 ? x + trunkWidth : x - reach;
         rect(c, bx, y, reach, 4 + r() * 4, '#183835');
-        ellipse(
-          c,
-          side === 0 ? bx + reach : bx,
-          y - 4,
-          23 + r() * 17,
-          14 + r() * 11,
-          '#164036',
-        );
+        ellipse(c, side === 0 ? bx + reach : bx, y - 4, 23 + r() * 17, 14 + r() * 11, '#164036');
         ellipse(c, side === 0 ? bx + reach + 4 : bx - 4, y - 9, 15, 8, '#285b46');
       }
       for (let k = 0; k < 3; k++) {
