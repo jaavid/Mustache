@@ -98,11 +98,17 @@ export async function leaderboard(db, now = Date.now(), options = {}) {
   const bounds = periodBounds(now, period, offset);
   const viewer = Number.isSafeInteger(options.userId) && options.userId > 0 ? options.userId : 0;
   const range = bounds.start === null ? '' : ' AND finished_at >= ? AND finished_at < ?';
+  // Temporary referral power-ups affect only day/week boards. Month/all-time
+  // preserve raw historical records and cannot be inflated with invites.
+  const rankedPoints = period === 'day' || period === 'week'
+    ? 'COALESCE(ranked_score, score)' : 'score';
+  const boostPoints = period === 'day' || period === 'week'
+    ? 'COALESCE(ranked_score, score)-score' : '0';
   const sql = [
     'WITH per_round AS (',
-    ' SELECT user_id, COALESCE(ranked_score, score) AS score, score AS base_score,',
-    ' COALESCE(ranked_score, score)-score AS boost_points, golden_perfect, finished_at, id,',
-    ' ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY COALESCE(ranked_score, score) DESC, golden_perfect DESC, finished_at ASC, id ASC) AS own_rank',
+    ' SELECT user_id, ' + rankedPoints + ' AS score, score AS base_score,',
+    ' ' + boostPoints + ' AS boost_points, golden_perfect, finished_at, id,',
+    ' ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY ' + rankedPoints + ' DESC, golden_perfect DESC, finished_at ASC, id ASC) AS own_rank',
     " FROM game_rounds WHERE score IS NOT NULL AND mode='" + mode + "'" + range,
     '), highs AS (',
     ' SELECT user_id, score, base_score, boost_points, golden_perfect FROM per_round WHERE own_rank=1',
