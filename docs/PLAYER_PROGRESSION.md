@@ -57,7 +57,6 @@ round score; it does not understand our per-mode or referral standings.
    score remains unchanged for Telegram Game Cards and player raw records.
    Gold Rush never receives referral multipliers.
 
-
 The Worker also persists the accepted score, XP, progress marker and referral
 qualification in **one D1 batch transaction**. A failure in any write rolls
 back the entire finish, and retrying a completed round cannot grant XP twice.
