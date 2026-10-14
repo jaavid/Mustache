@@ -304,6 +304,7 @@ export class MobilePlayScene extends Phaser.Scene {
       true,
       (message, color) => this.varietyNotice(message, color),
       (ready) => this.updateGoldenSelector(ready),
+      getSelectedGameMode() === 'goldRush',
     );
     addSoundToggle(this, 469, 27, 112);
     addMusicToggle(this, 70, 27, 112);
@@ -507,13 +508,13 @@ export class MobilePlayScene extends Phaser.Scene {
     });
   }
   private varietyNotice(message: string, color: string) {
-    const banner = text(this, 270, 247, message, 24, color)
-      .setDepth(68)
+    const banner = text(this, 270, 292, message, 24, color)
+      .setDepth(116)
       .setBackgroundColor('#18263d')
       .setPadding(10, 6);
     this.tweens.add({
       targets: banner,
-      y: 229,
+      y: 278,
       alpha: 0,
       duration: 780,
       delay: 410,
@@ -579,6 +580,7 @@ export class MobilePlayScene extends Phaser.Scene {
         });
         const { result, reward, gained, goldenPerfect, goldRushBonus } = outcome;
         this.perfectStreak = outcome.perfectStreak;
+        this.golden.setPerfectStreak(this.perfectStreak);
         recordCompetitiveShot({
           tMs: Math.min(46000, Math.round(this.roundElapsedMs)),
           aim,
