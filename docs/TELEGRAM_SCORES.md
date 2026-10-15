@@ -53,12 +53,17 @@ Empty archived periods remain empty and do not use scores from adjacent weeks.
 6. The game's result scene **automatically opens** the D1 weekly
    leaderboard after a successful save. The player can switch tabs or close
    the panel. The \`MISSIONS / BADGES\` status line also reopens the panel.
-7. The bot's **/leaderboard** command opens a navigable Telegram inline-keyboard
+7. The bot's **/leaderboard** command sends a Telegram Bot API 10.2+ native
+   Rich Message with a bordered, striped, compact table, plus an inline-keyboard
    scoreboard (Day, Saturday-to-Saturday Week, Solar Hijri Month, All-time,
    and up to 12 preceding weeks). It shows the top ten, participant count,
    and the requesting user's personal rank even outside the top ten.
    **/top** and **/score** are aliases for the same menu.
    Switching tabs edits the existing bot message; it does not spam chats.
+   Players can toggle a plain-text view if their Telegram client cannot render
+   rich tables. If Telegram explicitly rejects a rich send/edit, the Worker
+   retries that operation as a plain message/edit. Transport errors, rate limits
+   and blocked-chat errors are not retried as plaintext.
 8. The keyboard includes a native link back to the official Telegram Game.
    The bot's **/help** lists all commands. A production deployment calls
    `getMyCommands` and `setMyCommands` to expose these commands in the
@@ -218,3 +223,21 @@ moving Worker Custom Domains. No new token must be committed.
 A green GitHub build alone is not evidence that a score was recorded.
 Verify `roundsScored` before and after playing through the official Telegram
 Game Card. A real player must complete a non-skipped round.
+
+## Telegram Rich leaderboard implementation
+
+- Official methods: `sendRichMessage` for new leaderboard messages and
+  `editMessageText` with `rich_message` for period navigation.
+- Native `InputRichMessage.blocks` contains a heading, metadata, an optional
+  `table` block with 4 columns, legend, personal rank and Tehran period.
+  Table cells contain **plain strings**, never interpolated HTML/Markdown.
+- The bot retains the D1 unified ranking query and original inline navigation.
+  Legacy `lb:c:...` and `lb:g:...` callbacks are supported.
+- `📄 نمایش متنی` selects text-only navigation (`lb:t:...`); `✨ جدول ریچ`
+  restores rich navigation (`lb:r:...`). Old rich clients may need the manual
+  switch; Bot API doesn't expose the viewer's Telegram app version.
+- Only explicit Bot API rich-feature or rich-payload rejection triggers
+  plaintext fallback. Other errors stay visible for normal retry/diagnosis.
+  Messages are not automatically duplicated on ambiguous network failures.
+- Bot API reference: https://core.telegram.org/bots/api#sendrichmessage and
+  https://core.telegram.org/bots/api#inputrichblocktable .
