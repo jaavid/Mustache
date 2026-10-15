@@ -54,7 +54,7 @@ export async function handleTelegramUpdate(update, env, send) {
         .bind(message.from.id, String(message.from.first_name || 'Player').slice(0, 48), Date.now()).run();
       const profile = await playerProfile(env.DB, message.from.id, botUsername);
       const goldBoard = command === 'profile' && !profile.goldUnlocked
-        ? await leaderboard(env.DB, Date.now(), { userId: message.from.id })
+        ? await leaderboard(env.DB, Date.now(), { userId: message.from.id, mode: 'classic' })
         : null;
       const ticketAvailable = goldBoard ? goldCatchUpEligible(profile, goldBoard) : false;
       const goldStatus = profile.goldUnlocked
@@ -74,7 +74,7 @@ export async function handleTelegramUpdate(update, env, send) {
     } else if (command === 'help') {
       await send('sendMessage', {
         chat_id: message.chat.id,
-        text: '〰️ به جنگل سیبیل خوش اومدی! 🎩\n\n🎯 /play — بزن سیبیل رو بنشون سر جاش!\n👤 /profile — سطح و کارنامه سیبیلی\n〰️ /invite — دعوت دوستان و بوست روزانه\n🏆 /leaderboard — جدول Classic و Gold Rush\n👑 /top — ده نفر برتر جنگل\n📈 /score — ببین سیبیلات چند امتیاز آوردن\n🧭 /help — همین راهنمای سیبیلی\n\n🗓 رقابت هفتگی: شنبه تا شنبه به وقت تهران\n⚠️ جایزه توکنی هنوز فعال نیست.',
+        text: '〰️ به جنگل سیبیل خوش اومدی! 🎩\n\n🎯 /play — بزن سیبیل رو بنشون سر جاش!\n👤 /profile — سطح و کارنامه سیبیلی\n〰️ /invite — دعوت دوستان و بوست روزانه\n🏆 /leaderboard — جدول مشترک Classic و Gold Rush\n👑 /top — ده نفر برتر جنگل\n📈 /score — ببین سیبیلات چند امتیاز آوردن\n🧭 /help — همین راهنمای سیبیلی\n\n🗓 رقابت هفتگی: شنبه تا شنبه به وقت تهران\n⚠️ جایزه توکنی هنوز فعال نیست.',
       });
     } else if (command === 'top' || command === 'score' || command === 'leaderboard') {
       if (!env.DB) throw new Error('D1_NOT_CONFIGURED');
@@ -239,10 +239,14 @@ async function gameApi(request, env, url) {
       if (!session) return jsonReply({ error: 'UNAUTHORIZED' }, 401, cors);
       const now = Date.now();
       const result = await playerProfile(env.DB, session.user_id, env.BOT_USERNAME || DEFAULT_BOT_USERNAME, now);
-      const board = await leaderboard(env.DB, now, { userId: session.user_id });
+      const [board, classicBoard] = await Promise.all([
+        leaderboard(env.DB, now, { userId: session.user_id }),
+        leaderboard(env.DB, now, { userId: session.user_id, mode: 'classic' }),
+      ]);
+      const ticketEligible = goldCatchUpEligible(result, classicBoard);
       return jsonReply({ ...result, rank: board.me?.rank ?? null, weeklyScore: board.me?.score ?? 0, rival: board.rival ?? null,
-        goldTicketEligible: goldCatchUpEligible(result, board),
-        goldRushAvailable: result.goldUnlocked || goldCatchUpEligible(result, board) }, 200, cors);
+        goldTicketEligible: ticketEligible,
+        goldRushAvailable: result.goldUnlocked || ticketEligible }, 200, cors);
     }
     if (api === '/api/leaderboard' && request.method === 'GET') {
       const period = url.searchParams.get('period') || 'week';
@@ -252,7 +256,7 @@ async function gameApi(request, env, url) {
         return jsonReply({ error: 'UNAUTHORIZED' }, 401, cors);
       }
       return jsonReply(await leaderboard(env.DB, Date.now(), {
-        period, offset, mode: url.searchParams.get('mode') || 'classic', userId: session?.user_id,
+        period, offset, mode: url.searchParams.get('mode') || 'combined', userId: session?.user_id,
       }), 200, cors);
     }
     if ((api === '/api/round/start' || api === '/api/round/finish') && request.method === 'POST') {
@@ -309,7 +313,7 @@ async function gameApi(request, env, url) {
       return jsonReply({
         ...result, telegramSynced: telegramState === 'updated',
         telegramState, telegramScores,
-        leaderboard: await leaderboard(env.DB, Date.now(), { userId: session.user_id, mode: result.mode || 'classic' }),
+        leaderboard: await leaderboard(env.DB, Date.now(), { userId: session.user_id }),
       }, 200, cors);
     }
     return jsonReply({ error: 'NOT_FOUND' }, 404, cors);

@@ -54,7 +54,7 @@ export async function startRound(db, session, portrait, now = Date.now(), mode =
   if (typeof portrait !== 'boolean') throw new Error('INVALID_LAYOUT');
   if (!['classic', 'goldRush'].includes(mode)) throw new Error('INVALID_MODE');
   const ticket = mode === 'goldRush'
-    ? await permitGoldRound(db, session.user_id, await leaderboard(db, now, { userId: session.user_id }), now)
+    ? await permitGoldRound(db, session.user_id, await leaderboard(db, now, { userId: session.user_id, mode: 'classic' }), now)
     : null;
   const roundId = crypto.randomUUID();
   const insert = db.prepare(
@@ -120,12 +120,16 @@ export async function finishRound(db, session, data, now = Date.now()) {
  */
 export async function leaderboard(db, now = Date.now(), options = {}) {
   const period = options.period || 'week';
-  const mode = options.mode || 'classic';
-  if (!['classic', 'goldRush'].includes(mode)) throw new Error('INVALID_MODE');
+  const mode = options.mode || 'combined';
+  if (!['combined', 'classic', 'goldRush'].includes(mode)) throw new Error('INVALID_MODE');
   const offset = options.offset ?? 0;
   const bounds = periodBounds(now, period, offset);
   const viewer = Number.isSafeInteger(options.userId) && options.userId > 0 ? options.userId : 0;
   const range = bounds.start === null ? '' : ' AND finished_at >= ? AND finished_at < ?';
+  // Public standings are combined; catch-up ticket eligibility still uses Classic.
+  const modeFilter = mode === 'combined'
+    ? " AND mode IN ('classic', 'goldRush')"
+    : " AND mode='" + mode + "'";
   // Temporary referral power-ups affect only day/week boards. Month/all-time
   // preserve raw historical records and cannot be inflated with invites.
   const rankedPoints = period === 'day' || period === 'week'
@@ -135,18 +139,18 @@ export async function leaderboard(db, now = Date.now(), options = {}) {
   const sql = [
     'WITH per_round AS (',
     ' SELECT user_id, ' + rankedPoints + ' AS score, score AS base_score,',
-    ' ' + boostPoints + ' AS boost_points, golden_perfect, finished_at, id,',
+    ' ' + boostPoints + ' AS boost_points, golden_perfect, mode, finished_at, id,',
     ' ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY ' + rankedPoints + ' DESC, golden_perfect DESC, finished_at ASC, id ASC) AS own_rank',
-    " FROM game_rounds WHERE score IS NOT NULL AND mode='" + mode + "'" + range,
+    ' FROM game_rounds WHERE score IS NOT NULL' + modeFilter + range,
     '), highs AS (',
-    ' SELECT user_id, score, base_score, boost_points, golden_perfect FROM per_round WHERE own_rank=1',
+    ' SELECT user_id, score, base_score, boost_points, golden_perfect, mode FROM per_round WHERE own_rank=1',
     '), ranked AS (',
-    ' SELECT h.user_id, u.display_name, h.score, h.base_score, h.boost_points, h.golden_perfect,',
+    ' SELECT h.user_id, u.display_name, h.score, h.base_score, h.boost_points, h.golden_perfect, h.mode,',
     ' ROW_NUMBER() OVER (ORDER BY h.score DESC, h.golden_perfect DESC, h.user_id ASC) AS rank,',
     ' COUNT(*) OVER () AS player_count',
     ' FROM highs h JOIN game_users u ON u.user_id=h.user_id',
     ')',
-    'SELECT user_id, display_name, score, base_score, boost_points, golden_perfect, rank, player_count FROM ranked',
+    'SELECT user_id, display_name, score, base_score, boost_points, golden_perfect, mode, rank, player_count FROM ranked',
     'WHERE rank <= 10 OR user_id = ? OR rank = (SELECT rank - 1 FROM ranked WHERE user_id = ?) ORDER BY rank',
   ].join(' ');
   const bindings = bounds.start === null ? [viewer, viewer] : [bounds.start, bounds.end, viewer, viewer];
@@ -154,6 +158,7 @@ export async function leaderboard(db, now = Date.now(), options = {}) {
   const rows = list.results || [];
   const mapEntry = row => ({
     rank: Number(row.rank), name: row.display_name, score: Number(row.score),
+    mode: row.mode === 'goldRush' ? 'goldRush' : 'classic',
     goldenPerfect: Number(row.golden_perfect || 0),
     baseScore: Number(row.base_score ?? row.score), boostPoints: Number(row.boost_points || 0),
   });

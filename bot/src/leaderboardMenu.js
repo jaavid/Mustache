@@ -12,7 +12,7 @@ const PERIOD_BUTTONS = [
   [{ text: '🗓 ماه شمسی', code: 'm' }, { text: '⭐ کل دوران', code: 'a' }],
 ];
 
-/** Accept old lb:w:0 buttons after introducing mode-aware callbacks. */
+/** Accept old mode-aware callbacks; every button opens the unified board. */
 export function parseLeaderboardCallback(data) {
   if (typeof data !== 'string') return null;
   const match = /^lb:(?:(c|g):)?([dwma]):(0|[1-9]|1[0-2])$/.exec(data);
@@ -20,27 +20,21 @@ export function parseLeaderboardCallback(data) {
   const period = PERIODS[match[2]];
   const offset = Number(match[3]);
   if (period !== 'week' && offset !== 0) return null;
-  return { period, offset, mode: match[1] === 'g' ? 'goldRush' : 'classic' };
+  return { period, offset, mode: 'combined' };
 }
 
-export function leaderboardKeyboard(period = 'week', offset = 0, mode = 'classic') {
-  const prefix = mode === 'goldRush' ? 'g' : 'c';
-  const code = PERIOD_CODES[period] || 'w';
-  const key = (m, p, o) => 'lb:' + m + ':' + p + ':' + o;
+export function leaderboardKeyboard(period = 'week', offset = 0) {
+  const key = (p, o) => 'lb:' + p + ':' + o;
   const keyboard = [
-    [
-      { text: mode === 'classic' ? '✅ Classic' : '🌳 Classic', callback_data: key('c', code, offset) },
-      { text: mode === 'goldRush' ? '✅ Gold Rush' : '✨ Gold Rush', callback_data: key('g', code, offset) },
-    ],
     ...PERIOD_BUTTONS.map(row => row.map(button => ({
       text: button.text,
-      callback_data: key(prefix, button.code, 0),
+      callback_data: key(button.code, 0),
     }))),
   ];
   if (period === 'week') {
     const move = [];
-    if (offset < 12) move.push({ text: '◀️ هفته قبل', callback_data: key(prefix, 'w', offset + 1) });
-    if (offset > 0) move.push({ text: 'هفته بعد ▶️', callback_data: key(prefix, 'w', offset - 1) });
+    if (offset < 12) move.push({ text: '◀️ هفته قبل', callback_data: key('w', offset + 1) });
+    if (offset > 0) move.push({ text: 'هفته بعد ▶️', callback_data: key('w', offset - 1) });
     if (move.length) keyboard.push(move);
   }
   keyboard.push([{ text: '〰️🎮 بزن بریم سیبیل‌بازی!', url: 'https://t.me/RJTtobot?game=mustache' }]);
@@ -48,29 +42,33 @@ export function leaderboardKeyboard(period = 'week', offset = 0, mode = 'classic
 }
 
 export function formatLeaderboardMessage(board) {
-  const mode = board.mode === 'goldRush' ? 'goldRush' : 'classic';
   const title = TITLES[board.period] || TITLES.week;
   const lines = [
     '〰️🏆 نبرد سیبیل‌سالارها',
-    '🎮 ' + (mode === 'goldRush' ? 'Gold Rush' : 'Classic') + ' · 📊 ' + title,
+    '🎮 Classic + 🪙 Gold Rush · 📊 ' + title,
     board.startLabel || 'تمام دوران',
     '',
   ];
   if (board.players.length) {
     board.players.slice(0, 10).forEach(player => {
-      lines.push(String(player.rank).padStart(2, '0') + '. ' +
-        String(player.name).slice(0, 48) + ' — ' + Number(player.score).toLocaleString('en-US') +
-        (Number(player.goldenPerfect || 0) > 0 ? ' 🥇' : ''));
+      const medal = ['🥇', '🥈', '🥉'][Number(player.rank) - 1];
+      const rank = medal || String(player.rank).padStart(2, '0') + '.';
+      const mode = player.mode === 'goldRush' ? '🪙' : '🎮';
+      const golden = Number(player.goldenPerfect || 0) > 0 ? ' 〰️✨' : '';
+      lines.push(rank + ' ' + String(player.name).slice(0, 48) + ' — ' +
+        Number(player.score).toLocaleString('en-US') + ' ' + mode + golden);
     });
   } else {
     lines.push('هنوز امتیازی برای این بازه و این مود ثبت نشده است.');
   }
-  lines.push('', '👥 بازیکنان دارای امتیاز معتبر در این جدول: ' +
+  lines.push('', '🎮 کلاسیک · 🪙 گلدراش · 〰️✨ سیبیل طلایی پرفکت');
+  lines.push('👥 بازیکنان دارای امتیاز معتبر در این جدول: ' +
     Number(board.playerCount).toLocaleString('en-US'));
   if ('me' in board) {
     lines.push(board.me
       ? '🎯 رتبه شما: ' + board.me.rank + ' · ' + Number(board.me.score).toLocaleString('en-US') +
-        ' امتیاز' + (Number(board.me.goldenPerfect || 0) > 0 ? ' 🥇' : '')
+        ' امتیاز · ' + (board.me.mode === 'goldRush' ? '🪙' : '🎮') +
+        (Number(board.me.goldenPerfect || 0) > 0 ? ' 〰️✨' : '')
       : '🎯 در این بازه و این مود هنوز امتیازی ثبت نکرده‌اید.');
   }
   if (board.period === 'week') {
@@ -78,5 +76,5 @@ export function formatLeaderboardMessage(board) {
     if (board.offset > 0) lines.push('📁 هفته‌های گذشته · ' + board.offset + ' هفته قبل');
   }
   lines.push('', '〰️ جدول دیگه‌ای می‌خوای؟ روی دکمه‌ها بزن!');
-  return { text: lines.join('\n'), reply_markup: leaderboardKeyboard(board.period, board.offset, mode) };
+  return { text: lines.join('\n'), reply_markup: leaderboardKeyboard(board.period, board.offset) };
 }

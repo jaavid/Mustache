@@ -17,7 +17,7 @@ The collectible golden mustache is **not** Ramin's existing rare golden variant.
 
 `shared/goldenRules.js` is imported by Phaser and the Cloudflare Worker; the server does **not** trust pickup center coordinates, score claims, or the `goldenShot` flag. It recalculates the gold flight trajectory, validates unique pickup times/touch ellipses, reconstructs the one-use charge, accepts ordinary shots while charge is held, rejects premature or repeated gold claims, and recomputes the final score. Invalid pickup events or dishonest bonuses reject the round; older clients without pickups still work.
 
-The D1 migration adds a zero-default `golden_perfect` field. Existing historical scores are unchanged. Day/week/Persian-month/all-time continue showing **the player's best single round**. Score is the primary order; in an exact score tie, a Golden Perfect badge wins, followed by stable user ID. The bot shows `🥇`, and the Phaser leaderboard displays `★` next to winning rounds.
+The D1 migration adds a zero-default `golden_perfect` field. Existing historical scores are unchanged. Day/week/Persian-month/all-time continue showing **the player's best single round**. Score is the primary order; in an exact score tie, a Golden Perfect badge wins, followed by stable user ID. The unified bot and Phaser leaderboards show `〰️✨` for Golden Perfect, independently of the `🥇🥈🥉` medals reserved for the first three ranks. Records from Gold Rush have a distinct `🪙` badge.
 
 The next regular Tehran weekly rollover (Saturday 00:00) is a clean weekly competition window; past weeks remain browsable. It is **not** a retroactive rewrite of historical rankings or Telegram's all-time Game Card scores.
 

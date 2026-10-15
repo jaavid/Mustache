@@ -38,8 +38,9 @@ GOOD/MISS reset this special streak. Character variant and ordinary combo reward
 are unchanged. There is no infinite +350 golden pickup loop.
 
 shared/modeRules.js is the shared client/Worker scoring contract.
-game_rounds.mode and ranked_score keep Gold Rush separate from the
-original classic leaderboard. Telegram-native Game Card receives **raw**
+game_rounds.mode and ranked_score retain mode-specific scoring and Classic-only
+catch-up eligibility. Public rankings combine both modes, taking each player's
+best verified single round (never summing rounds). Telegram-native Game Card receives **raw**
 round score; it does not understand our per-mode or referral standings.
 
 ## Referral lifecycle
@@ -74,5 +75,5 @@ server-controlled target schedules and fraud heuristics.
   deploy is delayed. A rejected server mode never grants verified ranked points.
 - Check desktop and 540x960 mobile, old classic scoring, duplicate /finish,
   referral /start, /profile, /invite, Tehran midnight reset, and
-  independent Gold Rush rankings.
+  the unified rankings with mode badges; Classic-only ticket eligibility must stay unchanged.
 - Tests: npm run test:bot, npm test, npm run typecheck, npm run build.

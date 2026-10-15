@@ -1,4 +1,4 @@
-import { getSelectedGameMode, type GameMode } from '../logic/gameMode';
+import type { GameMode } from '../logic/gameMode';
 
 /**
  * Official Game backend bridge. Standalone browser visitors keep local scores.
@@ -24,6 +24,7 @@ type Trace = {
 type GoldenPickup = { index: number; tMs: number; aim: Aim };
 export type Leader = {
   rank: number;
+  mode?: GameMode;
   name: string;
   score: number;
   goldenPerfect?: number;
@@ -32,7 +33,7 @@ export type Leader = {
 };
 export type Period = 'day' | 'week' | 'month' | 'all';
 export type Board = {
-  mode?: GameMode;
+  mode?: GameMode | 'combined';
   rival?: Leader | null;
   period: Period;
   offset: number;
@@ -205,7 +206,7 @@ export async function submitCompetitiveRound(score: number): Promise<Submission>
 export async function getLeaderboard(
   period: Period = 'week',
   offset = 0,
-  mode: GameMode = getSelectedGameMode(),
+  mode: GameMode | 'combined' = 'combined',
 ): Promise<Board | undefined> {
   const query = new URLSearchParams({ period, offset: String(offset), mode });
   try {

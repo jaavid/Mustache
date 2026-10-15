@@ -55,7 +55,7 @@ test('slash commands show weekly top ten, own rank, all tabs and game URL', asyn
     assert.equal(out.chat_id, 43);
     assert.match(out.text, /رتبه شما: 11/);
     const buttons = out.reply_markup.inline_keyboard.flat();
-    for (const key of ['lb:c:d:0', 'lb:c:w:0', 'lb:c:m:0', 'lb:c:a:0', 'lb:g:w:0']) {
+    for (const key of ['lb:d:0', 'lb:w:0', 'lb:m:0', 'lb:a:0']) {
       assert.ok(buttons.some(b => b.callback_data === key));
     }
     assert.ok(buttons.some(b => b.url === 'https://t.me/RJTtobot?game=mustache'));
@@ -83,10 +83,10 @@ test('week navigation and invalid callbacks are tightly bounded', async () => {
       message: { message_id: 2, chat: { id: 44 } } },
   });
   const buttons = calls[0].payload.reply_markup.inline_keyboard.flat().map(b => b.callback_data);
-  assert.ok(buttons.includes('lb:c:w:2'));
-  assert.ok(buttons.includes('lb:c:w:0'));
-  assert.equal(parseLeaderboardCallback('lb:w:0').mode, 'classic');
-  assert.deepEqual(parseLeaderboardCallback('lb:g:w:1'), { period: 'week', offset: 1, mode: 'goldRush' });
+  assert.ok(buttons.includes('lb:w:2'));
+  assert.ok(buttons.includes('lb:w:0'));
+  assert.equal(parseLeaderboardCallback('lb:w:0').mode, 'combined');
+  assert.deepEqual(parseLeaderboardCallback('lb:g:w:1'), { period: 'week', offset: 1, mode: 'combined' });
   assert.equal(parseLeaderboardCallback('lb:w:12').offset, 12);
   for (const value of ['lb:w:13', 'lb:w:-1', 'lb:a:1', 'lb:x:0', 'lb:w:1;DROP TABLE', 'lb:g:a:1', 'lb:x:w:0', 'lb:g:w:13']) {
     assert.equal(parseLeaderboardCallback(value), null);
@@ -95,7 +95,7 @@ test('week navigation and invalid callbacks are tightly bounded', async () => {
     assert.equal(invalid.calls[0].method, 'answerCallbackQuery');
     assert.equal(invalid.calls[0].payload.show_alert, true);
   }
-  assert.ok(!leaderboardKeyboard('week', 12).inline_keyboard.flat().some(b => b.callback_data === 'lb:c:w:13'));
+  assert.ok(!leaderboardKeyboard('week', 12).inline_keyboard.flat().some(b => b.callback_data === 'lb:w:13'));
 });
 
 test('inline callbacks and stale messages are safe', async () => {
@@ -114,7 +114,8 @@ test('golden-perfect achievers show badge without HTML injection', () => {
     players: [{ rank: 1, name: 'Gold', score: 450, goldenPerfect: 1 }],
     me: { rank: 1, name: 'Gold', score: 450, goldenPerfect: 1 },
   });
-  assert.match(view.text, /450 🥇/);
+  assert.match(view.text, /🥇 Gold — 450 🎮 〰️✨/);
+  assert.match(view.text, /🎮 کلاسیک · 🪙 گلدراش/);
 });
 
 test('rendered leaderboard stays plain text, independent of player name formatting', () => {
@@ -144,17 +145,36 @@ test('command picker preserves unrelated commands and avoids redundant updates',
   await assert.rejects(syncBotCommands('invalid', fetcher), /INVALID_BOT_TOKEN/);
 });
 
-test('Gold Rush tabs keep mode through period and past-week navigation', async () => {
+test('legacy mode callbacks open unified standings without separate mode tabs', async () => {
   const { calls } = await dispatch({ callback_query: {
     id: 'gold', data: 'lb:g:w:2', from: { id: 999 },
     message: { message_id: 8, chat: { id: 44 } },
   } });
   assert.equal(calls[0].method, 'editMessageText');
-  assert.match(calls[0].payload.text, /Gold Rush/);
-  assert.match(calls[0].payload.text, /بازیکنان دارای امتیاز معتبر/);
+  assert.match(calls[0].payload.text, /Classic \+ 🪙 Gold Rush/);
   const buttons = calls[0].payload.reply_markup.inline_keyboard.flat();
-  assert.ok(buttons.some(item => item.callback_data === 'lb:g:w:3'));
-  assert.ok(buttons.some(item => item.callback_data === 'lb:g:d:0'));
-  assert.ok(buttons.some(item => item.callback_data === 'lb:c:w:2'));
+  assert.ok(buttons.some(item => item.callback_data === 'lb:w:3'));
+  assert.ok(buttons.some(item => item.callback_data === 'lb:d:0'));
+  assert.ok(buttons.every(item => !item.callback_data || !/lb:[cg]:/.test(item.callback_data)));
   assert.ok(buttons.every(item => !item.callback_data || item.callback_data.length <= 64));
+});
+
+test('unified board displays mode and golden badges independently of rank medals', () => {
+  const board = {
+    period: 'week', offset: 0, startLabel: 'week', playerCount: 4,
+    players: [
+      { rank: 1, name: 'GoldRush', score: 1600, mode: 'goldRush', goldenPerfect: 0 },
+      { rank: 2, name: 'ClassicGold', score: 1500, mode: 'classic', goldenPerfect: 1 },
+      { rank: 3, name: 'Classic', score: 1400, mode: 'classic', goldenPerfect: 0 },
+      { rank: 4, name: 'Fourth', score: 1300, mode: 'goldRush', goldenPerfect: 0 },
+    ],
+    me: { rank: 4, name: 'Fourth', score: 1300, mode: 'goldRush' },
+  };
+  const view = formatLeaderboardMessage(board);
+  assert.match(view.text, /🥇 GoldRush — 1,600 🪙/);
+  assert.match(view.text, /🥈 ClassicGold — 1,500 🎮 〰️✨/);
+  assert.match(view.text, /🥉 Classic — 1,400 🎮/);
+  assert.match(view.text, /04\. Fourth — 1,300 🪙/);
+  assert.doesNotMatch(view.text, /04\. Fourth[^\n]*🥇/);
+  assert.match(view.text, /رتبه شما: 4 · 1,300 امتیاز · 🪙/);
 });
