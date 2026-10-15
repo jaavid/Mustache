@@ -218,8 +218,7 @@ export function showLeaderboardOverlay(
   function formatRow(row: Leader): string {
     const medal = ['🥇', '🥈', '🥉'][row.rank - 1];
     const rank = medal || '#' + String(row.rank).padStart(2, '0');
-    const modeBadge =
-      row.mode === 'goldRush' ? ' 🪙' : row.mode === 'classic' ? ' 🎮' : '';
+    const modeBadge = row.mode === 'goldRush' ? ' 🪙' : row.mode === 'classic' ? ' 🎮' : '';
     return (
       rank +
       ' ' +
@@ -243,8 +242,7 @@ export function showLeaderboardOverlay(
     else current = args.initialBoard;
     loading = !current;
     render();
-    const board =
-      current || (await getLeaderboard(tab, offset));
+    const board = current || (await getLeaderboard(tab, offset));
     if (seq !== requestNumber || !sheet.active) return;
     current = board;
     loading = false;
