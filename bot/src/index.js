@@ -2,7 +2,7 @@
  * Client-provided gameplay telemetry is re-scored but NOT prize-grade anti-cheat.
  */
 import { issueSession, authenticate, startRound, finishRound, leaderboard } from './sessions.js';
-import { parseLeaderboardCallback, formatLeaderboardMessage } from './leaderboardMenu.js';
+import { parseLeaderboardCallback, formatLeaderboardMessage, formatRichLeaderboardMessage } from './leaderboardMenu.js';
 import { registerReferral, playerProfile, goldCatchUpEligible } from './progression.js';
 export const DEFAULT_GAME_URL = 'https://mustache.alexa.ir/';
 export const DEFAULT_GAME_SHORT_NAME = 'mustache';
@@ -39,6 +39,42 @@ function gameConfig(env) {
 }
 
 /** Isolated dispatch permits testing without Telegram credentials or network. */
+/** Only fall back when Telegram explicitly rejects Rich Messages; never retry a network error. */
+function isRichUnsupported(error) {
+  return error instanceof Error && error.message === 'TELEGRAM_RICH_UNSUPPORTED';
+}
+
+async function sendLeaderboard(chatId, board, send) {
+  try {
+    await send('sendRichMessage', {
+      chat_id: chatId, ...formatRichLeaderboardMessage(board),
+    });
+  } catch (error) {
+    if (!isRichUnsupported(error)) throw error;
+    await send('sendMessage', {
+      chat_id: chatId, ...formatLeaderboardMessage(board),
+    });
+  }
+}
+
+async function editLeaderboard(destination, board, presentation, send) {
+  if (presentation === 'text') {
+    return send('editMessageText', {
+      ...destination, ...formatLeaderboardMessage(board),
+    });
+  }
+  try {
+    await send('editMessageText', {
+      ...destination, ...formatRichLeaderboardMessage(board),
+    });
+  } catch (error) {
+    if (!isRichUnsupported(error)) throw error;
+    await send('editMessageText', {
+      ...destination, ...formatLeaderboardMessage(board),
+    });
+  }
+}
+
 export async function handleTelegramUpdate(update, env, send) {
   const { gameShortName, gameUrl, botUsername } = gameConfig(env);
 
@@ -79,10 +115,7 @@ export async function handleTelegramUpdate(update, env, send) {
     } else if (command === 'top' || command === 'score' || command === 'leaderboard') {
       if (!env.DB) throw new Error('D1_NOT_CONFIGURED');
       const board = await leaderboard(env.DB, Date.now(), { userId: message.from?.id });
-      await send('sendMessage', {
-        chat_id: message.chat.id,
-        ...formatLeaderboardMessage(board),
-      });
+      await sendLeaderboard(message.chat.id, board, send);
     }
     return;
   }
@@ -103,7 +136,6 @@ export async function handleTelegramUpdate(update, env, send) {
       ...target,
       userId: callback.from?.id,
     });
-    const view = formatLeaderboardMessage(board);
     // Edit the same bot message instead of sending one message per button tap.
     const inlineId = callback.inline_message_id;
     const chatId = callback.message?.chat?.id;
@@ -118,7 +150,7 @@ export async function handleTelegramUpdate(update, env, send) {
       ? { inline_message_id: inlineId }
       : { chat_id: chatId, message_id: messageId };
     try {
-      await send('editMessageText', { ...destination, ...view });
+      await editLeaderboard(destination, board, target.presentation, send);
       await send('answerCallbackQuery', { callback_query_id: callback.id, cache_time: 0 });
     } catch (error) {
       // Re-tapping the active tab is normal, not a failed webhook delivery.
@@ -179,6 +211,15 @@ export async function callTelegram(token, method, payload) {
     }
     if (method === 'editMessageText' && /message is not modified/i.test(description)) {
       throw new Error('TELEGRAM_MESSAGE_NOT_MODIFIED');
+    }
+    // Distinguish unsupported/invalid rich payloads from network failures and chat errors.
+    // Do not include bot credentials or raw Telegram payloads in thrown errors.
+    const richRequest = method === 'sendRichMessage' ||
+      (method === 'editMessageText' && !!payload.rich_message);
+    if (richRequest && (response.status === 404 ||
+      (response.status === 400 &&
+        /rich|unsupported|not supported|can't parse|can't find|not found|unknown method|blocks|table/i.test(description)))) {
+      throw new Error('TELEGRAM_RICH_UNSUPPORTED');
     }
     throw new Error('Telegram Bot API failed for ' + method);
   }
