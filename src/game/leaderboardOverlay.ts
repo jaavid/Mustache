@@ -108,13 +108,7 @@ export function showLeaderboardOverlay(
       },
     );
   };
-  addText(
-    w / 2,
-    portrait ? 116 : 42,
-    'MUSTACHE · ALL MODES',
-    portrait ? 25 : 26,
-    '#ffda90',
-  );
+  addText(w / 2, portrait ? 116 : 42, 'MUSTACHE · ALL MODES', portrait ? 25 : 26, '#ffda90');
   const ranked =
     args.submission.state === 'saved' &&
     args.submission.rankedScore !== undefined &&
