@@ -119,17 +119,11 @@ function largeButton(
 
 function portraitBackdrop(scene: Phaser.Scene) {
   scene.add.rectangle(W / 2, H / 2, W, H, 0x101b31).setDepth(-45);
-  // Crop the existing landscape art instead of stretching it into a portrait texture.
+  // Dedicated tall artwork: no double-cropping or stretched landscape repeats.
   scene.add
-    .image(W / 2, 466, 'forest')
-    .setDisplaySize(1300, 735)
+    .image(W / 2, H / 2, 'forest-portrait')
+    .setDisplaySize(W, H)
     .setDepth(-40);
-  scene.add
-    .image(W / 2, 798, 'forest')
-    .setDisplaySize(1250, 710)
-    .setAlpha(0.65)
-    .setTint(0x7aa398)
-    .setDepth(-39);
   scene.add.rectangle(W / 2, 850, W, 235, 0x122c31, 0.72).setDepth(-10);
   for (let i = 0; i < 20; i++) {
     const x = 23 + ((i * 79) % 500);
