@@ -53,14 +53,28 @@ export async function handleTelegramUpdate(update, env, send) {
       await env.DB.prepare('INSERT INTO game_users(user_id, display_name, updated_at) VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET display_name=excluded.display_name, updated_at=excluded.updated_at')
         .bind(message.from.id, String(message.from.first_name || 'Player').slice(0, 48), Date.now()).run();
       const profile = await playerProfile(env.DB, message.from.id, botUsername);
+      const goldBoard = command === 'profile' && !profile.goldUnlocked
+        ? await leaderboard(env.DB, Date.now(), { userId: message.from.id })
+        : null;
+      const ticketAvailable = goldBoard ? goldCatchUpEligible(profile, goldBoard) : false;
+      const goldStatus = profile.goldUnlocked
+        ? 'همیشگی باز شده'
+        : profile.ticketUsedToday
+          ? 'بلیت امروز مصرف شده'
+          : ticketAvailable
+            ? 'بلیت طلایی امروز فعال (یک شروع)'
+            : profile.roundsPlayed + '/12 راند · ' + profile.activeDays + '/2 روز فعال';
       const output = command === 'invite'
         ? '〰️ لینک دعوت شما:\n' + profile.inviteUrl + '\n\nهر دوست جدید پس از تکمیل اولین بازی معتبر ۵٪ بوست روزانه (حداکثر ۳ نفر و ۲۰۰ امتیاز در هر راند) فعال می‌کند.'
-        : '〰️ پروفایل ' + profile.name + '\nLevel ' + profile.level + ' · XP ' + profile.xp + '\nراندها: ' + profile.roundsPlayed + ' · روزهای فعال: ' + profile.activeDays + '\nGold Rush: ' + (profile.goldUnlocked ? 'باز شده' : profile.roundsPlayed + '/12 راند · حداقل ۲ روز') + '\nدعوت‌های امروز: ' + profile.dailyInvites + '/3';
+        : '〰️ پروفایل ' + profile.name + '\nLevel ' + profile.level + ' · XP ' + profile.xp +
+          '\nراندها: ' + profile.roundsPlayed + ' · روزهای فعال: ' + profile.activeDays +
+          '\nرکورد Classic: ' + profile.bestClassic + ' · Gold Rush: ' + profile.bestGoldRush +
+          '\nGold Rush: ' + goldStatus + '\nدعوت‌های امروز: ' + profile.dailyInvites + '/3';
       await send('sendMessage', { chat_id: message.chat.id, text: output });
     } else if (command === 'help') {
       await send('sendMessage', {
         chat_id: message.chat.id,
-        text: '〰️ به جنگل سیبیل خوش اومدی! 🎩\n\n🎯 /play — بزن سیبیل رو بنشون سر جاش!\n👤 /profile — سطح و کارنامه سیبیلی\n〰️ /invite — دعوت دوستان و بوست روزانه\n🏆 /leaderboard — سیبیل‌سالارها رو پیدا کن\n👑 /top — ده نفر برتر جنگل\n📈 /score — ببین سیبیلات چند امتیاز آوردن\n🧭 /help — همین راهنمای سیبیلی\n\n🗓 رقابت هفتگی: شنبه تا شنبه به وقت تهران\n⚠️ جایزه توکنی هنوز فعال نیست.',
+        text: '〰️ به جنگل سیبیل خوش اومدی! 🎩\n\n🎯 /play — بزن سیبیل رو بنشون سر جاش!\n👤 /profile — سطح و کارنامه سیبیلی\n〰️ /invite — دعوت دوستان و بوست روزانه\n🏆 /leaderboard — جدول Classic و Gold Rush\n👑 /top — ده نفر برتر جنگل\n📈 /score — ببین سیبیلات چند امتیاز آوردن\n🧭 /help — همین راهنمای سیبیلی\n\n🗓 رقابت هفتگی: شنبه تا شنبه به وقت تهران\n⚠️ جایزه توکنی هنوز فعال نیست.',
       });
     } else if (command === 'top' || command === 'score' || command === 'leaderboard') {
       if (!env.DB) throw new Error('D1_NOT_CONFIGURED');
