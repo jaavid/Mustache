@@ -11,7 +11,7 @@
     "preview": "vite preview --host 0.0.0.0",
     "lint": "eslint .",
     "format": "prettier --write src/ docs/ assets/ scripts/ *.md *.json *.js",
-    "format:check": "prettier --check src/ scripts/ docs/ assets/ tests/ README.md CHANGELOG.md CONTRIBUTING.md package.json eslint.config.js vite.config.ts vitest.config.ts playwright.config.ts .github/workflows/pages.yml .github/workflows/browser-smoke.yml",
+    "format:check": "prettier --check src/ scripts/ docs/ assets/ tests/ README.md CHANGELOG.md CONTRIBUTING.md package.json eslint.config.js vite.config.ts vitest.config.ts playwright.config.ts .github/workflows/pages.yml .github/workflows/browser-smoke.yml || (prettier src/game/leaderboardOverlay.ts | diff -u src/game/leaderboardOverlay.ts -; exit 1)",
     "assets:check": "node scripts/check-assets.mjs",
     "docs:check": "node scripts/check-docs.mjs",
     "check": "npm run format:check && npm run lint && npm run assets:check && npm run docs:check && npm run typecheck && npm test && npm run build",
