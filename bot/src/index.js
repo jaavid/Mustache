@@ -196,8 +196,8 @@ export async function handleTelegramUpdate(update, env, send) {
   }
 }
 
-export async function callTelegram(token, method, payload) {
-  const response = await fetch('https://api.telegram.org/bot' + token + '/' + method, {
+export async function callTelegram(token, method, payload, fetcher = fetch) {
+  const response = await fetcher('https://api.telegram.org/bot' + token + '/' + method, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(payload),
