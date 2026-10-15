@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { getSelectedGameMode } from '../logic/gameMode';
 import {
   getLeaderboard,
   type Board,
@@ -109,13 +108,7 @@ export function showLeaderboardOverlay(
       },
     );
   };
-  addText(
-    w / 2,
-    portrait ? 116 : 42,
-    getSelectedGameMode() === 'goldRush' ? 'GOLD RUSH · LEADERBOARDS' : 'MUSTACHE · LEADERBOARDS',
-    portrait ? 25 : 26,
-    '#ffda90',
-  );
+  addText(w / 2, portrait ? 116 : 42, 'MUSTACHE · ALL MODES', portrait ? 25 : 26, '#ffda90');
   const ranked =
     args.submission.state === 'saved' &&
     args.submission.rankedScore !== undefined &&
@@ -152,6 +145,7 @@ export function showLeaderboardOverlay(
     '#e7fff1',
     'left',
   ).setOrigin(0.5);
+  const legendLine = addText(w / 2, portrait ? 625 : 427, '', portrait ? 13 : 12, '#edd6ad');
   const ownLine = addText(w / 2, portrait ? 676 : 451, '', portrait ? 17 : 16, '#f9e6a5');
   const infoLine = addText(w / 2, portrait ? 715 : 472, '', portrait ? 14 : 14, '#b6cadb');
   const buttonY = portrait ? 268 : 146;
@@ -168,6 +162,7 @@ export function showLeaderboardOverlay(
       );
       ownLine.setText(telegramMessage(args.submission.telegramState));
       infoLine.setText('TELEGRAM RETURNS TOP SCORES AND NEARBY PLAYERS');
+      legendLine.setText('🥇🥈🥉 TOP THREE');
       return;
     }
     if (!current) {
@@ -177,9 +172,11 @@ export function showLeaderboardOverlay(
       listText.setText('');
       ownLine.setText('');
       infoLine.setText('');
+      legendLine.setText('');
       return;
     }
     periodLine.setText(current.startLabel || 'ALL TIME');
+    legendLine.setText('🎮 CLASSIC · 🪙 GOLD RUSH · 〰️✨ GOLDEN PERFECT');
     listText.setText(
       current.players.length
         ? current.players.slice(0, 10).map(formatRow).join('\n')
@@ -193,7 +190,8 @@ export function showLeaderboardOverlay(
             number(current.me.score) +
             ' PTS' +
             (current.me.boostPoints ? ' (+' + number(current.me.boostPoints) + ' INVITE)' : '') +
-            (current.me.goldenPerfect ? ' ★ GOLD' : '')
+            (current.me.mode === 'goldRush' ? ' 🪙' : ' 🎮') +
+            (current.me.goldenPerfect ? ' 〰️✨' : '')
         : 'YOUR RANK: NO RECORDED SCORE',
     );
     const left = current.remainingSeconds;
@@ -212,16 +210,20 @@ export function showLeaderboardOverlay(
     );
   }
   function formatRow(row: Leader): string {
+    const medal = ['🥇', '🥈', '🥉'][row.rank - 1];
+    const rank = medal || '#' + String(row.rank).padStart(2, '0');
+    const modeBadge = row.mode === 'goldRush' ? ' 🪙' : row.mode === 'classic' ? ' 🎮' : '';
     return (
-      '#' +
-      String(row.rank).padStart(2, '0') +
-      '  ' +
-      row.name.slice(0, portrait ? 13 : 18).padEnd(portrait ? 13 : 18) +
-      '  ' +
+      rank +
+      ' ' +
+      row.name.slice(0, portrait ? 10 : 15).padEnd(portrait ? 10 : 15) +
+      ' ' +
       number(row.score) +
-      (row.goldenPerfect ? ' ★' : '')
+      modeBadge +
+      (row.goldenPerfect ? ' 〰️✨' : '')
     );
   }
+
   async function activate(tab: Tab, weekOffset = 0): Promise<void> {
     active = tab;
     offset = tab === 'week' ? weekOffset : 0;
@@ -234,8 +236,7 @@ export function showLeaderboardOverlay(
     else current = args.initialBoard;
     loading = !current;
     render();
-    const board =
-      current || (await getLeaderboard(tab, offset, args.submission.mode || getSelectedGameMode()));
+    const board = current || (await getLeaderboard(tab, offset));
     if (seq !== requestNumber || !sheet.active) return;
     current = board;
     loading = false;

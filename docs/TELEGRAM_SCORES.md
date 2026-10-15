@@ -19,6 +19,13 @@ scores are correctly placed into Tehran contest windows without overwriting data
 | ALL     | Entire game history                                 | Each player's best round    |
 | TG CHAT | Telegram Game Card scoreboard; chat-local, all-time | Native Telegram high scores |
 
+The unified D1 leaderboard combines Classic and Gold Rush, ranking one highest
+verified round per player. It displays `🎮` for Classic, `🪙` for Gold Rush,
+and `〰️✨` for Golden Perfect; only the top three ranks get `🥇🥈🥉`.
+Classic-only catch-up ticket eligibility remains unchanged. Legacy API mode
+filters remain available, while the default API and Telegram bot use the
+combined leaderboard.
+
 The weekly leaderboard supports browsing the preceding 12 completed
 Saturday-to-Saturday periods. Each D1 leaderboard includes the top ten,
 number of participating players, the signed-in player's own rank even when

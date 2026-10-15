@@ -1,7 +1,7 @@
 /** Non-destructive merge of our bot menu commands with any existing commands. */
 export const GAME_COMMANDS = [
   { command: 'play', description: '〰️🎯 آماده‌ای رامین رو سیبیلو کنی؟ بزن بریم!' },
-  { command: 'leaderboard', description: '〰️🏆 جداول Classic و Gold Rush؛ امروز، هفته، ماه و تاریخ!' },
+  { command: 'leaderboard', description: '〰️🏆 جدول مشترک Classic و Gold Rush؛ روز، هفته، ماه و تاریخ!' },
   { command: 'top', description: '〰️👑 ۱۰ سیبیل‌زن برتر جنگل رو بشناس!' },
   { command: 'score', description: '〰️📈 سیبیلات چند امتیاز آوردن؟ رتبه‌تو ببین!' },
   { command: 'profile', description: '〰️ پروفایل، XP و مرحله طلایی' },
