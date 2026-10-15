@@ -217,14 +217,14 @@ test('rich leaderboard uses typed striped compact table with separate rank and g
 
 test('rich leaderboard is safe for malicious names, empty weeks and at most ten rows', () => {
   const board = { period: 'week', offset: 2, playerCount: 11, players: [
-    { rank: 1, name: '<img src=x> @name\\nInjected\\u202e', score: 55, mode: 'classic' },
+    { rank: 1, name: '<img src=x> @name' + String.fromCharCode(10) + 'Injected' + String.fromCharCode(0x202e), score: 55, mode: 'classic' },
     ...Array.from({ length: 10 }, (_, i) => ({ rank: i + 2, name: 'Player ' + i, score: 50 - i })),
   ] };
   const rich = formatRichLeaderboardMessage(board);
   const table = rich.rich_message.blocks.find(b => b.type === 'table');
   assert.equal(table.cells.length, 11);
-  assert.equal(table.cells[1][1].text.includes('\\n'), false);
-  assert.equal(table.cells[1][1].text.includes('\\u202e'), false);
+  assert.equal(table.cells[1][1].text.includes(String.fromCharCode(10)), false);
+  assert.equal(table.cells[1][1].text.includes(String.fromCharCode(0x202e)), false);
   assert.match(table.cells[1][1].text, /<img src=x>/);
   const empty = formatRichLeaderboardMessage({ period: 'week', offset: 1, playerCount: 0, players: [], me: null });
   assert.equal(empty.rich_message.blocks.some(b => b.type === 'table'), false);
