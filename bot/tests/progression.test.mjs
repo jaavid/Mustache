@@ -56,7 +56,7 @@ test('only daily and weekly boards use boosted score when ranking', async () => 
   assert.match(statements[1], /SELECT user_id, COALESCE\(ranked_score, score\) AS score/);
   assert.match(statements[2], /SELECT user_id, score AS score/);
   assert.match(statements[3], /SELECT user_id, score AS score/);
-  assert.match(statements[0], /mode IN \\('classic', 'goldRush'\\)/);
+  assert.match(statements[0], /mode IN \('classic', 'goldRush'\)/);
   await leaderboard(db, at, { period: 'week', mode: 'classic' });
   await leaderboard(db, at, { period: 'week', mode: 'goldRush' });
   assert.match(statements[4], /AND mode='classic'/);

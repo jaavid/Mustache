@@ -1,6 +1,5 @@
 /** Interactive Telegram leaderboard for both modes, using the same D1 query as Phaser. */
 const PERIODS = { d: 'day', w: 'week', m: 'month', a: 'all' };
-const PERIOD_CODES = { day: 'd', week: 'w', month: 'm', all: 'a' };
 const TITLES = {
   day: 'امروز',
   week: 'هفته (شنبه تا شنبه)',
@@ -59,7 +58,7 @@ export function formatLeaderboardMessage(board) {
         Number(player.score).toLocaleString('en-US') + ' ' + mode + golden);
     });
   } else {
-    lines.push('هنوز امتیازی برای این بازه و این مود ثبت نشده است.');
+    lines.push('هنوز امتیازی برای این بازه ثبت نشده است.');
   }
   lines.push('', '🎮 کلاسیک · 🪙 گلدراش · 〰️✨ سیبیل طلایی پرفکت');
   lines.push('👥 بازیکنان دارای امتیاز معتبر در این جدول: ' +
@@ -69,7 +68,7 @@ export function formatLeaderboardMessage(board) {
       ? '🎯 رتبه شما: ' + board.me.rank + ' · ' + Number(board.me.score).toLocaleString('en-US') +
         ' امتیاز · ' + (board.me.mode === 'goldRush' ? '🪙' : '🎮') +
         (Number(board.me.goldenPerfect || 0) > 0 ? ' 〰️✨' : '')
-      : '🎯 در این بازه و این مود هنوز امتیازی ثبت نکرده‌اید.');
+      : '🎯 در این بازه هنوز امتیازی ثبت نکرده‌اید.');
   }
   if (board.period === 'week') {
     lines.push('⏰ از شنبه ۰۰:۰۰ تا شنبه بعد ۰۰:۰۰ به وقت تهران');
