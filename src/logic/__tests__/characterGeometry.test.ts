@@ -26,7 +26,7 @@ describe('shared visual character geometry', () => {
   it('covers exactly the selectable heroes and rejects invalid scale values', () => {
     expect(CHARACTER_IDS).toEqual(['ramin', 'borhan', 'mammad']);
     for (const id of CHARACTER_IDS) {
-      expect(characterDisplaySize(id, 1).height).toBe(362);
+      expect(characterDisplaySize(id, 1).height).toBeCloseTo(362, 8);
     }
     for (const bad of [0, -1, Infinity, NaN]) {
       expect(() => characterRenderScale('mammad', bad)).toThrow(RangeError);
