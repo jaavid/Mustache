@@ -26,7 +26,7 @@
       "frameHeight": 150,
       "frames": 4,
       "orientation": "horizontal",
-      "purpose": "Mammad graduation poses: idle, wink, surprise, victory; transparent indexed PNG rendered at shared 210x362 gameplay size"
+      "purpose": "Mammad graduation poses: idle, wink, surprise, victory; compact 87x150 indexed PNG consistently normalized to the 210x362 design canvas for sprites and all tweens"
     }
   ],
   "generatedTextures": [
