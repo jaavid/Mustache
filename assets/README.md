@@ -30,3 +30,10 @@ When real layered artwork becomes available, export six complete aligned artist-
 ## Mammad contract
 
 Mammad's four poses were derived from the supplied graduation artwork (idle, wink, surprise, victory). The optimized transparent source is four horizontal frames at **87 × 150**, displayed at **210 × 362** in-game. All expressions keep the same anchor, with the upper lip calibrated at virtual Y=136. The wink frame also serves blink, and neutral serves the fallback serious frame; no duplicate facial overlays are added. His mortarboard remains visible with cap-specific headband and gold accessories. The standard three mustache styles and gold projectile are shared with Ramin; score validation is unchanged.
+
+## In-progress hand-authored forest pack
+
+`src/assets/forest/tree_oak_back.png` begins the native 96×220 forest asset pack.
+It is intentionally staged without replacing the runtime tree textures until its
+paired `tree_oak_front`, the other species and mobile layout have been reviewed.
+See [forest asset status](forest/README.md).

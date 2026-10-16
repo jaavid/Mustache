@@ -27,6 +27,14 @@
       "frames": 4,
       "orientation": "horizontal",
       "purpose": "Mammad graduation poses: idle, wink, surprise, victory; compact 87x150 indexed PNG consistently normalized to the 210x362 design canvas for sprites and all tweens"
+    },
+    {
+      "path": "src/assets/forest/tree_oak_back.png",
+      "kind": "sprite",
+      "width": 96,
+      "height": 220,
+      "transparency": true,
+      "purpose": "Staged oak rear crown and branches, aligned to the original 96x220 / x=48 spawn trunk axis; not loaded until matching front art is approved."
     }
   ],
   "generatedTextures": [
