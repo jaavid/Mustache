@@ -1,6 +1,7 @@
 # Mustache Mayhem — staged forest asset pack
 
 ## Current status
+
 - [x] `tree_oak_back.png` — complete v1, ready for visual review.
 - [ ] `tree_oak_front.png` — matching foreground trunk, roots and bark.
 - [ ] Cedar back/front.
@@ -13,6 +14,7 @@ portrait and landscape, and connected to Phaser. Existing procedural trees remai
 live in `src/game/art.ts` until then. Runtime scoring and hit geometry are unchanged.
 
 ## tree_oak_back.png (v1)
+
 - **Path:** `src/assets/forest/tree_oak_back.png`
 - **Format:** 96×220 PNG, indexed 12-color palette with real alpha transparency.
 - **Coordinate space:** x=48 is the exact stationary trunk axis shared with the
