@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { type Point, type PopPlan, projectileMs, projectilePoint } from '../logic/gameplay';
+import { heroRenderScale } from './ramin';
 
 /** Peeking around a tree is primarily a sideways move, hopping also rises vertically.
  * The character remains behind the tree artwork until reaching the target pose.
@@ -13,10 +14,11 @@ export function enterFromTree(
   ready: () => void,
 ): void {
   scene.tweens.killTweensOf(hero);
+  const renderScale = heroRenderScale(hero, baseScale);
   hero
     .setPosition(at.x - plan.side * plan.shift, at.y + plan.lift)
     .setAlpha(0.18)
-    .setScale(baseScale * 0.87)
+    .setScale(renderScale * 0.87)
     .setAngle(-plan.side * (plan.behavior === 'dash' ? 15 : 9))
     .setVisible(true);
   scene.tweens.add({
@@ -25,8 +27,8 @@ export function enterFromTree(
     y: at.y,
     alpha: 1,
     angle: plan.side * 2,
-    scaleX: baseScale,
-    scaleY: baseScale,
+    scaleX: renderScale,
+    scaleY: renderScale,
     duration: plan.entryMs,
     ease: plan.behavior === 'hop' ? 'Back.easeOut' : 'Cubic.easeOut',
     onComplete: () => ready(),
@@ -115,11 +117,12 @@ export function hitReaction(
   perfect: boolean,
 ): void {
   const initialAngle = hero.angle;
+  const renderScale = heroRenderScale(hero, baseScale);
   scene.tweens.add({
     targets: hero,
     angle: initialAngle + (perfect ? 9 : 5),
-    scaleX: baseScale * 1.065,
-    scaleY: baseScale * 0.94,
+    scaleX: renderScale * 1.065,
+    scaleY: renderScale * 0.94,
     duration: 98,
     ease: 'Sine.easeOut',
     yoyo: true,

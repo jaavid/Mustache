@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { rotatedOffsetPoint } from '../logic/rotatedOffsetPoint';
+import { CHARACTER_FRAME_SIZES, characterRenderScale } from '../logic/characterGeometry';
 import { FACE_ATLAS_KEY, FACE_FRAME_INDEX } from '../logic/facialLayout';
 import { createFacialAtlas } from './facialAtlas';
 import { getSelectedCharacter, type CharacterId } from './characterChoice';
@@ -9,11 +10,11 @@ const borhanSheetUrl = new URL('../assets/borhan-sheet.png', import.meta.url).hr
 const mammadSheetUrl = new URL('../assets/mammad-sheet.png', import.meta.url).href;
 const BORHAN_ATLAS_KEY = 'borhan-face-atlas-v1';
 const MAMMAD_ATLAS_KEY = 'mammad-face-atlas-v1';
-const MAMMAD_FRAME_WIDTH = 87;
-const MAMMAD_FRAME_HEIGHT = 150;
+const MAMMAD_FRAME_WIDTH = CHARACTER_FRAME_SIZES.mammad.width;
+const MAMMAD_FRAME_HEIGHT = CHARACTER_FRAME_SIZES.mammad.height;
 
-export const RAMIN_FRAME_WIDTH = 210;
-export const RAMIN_FRAME_HEIGHT = 362;
+export const RAMIN_FRAME_WIDTH = CHARACTER_FRAME_SIZES.ramin.width;
+export const RAMIN_FRAME_HEIGHT = CHARACTER_FRAME_SIZES.ramin.height;
 export const RAMIN_DESKTOP_SCALE = 0.64;
 export const RAMIN_MOBILE_SCALE = 0.82;
 const LIP_X_RATIO = 0;
@@ -153,10 +154,12 @@ export function makeCharacter(
       : character === 'mammad'
         ? MAMMAD_ATLAS_KEY
         : FACE_ATLAS_KEY;
-  const hero = scene.add.sprite(x, y, atlas, FACE_FRAME_INDEX.idle).setScale(scale).setDepth(20);
-  // The compact Mammad source has the same on-screen size and lip geometry.
-  if (character === 'mammad')
-    hero.setDisplaySize(RAMIN_FRAME_WIDTH * scale, RAMIN_FRAME_HEIGHT * scale);
+  // Normalize source pixels at creation AND at every later tween (entry / reactions).
+  // A one-off setDisplaySize is overwritten by Phaser setScale/tween.scaleX/Y.
+  const hero = scene.add
+    .sprite(x, y, atlas, FACE_FRAME_INDEX.idle)
+    .setScale(characterRenderScale(character, scale))
+    .setDepth(20);
   hero.setData('character', character);
   applyRaminMood(hero, mood);
   return hero;
@@ -170,6 +173,19 @@ export function makeRamin(
   mood: RaminMood = 'idle',
 ): Phaser.GameObjects.Sprite {
   return makeCharacter(scene, getSelectedCharacter(), x, y, scale, mood);
+}
+
+/** Convert a gameplay design scale to a sprite's native source-pixel scale.
+ * Keep this same conversion for all Phaser tweens that touch scaleX/scaleY.
+ */
+export function heroRenderScale(hero: Phaser.GameObjects.Sprite, designScale: number): number {
+  const character = hero.getData('character') as CharacterId | undefined;
+  return characterRenderScale(character ?? 'ramin', designScale);
+}
+
+/** Motion offsets and accessories live in the shared 210×362 design space. */
+export function heroDesignScale(hero: Phaser.GameObjects.Sprite): number {
+  return hero.displayHeight / RAMIN_FRAME_HEIGHT;
 }
 
 export function applyRaminMood(hero: Phaser.GameObjects.Sprite, mood: RaminMood): void {

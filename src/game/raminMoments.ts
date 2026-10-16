@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { selectExitMoment, selectHitMoment, selectSpawnMoment } from '../logic/moments';
 import type { RaminVariant } from '../logic/variety';
-import { applyRaminMood, raminLipPoint } from './ramin';
+import { applyRaminMood, heroDesignScale, raminLipPoint } from './ramin';
 
 /**
  * Transient Ramin gestures. Facial expressions now select COMPLETE sprite
@@ -124,7 +124,8 @@ export class RaminMomentController {
   update(): void {
     if (!this.hero.active) return;
     const rot = this.hero.rotation,
-      dy = this.glassesMotion.lift * this.hero.scaleY;
+      designScale = heroDesignScale(this.hero),
+      dy = this.glassesMotion.lift * designScale;
     if (this.glasses.visible)
       this.glasses.setPosition(
         this.glasses.x - Math.sin(rot) * dy,
@@ -133,8 +134,8 @@ export class RaminMomentController {
     if (this.hand.visible) {
       const lip = raminLipPoint(this.hero),
         s = this.portrait ? 1.4 : 1.08;
-      const x = this.handMotion.x * this.hero.scaleX,
-        y = this.handMotion.y * this.hero.scaleY;
+      const x = this.handMotion.x * designScale,
+        y = this.handMotion.y * designScale;
       this.hand
         .setPosition(
           lip.x + x * Math.cos(rot) - y * Math.sin(rot),
