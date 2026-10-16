@@ -15,9 +15,7 @@ export function addGameplayTrees(scene: Phaser.Scene, portrait: boolean): void {
 
   centers.forEach((center, index) => {
     // A grounding shadow also separates each root flare from the fern floor.
-    scene.add
-      .ellipse(center, portrait ? 735 : 489, width * 0.72, 24, 0x071c1c, 0.38)
-      .setDepth(13);
+    scene.add.ellipse(center, portrait ? 735 : 489, width * 0.72, 24, 0x071c1c, 0.38).setDepth(13);
     const crown = scene.add
       .image(center, y, `tree-back-${index}`)
       .setDisplaySize(width, height)
@@ -32,9 +30,6 @@ export function addGameplayTrees(scene: Phaser.Scene, portrait: boolean): void {
         ease: 'Sine.inOut',
       });
     }
-    scene.add
-      .image(center, y, `tree-front-${index}`)
-      .setDisplaySize(width, height)
-      .setDepth(28);
+    scene.add.image(center, y, `tree-front-${index}`).setDisplaySize(width, height).setDepth(28);
   });
 }

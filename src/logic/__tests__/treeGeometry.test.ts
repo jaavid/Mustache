@@ -61,9 +61,9 @@ describe('art and hit geometry stay aligned after the forest upgrade', () => {
       [MOBILE_TRUNK_BOUNDS, 146, 430],
     ] as const) {
       // The unchanged collision core spans native source x=33..64, y=29..208.
-      const left = (48 - 33) * displayWidth / 96;
-      const top = bounds.centerY - displayHeight / 2 + 29 * displayHeight / 220;
-      const bottom = bounds.centerY - displayHeight / 2 + 208 * displayHeight / 220;
+      const left = ((48 - 33) * displayWidth) / 96;
+      const top = bounds.centerY - displayHeight / 2 + (29 * displayHeight) / 220;
+      const bottom = bounds.centerY - displayHeight / 2 + (208 * displayHeight) / 220;
       expect(Math.abs(bounds.halfWidth - left)).toBeLessThan(2);
       expect(Math.abs(bounds.top - top)).toBeLessThan(3);
       expect(Math.abs(bounds.bottom - bottom)).toBeLessThan(6);

@@ -147,7 +147,6 @@ function portraitBackdrop(scene: Phaser.Scene) {
   }
 }
 
-
 export class MobileMenuScene extends Phaser.Scene {
   constructor() {
     super('Menu');

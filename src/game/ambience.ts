@@ -7,24 +7,26 @@ export function addForestLife(scene: Phaser.Scene): void {
     !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const mistBack = scene.add.image(445, 334, 'mist').setScale(2).setAlpha(0.22).setDepth(5);
   const mistFront = scene.add.image(560, 427, 'mist').setScale(2.1).setAlpha(0.25).setDepth(32);
-  if (!reduceMotion) scene.tweens.add({
-    targets: mistBack,
-    x: 550,
-    alpha: 0.36,
-    duration: 7800,
-    yoyo: true,
-    repeat: -1,
-    ease: 'Sine.inOut',
-  });
-  if (!reduceMotion) scene.tweens.add({
-    targets: mistFront,
-    x: 395,
-    alpha: 0.13,
-    duration: 9900,
-    yoyo: true,
-    repeat: -1,
-    ease: 'Sine.inOut',
-  });
+  if (!reduceMotion)
+    scene.tweens.add({
+      targets: mistBack,
+      x: 550,
+      alpha: 0.36,
+      duration: 7800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.inOut',
+    });
+  if (!reduceMotion)
+    scene.tweens.add({
+      targets: mistFront,
+      x: 395,
+      alpha: 0.13,
+      duration: 9900,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.inOut',
+    });
   scene.add.image(480, 457, 'forest-front').setScale(2).setDepth(37);
 
   // Fireflies/butterflies in front of the forest, behind the HUD and prompts.
