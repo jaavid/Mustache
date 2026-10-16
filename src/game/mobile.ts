@@ -32,11 +32,13 @@ import { accumulateActiveRoundMs } from '../logic/activeRoundClock';
 import { nextSlot, popPlan, type PopPlan } from '../logic/gameplay';
 import {
   MOBILE_TREE_CENTERS,
+  MOBILE_TRUNK_BOUNDS,
   MOBILE_PEEK_DISTANCE,
   chooseSpawnSide,
   peekPosition,
 } from '../logic/treeGeometry';
 import { enterFromTree, exitBehindTreeWithSlip, hitReaction, launchMustache } from './gameFeel';
+import { addGameplayTrees } from './forestTrees';
 import {
   chooseRaminVariant,
   chooseSpawnEvent,
@@ -145,24 +147,6 @@ function portraitBackdrop(scene: Phaser.Scene) {
   }
 }
 
-function trees(scene: Phaser.Scene) {
-  MOBILE_TREE_CENTERS.forEach((center, index) => {
-    const canopy = scene.add
-      .image(center, 552, `tree-back-${index}`)
-      .setDisplaySize(146, 430)
-      .setDepth(14);
-    scene.tweens.add({
-      targets: canopy,
-      angle: index === 1 ? -0.6 : 0.6,
-      duration: 2550 + index * 310,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.inOut',
-    });
-    scene.add.image(center, 552, `tree-front-${index}`).setDisplaySize(146, 430).setDepth(28);
-  });
-  scene.add.image(270, 748, 'forest-front').setDisplaySize(545, 125).setDepth(40);
-}
 
 export class MobileMenuScene extends Phaser.Scene {
   constructor() {
@@ -273,7 +257,8 @@ export class MobilePlayScene extends Phaser.Scene {
     this.stickerAnchor = null;
     portraitBackdrop(this);
     if (getSelectedGameMode() === 'goldRush') addGoldVault(this, true);
-    trees(this);
+    addGameplayTrees(this, true);
+    this.add.image(270, 748, 'forest-front').setDisplaySize(545, 125).setDepth(40);
     addArcadeAccents(this, true);
     const lighting = addLivingForest(this, true);
     this.followLighting = lighting.follow;
@@ -600,7 +585,7 @@ export class MobilePlayScene extends Phaser.Scene {
             this,
             mustacheTexture(style, shotIsGolden || getSelectedGameMode() === 'goldRush'),
             aim,
-            { centers: MOBILE_TREE_CENTERS, centerY: 552, halfWidth: 23, top: 395, bottom: 738 },
+            MOBILE_TRUNK_BOUNDS,
             84,
             44,
           );

@@ -40,11 +40,13 @@ import { accumulateActiveRoundMs } from '../logic/activeRoundClock';
 import { nextSlot, popPlan, type PopPlan } from '../logic/gameplay';
 import {
   DESKTOP_TREE_CENTERS,
+  DESKTOP_TRUNK_BOUNDS,
   DESKTOP_PEEK_DISTANCE,
   chooseSpawnSide,
   peekPosition,
 } from '../logic/treeGeometry';
 import { enterFromTree, exitBehindTreeWithSlip, hitReaction, launchMustache } from './gameFeel';
+import { addGameplayTrees } from './forestTrees';
 import {
   chooseRaminVariant,
   chooseSpawnEvent,
@@ -143,24 +145,6 @@ function backdrop(scene: Phaser.Scene, withFireflies = true) {
       });
     }
   }
-}
-function addTrees(scene: Phaser.Scene) {
-  DESKTOP_TREE_CENTERS.forEach((center, index) => {
-    const crown = scene.add
-      .image(center, 300, `tree-back-${index}`)
-      .setDisplaySize(190, 430)
-      .setDepth(14);
-    // Only the crown sways; the physical trunk stays fixed with the lane.
-    scene.tweens.add({
-      targets: crown,
-      angle: index === 1 ? -0.8 : 0.8,
-      duration: 2900 + index * 330,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.inOut',
-    });
-    scene.add.image(center, 300, `tree-front-${index}`).setDisplaySize(190, 430).setDepth(28);
-  });
 }
 
 export class BootScene extends Phaser.Scene {
@@ -320,7 +304,7 @@ export class PlayScene extends Phaser.Scene {
     this.stickerAnchor = null;
     backdrop(this);
     if (getSelectedGameMode() === 'goldRush') addGoldVault(this, false);
-    addTrees(this);
+    addGameplayTrees(this, false);
     addArcadeAccents(this, false);
     const lighting = addLivingForest(this, false);
     this.followLighting = lighting.follow;
@@ -676,7 +660,7 @@ export class PlayScene extends Phaser.Scene {
             this,
             mustacheTexture(chosenStyle, shotIsGolden || getSelectedGameMode() === 'goldRush'),
             aim,
-            { centers: DESKTOP_TREE_CENTERS, centerY: 300, halfWidth: 30, top: 143, bottom: 486 },
+            DESKTOP_TRUNK_BOUNDS,
             66,
             34,
           );

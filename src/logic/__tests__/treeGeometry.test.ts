@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { treeAtImpact } from '../impactPersonality';
 import {
   DESKTOP_TREE_CENTERS,
   MOBILE_TREE_CENTERS,
@@ -6,6 +7,8 @@ import {
   MOBILE_PEEK_DISTANCE,
   chooseSpawnSide,
   peekPosition,
+  DESKTOP_TRUNK_BOUNDS,
+  MOBILE_TRUNK_BOUNDS,
 } from '../treeGeometry';
 describe('tree spawn lanes and occlusion geometry', () => {
   it('uses inward-facing exits at the outer trees', () => {
@@ -36,5 +39,34 @@ describe('tree spawn lanes and occlusion geometry', () => {
   it('rejects invalid spawn positions', () => {
     expect(() => chooseSpawnSide(3, 3, 1)).toThrow(RangeError);
     expect(() => chooseSpawnSide(-1, 3, 1)).toThrow(RangeError);
+  });
+});
+
+describe('art and hit geometry stay aligned after the forest upgrade', () => {
+  it('keeps every collision lane anchored to the stationary bark center', () => {
+    for (const bounds of [DESKTOP_TRUNK_BOUNDS, MOBILE_TRUNK_BOUNDS]) {
+      expect(bounds.centers).toHaveLength(3);
+      for (const x of bounds.centers) {
+        expect(treeAtImpact({ x, y: bounds.top }, bounds)).toBe(x);
+        expect(treeAtImpact({ x, y: bounds.bottom }, bounds)).toBe(x);
+        expect(treeAtImpact({ x, y: bounds.top - 1 }, bounds)).toBe(null);
+        expect(treeAtImpact({ x, y: bounds.bottom + 1 }, bounds)).toBe(null);
+      }
+    }
+  });
+
+  it('preserves bark geometry from the original 96x220 texture in both layouts', () => {
+    for (const [bounds, displayWidth, displayHeight] of [
+      [DESKTOP_TRUNK_BOUNDS, 190, 430],
+      [MOBILE_TRUNK_BOUNDS, 146, 430],
+    ] as const) {
+      // The unchanged collision core spans native source x=33..64, y=29..208.
+      const left = (48 - 33) * displayWidth / 96;
+      const top = bounds.centerY - displayHeight / 2 + 29 * displayHeight / 220;
+      const bottom = bounds.centerY - displayHeight / 2 + 208 * displayHeight / 220;
+      expect(Math.abs(bounds.halfWidth - left)).toBeLessThan(2);
+      expect(Math.abs(bounds.top - top)).toBeLessThan(3);
+      expect(Math.abs(bounds.bottom - bottom)).toBeLessThan(6);
+    }
   });
 });

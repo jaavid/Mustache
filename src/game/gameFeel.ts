@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { type Point, type PopPlan, projectileMs, projectilePoint } from '../logic/gameplay';
 import { heroRenderScale } from './ramin';
+import { acquireVisual, releaseVisual } from './visualPool';
 
 /** Peeking around a tree is primarily a sideways move, hopping also rises vertically.
  * The character remains behind the tree artwork until reaching the target pose.
@@ -69,8 +70,8 @@ export function launchMustache(
   display: { width: number; height: number },
   impact: () => void,
 ): void {
-  const projectile = scene.add
-    .image(start.x, start.y, texture)
+  const projectile = acquireVisual(scene, texture)
+    .setPosition(start.x, start.y)
     .setDisplaySize(display.width, display.height)
     .setDepth(99);
   const tweenState = { t: 0 };
@@ -88,8 +89,8 @@ export function launchMustache(
       projectile.setRotation(Math.atan2(next.y - point.y, next.x - point.x) * 0.12);
       if (tweenState.t > lastTrail + 0.14 && tweenState.t < 0.92) {
         lastTrail = tweenState.t;
-        const spark = scene.add
-          .image(point.x, point.y, 'spark')
+        const spark = acquireVisual(scene, 'spark')
+          .setPosition(point.x, point.y)
           .setDepth(92)
           .setTint(0xffd88e)
           .setScale(0.9)
@@ -99,12 +100,12 @@ export function launchMustache(
           alpha: 0,
           scale: 0.15,
           duration: 170,
-          onComplete: () => spark.destroy(),
+          onComplete: () => releaseVisual(scene, 'spark', spark),
         });
       }
     },
     onComplete: () => {
-      projectile.destroy();
+      releaseVisual(scene, texture, projectile);
       impact();
     },
   });

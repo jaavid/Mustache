@@ -251,34 +251,70 @@ function forestPortrait(c: Ctx) {
  */
 function treeBack(c: Ctx, variant: number) {
   const r = rand(6061 + variant * 97);
-  const canopy = [
-    ['#193d3f', '#275349', '#35654d', '#467755'],
-    ['#183c47', '#285359', '#32645e', '#4b7b65'],
-    ['#263d46', '#335552', '#41675a', '#577c59'],
+  const leaves = [
+    ['#142f35', '#225044', '#32694c', '#50835b', '#8baa69'],
+    ['#162f3a', '#23504d', '#336a56', '#4c8964', '#a4bb77'],
+    ['#1b343b', '#2d4d46', '#3f7055', '#699166', '#bdd080'],
   ][variant];
-  // Wide but cropped-at-top leafy crown, growing out of the trunk.
-  for (let i = 0; i < 52; i++) {
-    const px = 8 + r() * 82;
-    const py = 2 + r() * 76;
-    const rad = 8 + r() * 16;
-    ellipse(c, px, py, rad, 7 + r() * 12, canopy[(i + Math.floor(r() * 3)) % 4]);
-  }
-  // Pixel stepped edge and brighter clustered foliage; no hanging ornaments.
-  for (let i = 0; i < 65; i++) {
-    const px = r() * 96,
-      py = r() * 72;
-    if (Math.pow((px - 48) / 52, 2) + Math.pow((py - 26) / 55, 2) > 1.3) continue;
-    rect(c, px, py, 3 + r() * 7, 2 + r() * 5, canopy[1 + Math.floor(r() * 3)]);
-  }
-  // Branches are background objects: Ramin's face draws in front of them.
-  rect(c, 20, 55, 55, 6, '#463c38');
-  rect(c, 23, 51, 7, 5, '#5c5040');
-  rect(c, 58, 60, 25, 6, '#4c4039');
-  rect(c, 61, 57, 7, 4, '#6a5441');
-  for (let i = 0; i < 24; i++) {
-    const x = 15 + r() * 72,
-      y = 20 + r() * 55;
-    if (i % 4 === 0) rect(c, x, y, 3, 2, '#80a469');
+
+  // These limbs remain behind the character; only the narrow bark texture
+  // occludes gameplay. All three crowns share the exact 48px trunk axis.
+  rect(c, 44, 35, 9, 66, '#283536');
+  rect(c, 22, 53, 57, 7, '#393a34');
+  rect(c, 25, 49, 8, 5, '#65523a');
+  rect(c, 60, 56, 21, 5, '#5f503d');
+
+  if (variant === 0) {
+    // Oak: broad, tiered crown with a notched, unmistakable round silhouette.
+    ellipse(c, 48, 38, 46, 29, leaves[0]);
+    ellipse(c, 22, 50, 23, 24, leaves[0]);
+    ellipse(c, 75, 48, 23, 23, leaves[0]);
+    ellipse(c, 31, 28, 27, 25, leaves[1]);
+    ellipse(c, 64, 25, 27, 25, leaves[2]);
+    ellipse(c, 47, 47, 36, 23, leaves[2]);
+    ellipse(c, 29, 21, 14, 9, leaves[3]);
+    ellipse(c, 67, 24, 17, 9, leaves[3]);
+    for (let i = 0; i < 90; i++) {
+      const x = 5 + r() * 86;
+      const y = 7 + r() * 65;
+      const inside = ((x - 48) / 48) ** 2 + ((y - 38) / 38) ** 2 < 1;
+      if (inside) rect(c, x, y, 2 + r() * 6, 2 + r() * 4, leaves[2 + (i % 3)]);
+    }
+  } else if (variant === 1) {
+    // Cedar: stepped triangular layers read as a pine, not another round bush.
+    for (let tier = 0; tier < 4; tier++) {
+      const top = tier * 18 - 5;
+      const half = 13 + tier * 9;
+      for (let step = 0; step < 4; step++) {
+        const width = half * (0.65 + step * 0.12);
+        rect(c, 48 - width - 3, top + step * 7, width * 2 + 6, 9, leaves[0]);
+      }
+      rect(c, 48 - half + 4, top + 13, half * 2 - 8, 5, leaves[1]);
+      rect(c, 48 - half + 9, top + 9, half - 4, 3, leaves[3]);
+    }
+    for (let i = 0; i < 56; i++) {
+      const y = 8 + r() * 78;
+      const x = 48 + (r() - 0.5) * (25 + y * 0.55);
+      rect(c, x, y, 2 + r() * 5, 2 + r() * 3, leaves[2 + (i % 3)]);
+    }
+  } else {
+    // Willow: cascading tendrils give this tree a different lower silhouette.
+    ellipse(c, 48, 30, 43, 29, leaves[0]);
+    ellipse(c, 29, 33, 28, 25, leaves[1]);
+    ellipse(c, 67, 31, 26, 26, leaves[2]);
+    ellipse(c, 49, 15, 28, 15, leaves[3]);
+    for (let i = 0; i < 21; i++) {
+      const x = 7 + i * 4 + (r() - 0.5) * 3;
+      const len = 22 + r() * 30;
+      rect(c, x, 38, 3, len, i % 3 ? leaves[1] : leaves[2]);
+      for (let y = 43; y < 38 + len; y += 9) {
+        rect(c, x - 3, y, 5, 3, leaves[3]);
+        rect(c, x + 1, y + 3, 5, 2, leaves[2]);
+      }
+    }
+    for (let i = 0; i < 39; i++) {
+      rect(c, 8 + r() * 79, 6 + r() * 39, 3 + r() * 5, 3, leaves[2 + (i % 3)]);
+    }
   }
 }
 
@@ -320,6 +356,21 @@ function treeFront(c: Ctx, variant: number) {
     const x = 36 + r() * 23,
       y = 84 + r() * 105;
     rect(c, x, y, 2 + r() * 3, 1 + r() * 3, i % 2 === 0 ? '#42664a' : '#6e8653');
+  }
+  // Knots, rings and lichen turn each trunk into recognizable bark instead
+  // of a flat brown pole; details stay within the original collision silhouette.
+  for (let knot = 0; knot < 2; knot++) {
+    const x = 46 + (knot ? 8 : -4) + variant;
+    const y = 79 + knot * 68 + variant * 9;
+    ellipse(c, x, y, 5, 10, bark[0]);
+    ellipse(c, x - 1, y, 2, 6, bark[2]);
+    rect(c, x - 3, y - 12, 7, 2, bark[3]);
+    rect(c, x - 4, y + 11, 8, 2, bark[1]);
+  }
+  for (let i = 0; i < 32; i++) {
+    const x = 39 + r() * 18;
+    const y = 55 + r() * 122;
+    rect(c, x, y, 1 + r() * 2, 2 + r() * 6, i % 4 ? bark[1] : bark[3]);
   }
   // Wide root flare at the bottom. No loose decoration near face/aim point.
   rect(c, 28, 179, 43, 17, bark[1]);
