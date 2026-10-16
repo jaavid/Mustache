@@ -21,3 +21,21 @@ export function chooseSpawnSide(index: number, count: number, preferred: Side): 
 export function peekPosition(trunkCenter: number, side: Side, distance: number): number {
   return trunkCenter + side * distance;
 }
+
+/** Bark stays stationary while only the rear crown sways.
+ * Bounds retain the pre-art-pass hit geometry and match the baked trunks.
+ */
+export const DESKTOP_TRUNK_BOUNDS = {
+  centers: DESKTOP_TREE_CENTERS,
+  centerY: 300,
+  halfWidth: 30,
+  top: 143,
+  bottom: 486,
+} as const;
+export const MOBILE_TRUNK_BOUNDS = {
+  centers: MOBILE_TREE_CENTERS,
+  centerY: 552,
+  halfWidth: 23,
+  top: 395,
+  bottom: 738,
+} as const;

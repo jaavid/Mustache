@@ -59,11 +59,13 @@
     {
       "key": "tree-back-{0..2}",
       "producer": "src/game/art.ts",
+      "purpose": "Three distinctive oak, cedar and willow crowns with deterministic pixel foliage",
       "count": 3
     },
     {
       "key": "tree-front-{0..2}",
       "producer": "src/game/art.ts",
+      "purpose": "Fixed collision-aligned bark, knots, moss and root details",
       "count": 3
     },
     {
