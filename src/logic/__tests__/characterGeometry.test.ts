@@ -18,8 +18,8 @@ describe('shared visual character geometry', () => {
   it('provides native sprite scales for tween targets instead of raw design scales', () => {
     expect(characterRenderScale('ramin', 0.64)).toBe(0.64);
     expect(characterRenderScale('borhan', 0.82)).toBe(0.82);
-    expect(characterRenderScale('mammad', 0.64)).toBeCloseTo(0.64 * 362 / 150, 8);
-    expect(characterRenderScale('mammad', 0.82)).toBeCloseTo(0.82 * 362 / 150, 8);
+    expect(characterRenderScale('mammad', 0.64)).toBeCloseTo((0.64 * 362) / 150, 8);
+    expect(characterRenderScale('mammad', 0.82)).toBeCloseTo((0.82 * 362) / 150, 8);
     expect(characterRenderScale('mammad', 0.64)).toBeGreaterThan(1.5);
   });
 
