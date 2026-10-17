@@ -55,14 +55,14 @@ describe('art and hit geometry stay aligned after the forest upgrade', () => {
     }
   });
 
-  it('preserves bark geometry from the original 96x220 texture in both layouts', () => {
+  it('tracks the visible 96x220 bark hit area in both layouts', () => {
     for (const [bounds, displayWidth, displayHeight] of [
       [DESKTOP_TRUNK_BOUNDS, 190, 430],
       [MOBILE_TRUNK_BOUNDS, 146, 430],
     ] as const) {
-      // The unchanged collision core spans native source x=33..64, y=29..208.
+      // Visible bark spans native source x=37..62, y=94..208.
       const left = ((48 - 33) * displayWidth) / 96;
-      const top = bounds.centerY - displayHeight / 2 + (29 * displayHeight) / 220;
+      const top = bounds.centerY - displayHeight / 2 + (94 * displayHeight) / 220;
       const bottom = bounds.centerY - displayHeight / 2 + (208 * displayHeight) / 220;
       expect(Math.abs(bounds.halfWidth - left)).toBeLessThan(2);
       expect(Math.abs(bounds.top - top)).toBeLessThan(3);
