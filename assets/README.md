@@ -31,13 +31,11 @@ When real layered artwork becomes available, export six complete aligned artist-
 
 Mammad's four poses were derived from the supplied graduation artwork (idle, wink, surprise, victory). The optimized transparent source is four horizontal frames at **87 × 150**, displayed at **210 × 362** in-game. All expressions keep the same anchor, with the upper lip calibrated at virtual Y=136. The wink frame also serves blink, and neutral serves the fallback serious frame; no duplicate facial overlays are added. His mortarboard remains visible with cap-specific headband and gold accessories. The standard three mustache styles and gold projectile are shared with Ramin; score validation is unchanged.
 
-## In-progress hand-authored forest pack
+## Licensed two-tree forest pack
 
-`src/assets/forest/tree_oak_back.png` begins the native 96×220 forest asset pack.
-It is intentionally staged without replacing the runtime tree textures until its
-paired `tree_oak_front`, the other species and mobile layout have been reviewed.
-See [forest asset status](forest/README.md).
-
-## Verified CC0 third-party candidates
-
-Three _original, unmodified_ Karsiori tree sprites are currently staged in `public/forest-candidates/` for comparison, **not activated in gameplay**. Their source repository mirrors and the original CC0 itch.io author pages are recorded in [the comparison](../docs/FOREST_ASSET_COMPARISON.md). The previous hand-authored `tree_oak_back.png` remains a separate candidate. In-game art must not be switched until both occlusion layers and the target alignment are approved.
+The production forest uses two source Karsiori CC0 PNGs at
+`src/assets/forest/`: oak #6 and large night spruce. At boot Phaser creates
+four virtual 96×220 rear/occluding textures (oak and cedar back/front),
+mapping them **Cedar — Oak — Cedar** across three stationary collision lanes.
+See [forest contract](forest/README.md) for texture alignment, licensing
+and render rules. No Aseprite source has been invented.

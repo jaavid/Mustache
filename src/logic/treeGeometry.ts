@@ -3,6 +3,8 @@ import type { Side } from './gameplay';
 /** Tree centers are also the local X axis of both independently drawn tree layers. */
 export const DESKTOP_TREE_CENTERS = [193, 473, 748] as const;
 export const MOBILE_TREE_CENTERS = [78, 270, 462] as const;
+/** Two CC0 silhouettes over three spawn lanes: cedar - oak - cedar. */
+export const FOREST_TREE_SPECIES = ['cedar', 'oak', 'cedar'] as const;
 export const DESKTOP_PEEK_DISTANCE = 96;
 export const MOBILE_PEEK_DISTANCE = 96;
 

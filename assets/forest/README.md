@@ -1,39 +1,48 @@
-# Mustache Mayhem — staged forest asset pack
+# Forest art — production asset contract
 
-## Current status
+## Final selection
 
-- [x] Stage verified original Karsiori **oak #6** and **large spruce** PNGs for comparison.
-- [x] Stage **tree #10** as a rejected/experimental willow-like comparison (35×28: too small for gameplay).
-- [x] Add side-by-side browser review page and screenshot test (no runtime integration).
+Only **two** licensed Karsiori species are used, arranged **Cedar — Oak — Cedar**
+over the game's original three tree lanes.
 
-- [x] `tree_oak_back.png` — complete v1, ready for visual review.
-- [ ] `tree_oak_front.png` — matching foreground trunk, roots and bark.
-- [ ] Cedar back/front.
-- [ ] Willow back/front.
-- [ ] Ground, foliage, revised layout and mobile HUD-safe composition.
+- Oak: original unmodified 70×98 PNG, `src/assets/forest/karsiori-oak-tree6-green.png`.
+- Cedar / spruce: original 25-frame 74×128 PNG sheet (1850×128),
+  `src/assets/forest/karsiori-large-spruce-night-sheet.png`.
 
-**This branch is a working art-pack branch, not a deployable scene replacement yet.**
-Do not merge until both layers of all trees have been aligned, visually tested in
-portrait and landscape, and connected to Phaser. Existing procedural trees remain
-live in `src/game/art.ts` until then. Runtime scoring and hit geometry are unchanged.
+Both are **CC0-1.0**, including commercial redistribution and modification.
+Artist credit is optional but included below:
 
-## tree_oak_back.png (v1)
+- [Karsiori FREE Pixel Art Tree Pack](https://karsiori.itch.io/free-pixel-art-tree-pack)
+- [Karsiori FREE Pixel Art Spruce Tree Pack - Animated](https://karsiori.itch.io/spruce-tree-pack-pixel-art-animated)
 
-- **Path:** `src/assets/forest/tree_oak_back.png`
-- **Format:** 96×220 PNG, indexed 12-color palette with real alpha transparency.
-- **Coordinate space:** x=48 is the exact stationary trunk axis shared with the
-  existing front occluder. Same 96×220 bounds and texture center as original
-  `tree-back-0`. Registration will preserve these dimensions.
-- **Contents:** broad oak crown, multi-layer light and shadow pixel foliage,
-  and rear branches / rear trunk. No painted background, platform, text or HUD.
-- **Depth:** place the crown behind the hero (same relative depth as the
-  existing back layer). Front bark stays anchored and stationary.
-- **Art direction:** chunky pixel edges, midnight teal shadow outlines,
-  cool layered foliage with sparse warm highlights. Avoid willow droops and
-  cedar-like triangular silhouettes.
-- **Testing:** at native size and at the existing displayed sizes
-  (190×430 landscape, 146×430 portrait), verify crown reads as a broad oak
-  without swallowing the character's face or overlapping interactive HUD.
-  When the new front arrives, validate bark and actual miss impacts.
+## Implementation
 
-No source .aseprite file is asserted; the deliverable is the exported PNG.
+The original source PNGs are loaded by Phaser in the Boot scene through Vite
+asset URLs, not `public/` root paths. `src/game/forestTreeAssets.ts`
+synthesizes four **96×220 transparent pixel canvas textures** once at boot:
+
+- `tree-oak-back`: the oak source with a rear trunk
+- `tree-oak-front`: stationary matching bark, details and roots
+- `tree-cedar-back`: first frame of the animated cedar source and rear trunk
+- `tree-cedar-front`: stationary matching bark, details and roots
+
+The complete source PNG is preserved in the repository; no generated source
+files are claimed to be hand-authored Aseprite artwork. The source canopy
+is nearest-neighbour resized into the common 96×220 texture space with fixed
+trunk axis **x=48**. Foreground bark stays in place at depth 28 while only
+the rear canopy gently sways behind the character at depth 14. Reduced-motion
+settings disable the sway.
+
+Runtime positions and spawn selection remain identical in desktop and portrait.
+Existing bark collision bounds, score processing, mouth aim and Gold Rush rules
+are unchanged. These layers are deliberately separated so the hero disappears
+behind the same stationary trunk used for failed moustache attachments.
+
+## Validation before release
+
+- [x] Exactly two licensed source sprites, no experimental willow.
+- [x] Reuse the cedar source for both side lanes and oak for the center.
+- [x] Keep 96×220 aligned back/front virtual textures.
+- [x] Update image manifest and asset checks.
+- [x] No `/forest-asset-review.html` or candidate preview page in production.
+- [ ] Manually inspect real Telegram iOS/Android gameplay after deployment.

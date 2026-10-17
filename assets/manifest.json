@@ -29,24 +29,19 @@
       "purpose": "Mammad graduation poses: idle, wink, surprise, victory; compact 87x150 indexed PNG consistently normalized to the 210x362 design canvas for sprites and all tweens"
     },
     {
-      "path": "src/assets/forest/tree_oak_back.png",
+      "path": "src/assets/forest/karsiori-oak-tree6-green.png",
       "kind": "sprite",
-      "width": 96,
-      "height": 220,
-      "transparency": true,
-      "purpose": "Staged oak rear crown and branches, aligned to the original 96x220 / x=48 spawn trunk axis; not loaded until matching front art is approved."
-    },
-    {
-      "path": "public/forest-candidates/karsiori-oak-tree6-green.png",
-      "kind": "sprite-candidate",
       "width": 70,
       "height": 98,
       "transparency": true,
-      "purpose": "Karsiori CC0 tree #6; broadleaf oak candidate; unmodified source sprite."
+      "license": "CC0-1.0",
+      "attribution": "Karsiori — FREE Pixel Art Tree Pack",
+      "sourceUrl": "https://karsiori.itch.io/free-pixel-art-tree-pack",
+      "purpose": "Original Karsiori Oak #6 source, nearest-neighbor composed into the rear oak canopy."
     },
     {
-      "path": "public/forest-candidates/karsiori-large-spruce-night-sheet.png",
-      "kind": "sprite-candidate",
+      "path": "src/assets/forest/karsiori-large-spruce-night-sheet.png",
+      "kind": "spritesheet",
       "width": 1850,
       "height": 128,
       "transparency": true,
@@ -54,15 +49,10 @@
       "frameWidth": 74,
       "frameHeight": 128,
       "frames": 25,
-      "purpose": "Karsiori CC0 large spruce NIGHT; original 25-frame spritesheet, candidate only."
-    },
-    {
-      "path": "public/forest-candidates/karsiori-willow-like-tree10-teal.png",
-      "kind": "sprite-candidate",
-      "width": 35,
-      "height": 28,
-      "transparency": true,
-      "purpose": "Karsiori CC0 tree #10 teal; small hanging tree (35x28) comparison only; NOT accepted as a full-scale willow."
+      "license": "CC0-1.0",
+      "attribution": "Karsiori — FREE Pixel Art Spruce Tree Pack",
+      "sourceUrl": "https://karsiori.itch.io/spruce-tree-pack-pixel-art-animated",
+      "purpose": "Original Karsiori large night spruce sheet; its first frame forms both side cedars."
     }
   ],
   "generatedTextures": [
@@ -91,18 +81,6 @@
       "key": "forest",
       "producer": "src/game/art.ts",
       "kind": "canvas"
-    },
-    {
-      "key": "tree-back-{0..2}",
-      "producer": "src/game/art.ts",
-      "purpose": "Three distinctive oak, cedar and willow crowns with deterministic pixel foliage",
-      "count": 3
-    },
-    {
-      "key": "tree-front-{0..2}",
-      "producer": "src/game/art.ts",
-      "purpose": "Fixed collision-aligned bark, knots, moss and root details",
-      "count": 3
     },
     {
       "key": "ramin-acc-{variant}",
@@ -166,6 +144,34 @@
     {
       "key": "n5-dynamic-face-light",
       "producer": "src/game/arcadeVisuals.ts"
+    },
+    {
+      "key": "tree-oak-back",
+      "producer": "src/game/forestTreeAssets.ts",
+      "kind": "canvas",
+      "width": 96,
+      "height": 220
+    },
+    {
+      "key": "tree-oak-front",
+      "producer": "src/game/forestTreeAssets.ts",
+      "kind": "canvas",
+      "width": 96,
+      "height": 220
+    },
+    {
+      "key": "tree-cedar-back",
+      "producer": "src/game/forestTreeAssets.ts",
+      "kind": "canvas",
+      "width": 96,
+      "height": 220
+    },
+    {
+      "key": "tree-cedar-front",
+      "producer": "src/game/forestTreeAssets.ts",
+      "kind": "canvas",
+      "width": 96,
+      "height": 220
     }
   ],
   "audio": {
