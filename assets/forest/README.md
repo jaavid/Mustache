@@ -21,15 +21,17 @@ The original source PNGs are loaded by Phaser in the Boot scene through Vite
 asset URLs, not `public/` root paths. `src/game/forestTreeAssets.ts`
 synthesizes four **96×220 transparent pixel canvas textures** once at boot:
 
-- `tree-oak-back`: the oak source with a rear trunk
-- `tree-oak-front`: stationary matching bark, details and roots
-- `tree-cedar-back`: first frame of the animated cedar source and rear trunk
-- `tree-cedar-front`: stationary matching bark, details and roots
+- `tree-oak-back`: full original oak sprite including its natural trunk
+- `tree-oak-front`: only the original lower oak pixels, clipped for occlusion
+- `tree-cedar-back`: first original spruce frame including its natural trunk
+- `tree-cedar-front`: only the original lower spruce pixels, clipped for occlusion
 
 The complete source PNG is preserved in the repository; no generated source
 files are claimed to be hand-authored Aseprite artwork. The source canopy
 is nearest-neighbour resized into the common 96×220 texture space with fixed
-trunk axis **x=48**. Foreground bark stays in place at depth 28 while only
+trunk axis **x=48**. **No synthetic trunks are painted:** the front occluder
+reuses pixels from the same licensed source image, clipped to the lower bark.
+Foreground pixels stay in place at depth 28 while only
 the rear canopy gently sways behind the character at depth 14. Reduced-motion
 settings disable the sway.
 
