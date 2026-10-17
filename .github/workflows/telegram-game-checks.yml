@@ -39,7 +39,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - run: npm run format:check || (for f in src/game/forestTreeAssets.ts src/logic/forestArtLayout.ts; do npx prettier $f | diff -u $f - || true; done; exit 1)
+      - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
