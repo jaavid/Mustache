@@ -35,6 +35,34 @@
       "height": 220,
       "transparency": true,
       "purpose": "Staged oak rear crown and branches, aligned to the original 96x220 / x=48 spawn trunk axis; not loaded until matching front art is approved."
+    },
+    {
+      "path": "public/forest-candidates/karsiori-oak-tree6-green.png",
+      "kind": "sprite-candidate",
+      "width": 70,
+      "height": 98,
+      "transparency": true,
+      "purpose": "Karsiori CC0 tree #6; broadleaf oak candidate; unmodified source sprite."
+    },
+    {
+      "path": "public/forest-candidates/karsiori-large-spruce-night-sheet.png",
+      "kind": "sprite-candidate",
+      "width": 1850,
+      "height": 128,
+      "transparency": true,
+      "orientation": "horizontal",
+      "frameWidth": 74,
+      "frameHeight": 128,
+      "frames": 25,
+      "purpose": "Karsiori CC0 large spruce NIGHT; original 25-frame spritesheet, candidate only."
+    },
+    {
+      "path": "public/forest-candidates/karsiori-willow-like-tree10-teal.png",
+      "kind": "sprite-candidate",
+      "width": 35,
+      "height": 28,
+      "transparency": true,
+      "purpose": "Karsiori CC0 tree #10 teal; small hanging tree (35x28) comparison only; NOT accepted as a full-scale willow."
     }
   ],
   "generatedTextures": [

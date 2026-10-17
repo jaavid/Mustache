@@ -2,6 +2,10 @@
 
 ## Current status
 
+- [x] Stage verified original Karsiori **oak #6** and **large spruce** PNGs for comparison.
+- [x] Stage **tree #10** as a rejected/experimental willow-like comparison (35×28: too small for gameplay).
+- [x] Add side-by-side browser review page and screenshot test (no runtime integration).
+
 - [x] `tree_oak_back.png` — complete v1, ready for visual review.
 - [ ] `tree_oak_front.png` — matching foreground trunk, roots and bark.
 - [ ] Cedar back/front.

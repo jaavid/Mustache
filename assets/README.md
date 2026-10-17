@@ -37,3 +37,7 @@ Mammad's four poses were derived from the supplied graduation artwork (idle, win
 It is intentionally staged without replacing the runtime tree textures until its
 paired `tree_oak_front`, the other species and mobile layout have been reviewed.
 See [forest asset status](forest/README.md).
+
+## Verified CC0 third-party candidates
+
+Three *original, unmodified* Karsiori tree sprites are currently staged in `public/forest-candidates/` for comparison, **not activated in gameplay**. Their source repository mirrors and the original CC0 itch.io author pages are recorded in [the comparison](../docs/FOREST_ASSET_COMPARISON.md). The previous hand-authored `tree_oak_back.png` remains a separate candidate. In-game art must not be switched until both occlusion layers and the target alignment are approved.
