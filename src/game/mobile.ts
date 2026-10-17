@@ -19,7 +19,7 @@ import {
   celebrateCombo,
   impactRing,
   raminMoment,
-  rarePerfectSlowMo,
+  rarePerfectAccent,
 } from './arcadeVisuals';
 import { tunePopPlan } from '../logic/arcadePhases';
 import { setMusicPhase } from './sound';
@@ -588,7 +588,6 @@ export class MobilePlayScene extends Phaser.Scene {
             84,
             44,
           );
-          burstLeaves(this, aim.x, aim.y, 3);
         } else {
           this.scoreText.setText(String(this.score).padStart(5, '0'));
           this.comboText.setText('× ' + this.combo);
@@ -623,7 +622,7 @@ export class MobilePlayScene extends Phaser.Scene {
             applyRaminMood(this.hero, 'victory');
             raminMoment(this, this.hero, true);
           }
-          rarePerfectSlowMo(this, result.grade === 'perfect', this.combo);
+          rarePerfectAccent(this, this.hero, result.grade === 'perfect', this.combo);
         }
         this.updateMissions(this.score, this.stats.perfect, this.combo);
         this.time.delayedCall(result.grade === 'miss' ? 180 : 440, () => {

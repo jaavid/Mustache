@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { type Point, type PopPlan, projectileMs, projectilePoint } from '../logic/gameplay';
 import { heroRenderScale } from './ramin';
 import { acquireVisual, releaseVisual } from './visualPool';
+import { reduceVisualMotion } from './motionPrefs';
 
 /** Peeking around a tree is primarily a sideways move, hopping also rises vertically.
  * The character remains behind the tree artwork until reaching the target pose.
@@ -117,6 +118,7 @@ export function hitReaction(
   baseScale: number,
   perfect: boolean,
 ): void {
+  if (reduceVisualMotion()) return;
   const initialAngle = hero.angle;
   const renderScale = heroRenderScale(hero, baseScale);
   scene.tweens.add({
@@ -128,10 +130,7 @@ export function hitReaction(
     ease: 'Sine.easeOut',
     yoyo: true,
   });
-  if (perfect) {
-    scene.cameras.main.shake(110, 0.0023);
-    scene.cameras.main.flash(90, 255, 215, 130);
-  }
+  // Character-local motion: shaking the camera also moves HUD and tap coordinates.
 }
 
 /** Optional slapstick exit; only runs after the target is inactive, so there is no moving hitbox. */

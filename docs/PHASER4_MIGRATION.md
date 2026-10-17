@@ -15,6 +15,14 @@ Keep `roundPixels: true` to preserve the pixel-art intent, but manually
 inspect movement in both orientations: Phaser 4 rounds only safe,
 axis-aligned, unscaled transforms by default.
 
+## Game-feel polish
+
+- Stage toast is smaller and lasts 720ms rather than obstructing play for 2.65 seconds.
+- Perfect uses character-local impact motion and a rare gold glow, not camera shake
+  or the former global Phaser tween timeScale (which also affected projectiles).
+- Leaf bursts only come from real bark hits, not air misses.
+- Reduced-motion preference suppresses new motion; no scoring rules have changed.
+
 ## Validation
 
 - [ ] Play desktop at 960×540 and portrait at 540×960 in Chromium.

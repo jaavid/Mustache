@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { comboMilestone, phaseCaption, roundPhase, type RoundPhase } from '../logic/arcadePhases';
 import { raminLipPoint } from './ramin';
+import { PHASE_TOAST, PHASE_TOAST_MS, shouldAccentPerfectStreak } from '../logic/visualPolish';
+import { reduceVisualMotion } from './motionPrefs';
 
 const PIXEL_FONT = '"Courier New", monospace';
 
@@ -33,9 +35,7 @@ export type ForestLighting = {
 export function addLivingForest(scene: Phaser.Scene, portrait: boolean): ForestLighting {
   const w = scene.scale.width,
     h = scene.scale.height;
-  const reduceMotion =
-    typeof window !== 'undefined' &&
-    !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const reduceMotion = reduceVisualMotion();
   // Depth 41 intentionally covers the trunk, Ramin and foreground. Previous
   // version dimmed only the distant forest (< tree depths) at <= 25% alpha.
   const sunlight = scene.add
@@ -262,40 +262,41 @@ export function addPhaseHud(
 
 export function announcePhase(scene: Phaser.Scene, portrait: boolean, phase: RoundPhase): void {
   if (phase === 'WARMUP') return;
-  const x = scene.scale.width / 2,
-    y = portrait ? 368 : 217;
+  const { y, width, height, fontSize, rise } = portrait
+    ? PHASE_TOAST.portrait
+    : PHASE_TOAST.landscape;
+  const x = scene.scale.width / 2;
   const headline = phase === 'GROOVE' ? 'STAGE 2 / 3 · TWILIGHT' : 'STAGE 3 / 3 · NIGHT RUSH!';
+  // Small, short-lived banner: no two-second obstruction of playable space.
   const under = scene.add
-    .rectangle(x, y, portrait ? 470 : 570, portrait ? 65 : 66, 0x111b31, 0.82)
-    .setStrokeStyle(4, phase === 'FINALE' ? 0xffab9c : 0xb8a5ff)
-    .setDepth(108);
+    .rectangle(x, y, width, height, 0x111b31, 0.84)
+    .setStrokeStyle(2, phase === 'FINALE' ? 0xffab9c : 0xb8a5ff)
+    .setDepth(90);
   const text = scene.add
     .text(x, y, headline, {
       fontFamily: PIXEL_FONT,
-      fontSize: portrait ? '25px' : '30px',
+      fontSize: `${fontSize}px`,
       fontStyle: 'bold',
       color: phase === 'FINALE' ? '#ffad8b' : '#e3c2ff',
       stroke: '#142036',
-      strokeThickness: 5,
+      strokeThickness: 3,
     })
     .setOrigin(0.5)
-    .setDepth(110)
-    .setScale(0.6);
+    .setDepth(91);
+  const reduced = reduceVisualMotion();
   scene.tweens.add({
-    targets: [text, under],
+    targets: [under, text],
+    y: reduced ? y : y - rise,
     alpha: 0,
-    y: y - 26,
-    duration: 2200,
-    delay: 450,
+    delay: reduced ? 280 : 310,
+    duration: PHASE_TOAST_MS - (reduced ? 280 : 310),
     ease: 'Sine.easeOut',
     onComplete: () => {
       text.destroy();
       under.destroy();
     },
   });
-  scene.tweens.add({ targets: text, scale: 1.04, duration: 250, ease: 'Back.easeOut' });
 }
-
 export function celebrateCombo(scene: Phaser.Scene, portrait: boolean, combo: number): void {
   const title = comboMilestone(combo);
   if (!title) return;
@@ -412,14 +413,23 @@ export function addMissionStrip(
   return { update };
 }
 
-/** A very brief tween-only slow-motion accent on exceptional Perfect streaks.
- * Never modifies Phaser's round clock or input timing, so scoring stays fair.
- */
-export function rarePerfectSlowMo(scene: Phaser.Scene, perfect: boolean, combo: number): void {
-  if (!perfect || combo < 5) return;
-  const previous = scene.tweens.timeScale;
-  scene.tweens.timeScale = 0.48;
-  scene.time.delayedCall(145, () => {
-    if (scene.tweens) scene.tweens.timeScale = previous;
+/** Local glow replaces the former global tween timeScale mutation. */
+export function rarePerfectAccent(
+  scene: Phaser.Scene,
+  hero: Phaser.GameObjects.Sprite,
+  perfect: boolean,
+  combo: number,
+): void {
+  if (!shouldAccentPerfectStreak(perfect, combo) || reduceVisualMotion()) return;
+  const halo = scene.add
+    .circle(hero.x, hero.y - hero.displayHeight * 0.16, 54, 0xffdf8c, 0.19)
+    .setDepth(19);
+  scene.tweens.add({
+    targets: halo,
+    alpha: 0,
+    scale: 1.8,
+    duration: 300,
+    ease: 'Sine.easeOut',
+    onComplete: () => halo.destroy(),
   });
 }
