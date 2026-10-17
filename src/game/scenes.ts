@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { createArt } from './art';
+import { preloadForestTreeSources, createForestTreeTextures } from './forestTreeAssets';
 import { addSoundToggle, playSfx } from './sound';
 import { addMusicToggle, startMusic, stopMusic } from './sound';
 import { addPauseButton, beginTutorial, registerRoundVisibility } from './overlays';
@@ -180,9 +181,11 @@ export class BootScene extends Phaser.Scene {
     redraw(0);
     this.load.on('progress', redraw);
     preloadRamin(this);
+    preloadForestTreeSources(this);
   }
   create() {
     createArt(this);
+    createForestTreeTextures(this);
     ensureRaminAnimations(this);
     this.scene.start('Menu');
   }

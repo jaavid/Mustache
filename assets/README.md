@@ -30,3 +30,12 @@ When real layered artwork becomes available, export six complete aligned artist-
 ## Mammad contract
 
 Mammad's four poses were derived from the supplied graduation artwork (idle, wink, surprise, victory). The optimized transparent source is four horizontal frames at **87 × 150**, displayed at **210 × 362** in-game. All expressions keep the same anchor, with the upper lip calibrated at virtual Y=136. The wink frame also serves blink, and neutral serves the fallback serious frame; no duplicate facial overlays are added. His mortarboard remains visible with cap-specific headband and gold accessories. The standard three mustache styles and gold projectile are shared with Ramin; score validation is unchanged.
+
+## Licensed two-tree forest pack
+
+The production forest uses two source Karsiori CC0 PNGs at
+`src/assets/forest/`: oak #6 and large night spruce. At boot Phaser creates
+four virtual 96×220 rear/occluding textures (oak and cedar back/front),
+mapping them **Cedar — Oak — Cedar** across three stationary collision lanes.
+See [forest contract](forest/README.md) for texture alignment, licensing
+and render rules. No Aseprite source has been invented.

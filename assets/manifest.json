@@ -27,6 +27,32 @@
       "frames": 4,
       "orientation": "horizontal",
       "purpose": "Mammad graduation poses: idle, wink, surprise, victory; compact 87x150 indexed PNG consistently normalized to the 210x362 design canvas for sprites and all tweens"
+    },
+    {
+      "path": "src/assets/forest/karsiori-oak-tree6-green.png",
+      "kind": "sprite",
+      "width": 70,
+      "height": 98,
+      "transparency": true,
+      "license": "CC0-1.0",
+      "attribution": "Karsiori — FREE Pixel Art Tree Pack",
+      "sourceUrl": "https://karsiori.itch.io/free-pixel-art-tree-pack",
+      "purpose": "Original Karsiori Oak #6 source, nearest-neighbor composed into the rear oak canopy."
+    },
+    {
+      "path": "src/assets/forest/karsiori-large-spruce-night-sheet.png",
+      "kind": "spritesheet",
+      "width": 1850,
+      "height": 128,
+      "transparency": true,
+      "orientation": "horizontal",
+      "frameWidth": 74,
+      "frameHeight": 128,
+      "frames": 25,
+      "license": "CC0-1.0",
+      "attribution": "Karsiori — FREE Pixel Art Spruce Tree Pack",
+      "sourceUrl": "https://karsiori.itch.io/spruce-tree-pack-pixel-art-animated",
+      "purpose": "Original Karsiori large night spruce sheet; its first frame forms both side cedars."
     }
   ],
   "generatedTextures": [
@@ -55,18 +81,6 @@
       "key": "forest",
       "producer": "src/game/art.ts",
       "kind": "canvas"
-    },
-    {
-      "key": "tree-back-{0..2}",
-      "producer": "src/game/art.ts",
-      "purpose": "Three distinctive oak, cedar and willow crowns with deterministic pixel foliage",
-      "count": 3
-    },
-    {
-      "key": "tree-front-{0..2}",
-      "producer": "src/game/art.ts",
-      "purpose": "Fixed collision-aligned bark, knots, moss and root details",
-      "count": 3
     },
     {
       "key": "ramin-acc-{variant}",
@@ -130,6 +144,34 @@
     {
       "key": "n5-dynamic-face-light",
       "producer": "src/game/arcadeVisuals.ts"
+    },
+    {
+      "key": "tree-oak-back",
+      "producer": "src/game/forestTreeAssets.ts",
+      "kind": "canvas",
+      "width": 96,
+      "height": 220
+    },
+    {
+      "key": "tree-oak-front",
+      "producer": "src/game/forestTreeAssets.ts",
+      "kind": "canvas",
+      "width": 96,
+      "height": 220
+    },
+    {
+      "key": "tree-cedar-back",
+      "producer": "src/game/forestTreeAssets.ts",
+      "kind": "canvas",
+      "width": 96,
+      "height": 220
+    },
+    {
+      "key": "tree-cedar-front",
+      "producer": "src/game/forestTreeAssets.ts",
+      "kind": "canvas",
+      "width": 96,
+      "height": 220
     }
   ],
   "audio": {

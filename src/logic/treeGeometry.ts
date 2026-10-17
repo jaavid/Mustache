@@ -3,6 +3,8 @@ import type { Side } from './gameplay';
 /** Tree centers are also the local X axis of both independently drawn tree layers. */
 export const DESKTOP_TREE_CENTERS = [193, 473, 748] as const;
 export const MOBILE_TREE_CENTERS = [78, 270, 462] as const;
+/** Two CC0 silhouettes over three spawn lanes: cedar - oak - cedar. */
+export const FOREST_TREE_SPECIES = ['cedar', 'oak', 'cedar'] as const;
 export const DESKTOP_PEEK_DISTANCE = 96;
 export const MOBILE_PEEK_DISTANCE = 96;
 
@@ -23,19 +25,20 @@ export function peekPosition(trunkCenter: number, side: Side, distance: number):
 }
 
 /** Bark stays stationary while only the rear crown sways.
- * Bounds retain the pre-art-pass hit geometry and match the baked trunks.
+ * Miss decals stick to visible foreground bark, not to transparent crown.
+ * Score/aim grading is independent of these cosmetic bounds.
  */
 export const DESKTOP_TRUNK_BOUNDS = {
   centers: DESKTOP_TREE_CENTERS,
   centerY: 300,
   halfWidth: 30,
-  top: 143,
+  top: 269,
   bottom: 486,
 } as const;
 export const MOBILE_TRUNK_BOUNDS = {
   centers: MOBILE_TREE_CENTERS,
   centerY: 552,
   halfWidth: 23,
-  top: 395,
+  top: 521,
   bottom: 738,
 } as const;

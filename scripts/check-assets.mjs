@@ -20,6 +20,20 @@ for (const asset of manifest.sourceAssets) {
   );
   const width = bytes.readUInt32BE(16);
   const height = bytes.readUInt32BE(20);
+  if (asset.width !== undefined) {
+    assert.equal(width, asset.width, 'Sprite width mismatch: ' + asset.path);
+  }
+  if (asset.height !== undefined) {
+    assert.equal(height, asset.height, 'Sprite height mismatch: ' + asset.path);
+  }
+  if (asset.transparency) {
+    // Indexed PNGs need tRNS; truecolor RGBA carries alpha in the color type.
+    const colorType = bytes[25];
+    assert(
+      colorType === 6 || (colorType === 3 && bytes.includes(Buffer.from('tRNS'))),
+      'Expected alpha-enabled PNG: ' + asset.path,
+    );
+  }
   if (asset.orientation === 'horizontal') {
     assert.equal(
       width,

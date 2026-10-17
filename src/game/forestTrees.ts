@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
-import { DESKTOP_TREE_CENTERS, MOBILE_TREE_CENTERS } from '../logic/treeGeometry';
+import {
+  DESKTOP_TREE_CENTERS,
+  FOREST_TREE_SPECIES,
+  MOBILE_TREE_CENTERS,
+} from '../logic/treeGeometry';
 
 /** All visual sprite axes line up with the server-independent trunk collision lanes.
  * Crowns sway while bark remains stationary, so a missed shot never targets a moving tree.
@@ -16,8 +20,9 @@ export function addGameplayTrees(scene: Phaser.Scene, portrait: boolean): void {
   centers.forEach((center, index) => {
     // A grounding shadow also separates each root flare from the fern floor.
     scene.add.ellipse(center, portrait ? 735 : 489, width * 0.72, 24, 0x071c1c, 0.38).setDepth(13);
+    const species = FOREST_TREE_SPECIES[index];
     const crown = scene.add
-      .image(center, y, `tree-back-${index}`)
+      .image(center, y, `tree-${species}-back`)
       .setDisplaySize(width, height)
       .setDepth(14);
     if (!reduceMotion) {
@@ -30,6 +35,6 @@ export function addGameplayTrees(scene: Phaser.Scene, portrait: boolean): void {
         ease: 'Sine.inOut',
       });
     }
-    scene.add.image(center, y, `tree-front-${index}`).setDisplaySize(width, height).setDepth(28);
+    scene.add.image(center, y, `tree-${species}-front`).setDisplaySize(width, height).setDepth(28);
   });
 }
