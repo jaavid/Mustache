@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { selectExitMoment, selectHitMoment, selectSpawnMoment } from '../logic/moments';
 import type { RaminVariant } from '../logic/variety';
 import { applyRaminMood, heroDesignScale, raminLipPoint } from './ramin';
+import { acquireVisual, releaseVisual } from './visualPool';
 
 /**
  * Transient Ramin gestures. Facial expressions now select COMPLETE sprite
@@ -104,8 +105,8 @@ export class RaminMomentController {
     if (kind !== 'slip') return false;
     this.lastAt = this.scene.time.now;
     const pos = raminLipPoint(this.hero);
-    const dust = this.scene.add
-      .image(pos.x, pos.y + this.hero.displayHeight * 0.38, 'leaf-1')
+    const dust = acquireVisual(this.scene, 'leaf-1')
+      .setPosition(pos.x, pos.y + this.hero.displayHeight * 0.38)
       .setDepth(49)
       .setScale(this.portrait ? 3.8 : 2.8)
       .setAlpha(0.9);
@@ -116,7 +117,7 @@ export class RaminMomentController {
       alpha: 0,
       angle: 110,
       duration: 350,
-      onComplete: () => dust.destroy(),
+      onComplete: () => releaseVisual(this.scene, 'leaf-1', dust),
     });
     return true;
   }

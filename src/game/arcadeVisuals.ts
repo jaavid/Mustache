@@ -3,6 +3,8 @@ import { comboMilestone, phaseCaption, roundPhase, type RoundPhase } from '../lo
 import { raminLipPoint } from './ramin';
 import { PHASE_TOAST, PHASE_TOAST_MS, shouldAccentPerfectStreak } from '../logic/visualPolish';
 import { reduceVisualMotion } from './motionPrefs';
+import { fxBudget } from './fxQuality';
+import { acquireVisual, releaseVisual } from './visualPool';
 
 const PIXEL_FONT = '"Courier New", monospace';
 
@@ -121,30 +123,31 @@ export function addLivingForest(scene: Phaser.Scene, portrait: boolean): ForestL
       repeat: -1,
       ease: 'Sine.inOut',
     });
-    scene.time.addEvent({
-      delay: 1330,
-      loop: true,
-      callback: () => {
-        const leaf = scene.add
-          .image(
-            Phaser.Math.Between(0, w),
-            Phaser.Math.Between(portrait ? 335 : 166, portrait ? 670 : 365),
-            'leaf-' + Phaser.Math.Between(0, 2),
-          )
-          .setDepth(16)
-          .setAlpha(0.7)
-          .setScale(1.15);
-        scene.tweens.add({
-          targets: leaf,
-          x: leaf.x + Phaser.Math.Between(-80, 95),
-          y: leaf.y + Phaser.Math.Between(35, 95),
-          angle: Phaser.Math.Between(-90, 90),
-          alpha: 0,
-          duration: Phaser.Math.Between(2000, 3400),
-          onComplete: () => leaf.destroy(),
-        });
-      },
-    });
+    if (fxBudget().fallingLeaves)
+      scene.time.addEvent({
+        delay: 1330,
+        loop: true,
+        callback: () => {
+          const texture = 'leaf-' + Phaser.Math.Between(0, 2);
+          const leaf = acquireVisual(scene, texture)
+            .setPosition(
+              Phaser.Math.Between(0, w),
+              Phaser.Math.Between(portrait ? 335 : 166, portrait ? 670 : 365),
+            )
+            .setDepth(16)
+            .setAlpha(0.7)
+            .setScale(1.15);
+          scene.tweens.add({
+            targets: leaf,
+            x: leaf.x + Phaser.Math.Between(-80, 95),
+            y: leaf.y + Phaser.Math.Between(35, 95),
+            angle: Phaser.Math.Between(-90, 90),
+            alpha: 0,
+            duration: Phaser.Math.Between(2000, 3400),
+            onComplete: () => releaseVisual(scene, texture, leaf),
+          });
+        },
+      });
   }
 
   // A small additive face light restores lip contrast during the much

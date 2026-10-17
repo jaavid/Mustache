@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { fxBudget } from './fxQuality';
+import { acquireVisual, releaseVisual } from './visualPool';
 
 /** Scene-local decorative effects. No external assets, update loops, or timers survive a scene shutdown. */
 export function addForestLife(scene: Phaser.Scene): void {
@@ -30,7 +32,7 @@ export function addForestLife(scene: Phaser.Scene): void {
   scene.add.image(480, 457, 'forest-front').setScale(2).setDepth(37);
 
   // Fireflies/butterflies in front of the forest, behind the HUD and prompts.
-  for (let i = 0; i < 9; i++) {
+  for (let i = 0; i < fxBudget().forestInsects; i++) {
     const x = 55 + ((i * 263) % 845);
     const y = 172 + ((i * 137) % 220);
     const insect = scene.add
@@ -54,9 +56,12 @@ export function addForestLife(scene: Phaser.Scene): void {
 }
 
 export function burstLeaves(scene: Phaser.Scene, x: number, y: number, count = 9): void {
-  for (let i = 0; i < count; i++) {
-    const leaf = scene.add
-      .image(x, y, `leaf-${i % 3}`)
+  const budget = fxBudget();
+  const actualCount = Math.ceil(count * budget.leafScale);
+  for (let i = 0; i < actualCount; i++) {
+    const texture = `leaf-${i % 3}`;
+    const leaf = acquireVisual(scene, texture)
+      .setPosition(x, y)
       .setScale(1.5 + (i % 3) * 0.25)
       .setDepth(48)
       .setAngle(Phaser.Math.Between(-50, 50));
@@ -68,19 +73,20 @@ export function burstLeaves(scene: Phaser.Scene, x: number, y: number, count = 9
       alpha: 0,
       duration: Phaser.Math.Between(560, 1000),
       ease: 'Quad.easeOut',
-      onComplete: () => leaf.destroy(),
+      onComplete: () => releaseVisual(scene, texture, leaf),
     });
   }
 }
 
 export function burstStars(scene: Phaser.Scene, x: number, y: number, perfect: boolean): void {
   const palette = perfect ? [0xffe4a5, 0xffc65a, 0xe8c4ff] : [0xa4f4d2, 0xddf9ad];
-  const amount = perfect ? 18 : 11;
+  const budget = fxBudget();
+  const amount = perfect ? budget.starsPerfect : budget.starsGood;
   for (let i = 0; i < amount; i++) {
     const angle = (i / amount) * Math.PI * 2;
     const radius = Phaser.Math.Between(40, perfect ? 108 : 75);
-    const star = scene.add
-      .image(x, y, 'spark')
+    const star = acquireVisual(scene, 'spark')
+      .setPosition(x, y)
       .setTint(palette[i % palette.length])
       .setScale(i % 3 === 0 ? 2.1 : 1.25)
       .setDepth(96);
@@ -92,7 +98,7 @@ export function burstStars(scene: Phaser.Scene, x: number, y: number, perfect: b
       scale: 0.3,
       duration: Phaser.Math.Between(440, 720),
       ease: 'Cubic.easeOut',
-      onComplete: () => star.destroy(),
+      onComplete: () => releaseVisual(scene, 'spark', star),
     });
   }
 }

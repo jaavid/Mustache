@@ -1,4 +1,4 @@
-import type Phaser from 'phaser';
+import Phaser from 'phaser';
 
 const MAX_REUSABLE_PER_TEXTURE = 12;
 const scenePools = new WeakMap<Phaser.Scene, Map<string, Phaser.GameObjects.Image[]>>();
@@ -26,8 +26,13 @@ export function acquireVisual(scene: Phaser.Scene, texture: string): Phaser.Game
     .setActive(true)
     .setVisible(true)
     .setAlpha(1)
+    .setPosition(0, 0)
     .setAngle(0)
     .setScale(1)
+    .setDepth(0)
+    .setFlipX(false)
+    .setFlipY(false)
+    .setBlendMode(Phaser.BlendModes.NORMAL)
     .clearTint();
 }
 

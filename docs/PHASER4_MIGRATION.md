@@ -23,6 +23,17 @@ axis-aligned, unscaled transforms by default.
 - Leaf bursts only come from real bark hits, not air misses.
 - Reduced-motion preference suppresses new motion; no scoring rules have changed.
 
+## Performance & accessibility follow-up
+
+- Temporary sparks, leaf bursts, ambient falling leaves, air/tree-miss
+  moustaches and slip-dust now recycle through bounded per-texture scene pools.
+- Pooled objects have position, scale, alpha, tint, rotation, flip,
+  blend and depth reset before reuse. No retained references survive shutdown.
+- Cosmetic FX budgets respond to reduced-motion and conservative hardware
+  hints (cores/memory). Gameplay timers, shot travel and hit grading do not.
+- Gold collectible glow respects reduced motion.
+- No custom WebGL shader or heavyweight postprocessing is introduced.
+
 ## Validation
 
 - [ ] Play desktop at 960×540 and portrait at 540×960 in Chromium.

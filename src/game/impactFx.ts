@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { Grade, AimPoint } from '../logic/scoring';
 import { impactPlan, treeAtImpact, type TrunkBounds } from '../logic/impactPersonality';
 import { burstLeaves } from './ambience';
+import { acquireVisual, releaseVisual } from './visualPool';
 
 /** Bounce the visual sticker at the actual landing coordinate.
  * A rotation offset is stored separately so scene.update follows hero rotation
@@ -52,8 +53,8 @@ export function resolveMissImpact(
   height: number,
 ): void {
   const bark = treeAtImpact(aim, trees);
-  const item = scene.add
-    .image(aim.x, aim.y, texture)
+  const item = acquireVisual(scene, texture)
+    .setPosition(aim.x, aim.y)
     .setDisplaySize(width, height)
     .setDepth(50)
     .setTint(0xffbbc3)
@@ -77,7 +78,7 @@ export function resolveMissImpact(
           duration: 260,
           delay: 290,
           ease: 'Quad.easeIn',
-          onComplete: () => item.destroy(),
+          onComplete: () => releaseVisual(scene, texture, item),
         });
       },
     });
@@ -93,7 +94,7 @@ export function resolveMissImpact(
       scaleY: item.scaleY * 0.55,
       duration: 520,
       ease: 'Quad.easeIn',
-      onComplete: () => item.destroy(),
+      onComplete: () => releaseVisual(scene, texture, item),
     });
   }
 }
