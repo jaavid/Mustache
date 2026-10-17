@@ -7,6 +7,7 @@ import {
 } from '../../shared/goldenRules.js';
 import { recordCompetitiveGoldenPickup } from '../platform/competitiveScores';
 import { mustacheTexture } from './characterChoice';
+import { reduceVisualMotion } from './motionPrefs';
 
 /** Cosmetic and input presentation only; authoritative flight rules live in shared/. */
 export class GoldenFlyer {
@@ -42,14 +43,15 @@ export class GoldenFlyer {
       .setDisplaySize(portrait ? 80 : 74, portrait ? 44 : 40)
       .setDepth(121)
       .setVisible(false);
-    scene.tweens.add({
-      targets: this.glow,
-      scale: 1.22,
-      alpha: 0.07,
-      duration: 500,
-      yoyo: true,
-      repeat: -1,
-    });
+    if (!reduceVisualMotion())
+      scene.tweens.add({
+        targets: this.glow,
+        scale: 1.22,
+        alpha: 0.07,
+        duration: 500,
+        yoyo: true,
+        repeat: -1,
+      });
     this.hud = scene.add
       .text(
         portrait ? 270 : 480,

@@ -3,6 +3,7 @@ import { type Point, type PopPlan, projectileMs, projectilePoint } from '../logi
 import { heroRenderScale } from './ramin';
 import { acquireVisual, releaseVisual } from './visualPool';
 import { reduceVisualMotion } from './motionPrefs';
+import { fxBudget } from './fxQuality';
 
 /** Peeking around a tree is primarily a sideways move, hopping also rises vertically.
  * The character remains behind the tree artwork until reaching the target pose.
@@ -78,6 +79,7 @@ export function launchMustache(
   const tweenState = { t: 0 };
   let lastTrail = -1;
   const height = Math.min(65, Math.max(23, Math.abs(target.y - start.y) * 0.13));
+  const trailStep = fxBudget().projectileTrailStep;
   scene.tweens.add({
     targets: tweenState,
     t: 1,
@@ -88,7 +90,7 @@ export function launchMustache(
       const next = projectilePoint(start, target, Math.min(1, tweenState.t + 0.02), height);
       projectile.setPosition(point.x, point.y);
       projectile.setRotation(Math.atan2(next.y - point.y, next.x - point.x) * 0.12);
-      if (tweenState.t > lastTrail + 0.14 && tweenState.t < 0.92) {
+      if (tweenState.t > lastTrail + trailStep && tweenState.t < 0.92) {
         lastTrail = tweenState.t;
         const spark = acquireVisual(scene, 'spark')
           .setPosition(point.x, point.y)
