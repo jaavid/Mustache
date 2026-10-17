@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test('game launches with the licensed two-species forest art', async ({ page }) => {
   const failed: string[] = [];
-  page.on('pageerror', error => failed.push(error.message));
+  page.on('pageerror', (error) => failed.push(error.message));
   await page.goto('/');
   const canvas = page.locator('#game canvas').first();
   await expect(canvas).toBeVisible({ timeout: 20_000 });

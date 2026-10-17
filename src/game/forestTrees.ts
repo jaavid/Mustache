@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
-import { DESKTOP_TREE_CENTERS, FOREST_TREE_SPECIES, MOBILE_TREE_CENTERS } from '../logic/treeGeometry';
+import {
+  DESKTOP_TREE_CENTERS,
+  FOREST_TREE_SPECIES,
+  MOBILE_TREE_CENTERS,
+} from '../logic/treeGeometry';
 
 /** All visual sprite axes line up with the server-independent trunk collision lanes.
  * Crowns sway while bark remains stationary, so a missed shot never targets a moving tree.

@@ -4,10 +4,8 @@ import Phaser from 'phaser';
  * Keep the sprite files bundled by Vite (rather than hard-coded root URLs).
  */
 const oakUrl = new URL('../assets/forest/karsiori-oak-tree6-green.png', import.meta.url).href;
-const cedarUrl = new URL(
-  '../assets/forest/karsiori-large-spruce-night-sheet.png',
-  import.meta.url,
-).href;
+const cedarUrl = new URL('../assets/forest/karsiori-large-spruce-night-sheet.png', import.meta.url)
+  .href;
 
 export const TREE_TEXTURE_SIZE = { width: 96, height: 220 } as const;
 

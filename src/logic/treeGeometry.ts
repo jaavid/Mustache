@@ -25,19 +25,20 @@ export function peekPosition(trunkCenter: number, side: Side, distance: number):
 }
 
 /** Bark stays stationary while only the rear crown sways.
- * Bounds retain the pre-art-pass hit geometry and match the baked trunks.
+ * Miss decals stick to visible foreground bark, not to transparent crown.
+ * Score/aim grading is independent of these cosmetic bounds.
  */
 export const DESKTOP_TRUNK_BOUNDS = {
   centers: DESKTOP_TREE_CENTERS,
   centerY: 300,
   halfWidth: 30,
-  top: 143,
+  top: 269,
   bottom: 486,
 } as const;
 export const MOBILE_TRUNK_BOUNDS = {
   centers: MOBILE_TREE_CENTERS,
   centerY: 552,
   halfWidth: 23,
-  top: 395,
+  top: 521,
   bottom: 738,
 } as const;
