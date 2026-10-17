@@ -30,16 +30,30 @@ function drawTreeLayer(
   const rect = TREE_SOURCE_REGISTRATION[species];
   ctx.imageSmoothingEnabled = false;
   ctx.save();
-  if (layer === 'front') {
-    const points = TREE_TRUNK_OCCLUSION[species];
-    ctx.beginPath();
-    ctx.moveTo(points[0][0], points[0][1]);
-    for (const [x, y] of points.slice(1)) ctx.lineTo(x, y);
-    ctx.closePath();
-    ctx.clip();
-  }
+  const points = TREE_TRUNK_OCCLUSION[species];
+  ctx.beginPath();
+  ctx.moveTo(points[0][0], points[0][1]);
+  for (const [x, y] of points.slice(1)) ctx.lineTo(x, y);
+  ctx.closePath();
+  // Exactly one visual copy of each source pixel: the foreground contains
+  // stationary bark; the back contains only the surrounding swaying crown.
+  if (layer === 'front') ctx.clip();
   // The cedar sheet consists of 25 frames; sample only its first 74×128 frame.
-  ctx.drawImage(source, 0, 0, rect.sourceWidth, rect.sourceHeight, rect.x, rect.y, rect.width, rect.height);
+  ctx.drawImage(
+    source,
+    0,
+    0,
+    rect.sourceWidth,
+    rect.sourceHeight,
+    rect.x,
+    rect.y,
+    rect.width,
+    rect.height,
+  );
+  if (layer === 'back') {
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fill();
+  }
   ctx.restore();
 }
 
