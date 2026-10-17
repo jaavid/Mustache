@@ -1,12 +1,16 @@
 import { test, expect } from '@playwright/test';
 
-test('CC0 forest candidates render from real PNG files and spruce sheet frame', async ({ page }) => {
+test('CC0 forest candidates render from real PNG files and spruce sheet frame', async ({
+  page,
+}) => {
   await page.goto('/forest-asset-review.html');
   await expect(page.getByRole('heading', { name: /Forest Asset Review/ })).toBeVisible();
   for (const id of ['oak', 'willow']) {
     const img = page.locator('#' + id);
     await expect(img).toBeVisible();
-    expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+    expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(
+      true,
+    );
   }
   await expect(page.locator('#cedar')).toHaveAttribute('data-loaded', 'true');
   await expect(page.locator('#cedar-scene')).toHaveAttribute('data-loaded', 'true');
@@ -16,5 +20,8 @@ test('CC0 forest candidates render from real PNG files and spruce sheet frame', 
     return false;
   });
   expect(nonTransparent).toBe(true);
-  await page.screenshot({ path: 'test-results/forest-assets-' + test.info().project.name + '.png', fullPage: true });
+  await page.screenshot({
+    path: 'test-results/forest-assets-' + test.info().project.name + '.png',
+    fullPage: true,
+  });
 });

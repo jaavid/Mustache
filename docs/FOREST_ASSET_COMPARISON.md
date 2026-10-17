@@ -4,11 +4,11 @@ This sheet compares **actual Karsiori CC0 PNG assets** against the existing proc
 
 **Open the visual review page:** `/forest-asset-review.html` after running `npm run dev`. The page draws actual source sprites over a simplified night-forest stage and exposes their native pixel sizes. No game mechanics are changed.
 
-| Species role | Unmodified source sprite | Fit assessment |
-| --- | --- | --- |
-| Oak (broadleaf) | ![Karsiori oak #6](../public/forest-candidates/karsiori-oak-tree6-green.png) | **Shortlist** — readable broad crown, `70×98`; requires carefully separating trunk/front occluder and normalizing to `96×220`. |
-| Cedar / spruce | ![Karsiori large spruce](../public/forest-candidates/karsiori-large-spruce-night-sheet.png) | **Shortlist** — tall tapered silhouette, `74×128` per frame, **25 frames**, `1850×128` sheet; NIGHT edition has low contrast and needs visibility testing during Finale. |
-| Willow-like comparison | ![Karsiori tree #10](../public/forest-candidates/karsiori-willow-like-tree10-teal.png) | **Not approved** — `35×28` is tiny for the principal game tree, and it lacks the tall hanging-branch structure of a mature willow. Kept to make the mismatch visible; source a proper willow before merge. |
+| Species role           | Unmodified source sprite                                                                    | Fit assessment                                                                                                                                                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Oak (broadleaf)        | ![Karsiori oak #6](../public/forest-candidates/karsiori-oak-tree6-green.png)                | **Shortlist** — readable broad crown, `70×98`; requires carefully separating trunk/front occluder and normalizing to `96×220`.                                                                             |
+| Cedar / spruce         | ![Karsiori large spruce](../public/forest-candidates/karsiori-large-spruce-night-sheet.png) | **Shortlist** — tall tapered silhouette, `74×128` per frame, **25 frames**, `1850×128` sheet; NIGHT edition has low contrast and needs visibility testing during Finale.                                   |
+| Willow-like comparison | ![Karsiori tree #10](../public/forest-candidates/karsiori-willow-like-tree10-teal.png)      | **Not approved** — `35×28` is tiny for the principal game tree, and it lacks the tall hanging-branch structure of a mature willow. Kept to make the mismatch visible; source a proper willow before merge. |
 
 ## Provenance and license (CC0)
 
