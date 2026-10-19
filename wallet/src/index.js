@@ -116,6 +116,13 @@ async function requestWithdrawal(env,userId,body) {
   if(amount>tokenRaw(env.MAX_WITHDRAWAL_TOKENS||'1000',decimals)) throw new Error('WITHDRAWAL_LIMIT');
   const current=await client.readContract({address:contract,abi:(await import('./chain.js')).tokenAbi,functionName:'balanceOf',args:[getAddress(wallet.address)]});
   if(current<amount) throw new Error('INSUFFICIENT_NFIVE');
+  // Expire unconfirmed button prompts after 15 minutes; cap sponsored gas
+  // use by allowing at most one new withdrawal request every 24 hours.
+  await env.DB.prepare("UPDATE withdrawals SET state='CANCELLED' WHERE telegram_user_id=? AND state='AWAITING_CONFIRMATION' AND created_at<?")
+    .bind(id,Date.now()-15*60_000).run();
+  const recent=await env.DB.prepare('SELECT id FROM withdrawals WHERE telegram_user_id=? AND created_at>? LIMIT 1')
+    .bind(id,Date.now()-24*60*60_000).first();
+  if(recent) throw new Error('WITHDRAWAL_COOLDOWN');
   // Only one active request per player. Confirmation is through the Telegram
   // callback_query.from identity, not a client-provided Telegram user ID.
   const active=await env.DB.prepare("SELECT id FROM withdrawals WHERE telegram_user_id=? AND state NOT IN ('COMPLETE','CANCELLED','REVIEW_REQUIRED') LIMIT 1").bind(id).first();
@@ -128,8 +135,9 @@ async function requestWithdrawal(env,userId,body) {
 async function confirmWithdrawal(env,userId,requestId) {
   if(!/^[a-f0-9-]{36}$/i.test(requestId)) throw new Error('INVALID_WITHDRAWAL_ID');
   const id=telegramId(userId);
-  const result=await env.DB.prepare("UPDATE withdrawals SET state='READY',confirmed_at=? WHERE id=? AND telegram_user_id=? AND state='AWAITING_CONFIRMATION'")
-    .bind(Date.now(),requestId,id).run();
+  const now=Date.now();
+  const result=await env.DB.prepare("UPDATE withdrawals SET state='READY',confirmed_at=? WHERE id=? AND telegram_user_id=? AND state='AWAITING_CONFIRMATION' AND created_at>=?")
+    .bind(now,requestId,id,now-15*60_000).run();
   if(result.meta.changes!==1) throw new Error('WITHDRAWAL_NOT_CONFIRMABLE');
   return {requestId,state:'READY'};
 }
