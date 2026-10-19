@@ -10,20 +10,20 @@
     "ADMIN_ADDRESS": "0x45046A011987c5CB76AfCc0249730697E7C7efa7",
     "MAX_BATCH_TOKENS": "10000",
     "WEEKLY_POOL_TOKENS": "10000",
-    "TRANSFERS_ENABLED": "false",
-    "AUTO_REWARDS_ENABLED": "false"
+    "TRANSFERS_ENABLED": "true",
+    "AUTO_REWARDS_ENABLED": "true"
   },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "n5-wallet-db",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "9623281c-fbdf-485e-886f-4380922dbf2e",
       "migrations_dir": "migrations"
     },
     {
       "binding": "SCORES_DB",
       "database_name": "n5-mustache-scores",
-      "database_id": "00000000-0000-0000-0000-000000000000"
+      "database_id": "b7697aac-bb42-4507-9b59-5e23d6ee04d5"
     }
   ],
   "durable_objects": {
