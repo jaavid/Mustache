@@ -51,6 +51,9 @@ CREATE TABLE IF NOT EXISTS withdrawals (
   CHECK (length(destination)=42)
 );
 CREATE INDEX IF NOT EXISTS withdrawal_user_state ON withdrawals(telegram_user_id,state);
+-- Concurrent duplicate Telegram deliveries cannot create multiple active withdrawals.
+CREATE UNIQUE INDEX IF NOT EXISTS one_active_withdrawal_per_user ON withdrawals(telegram_user_id)
+  WHERE state IN ('AWAITING_CONFIRMATION','READY','GAS_PENDING','TOKEN_PENDING');
 CREATE TABLE IF NOT EXISTS audit_events (
   event_id TEXT PRIMARY KEY,
   action TEXT NOT NULL,
