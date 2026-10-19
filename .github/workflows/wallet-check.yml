@@ -1,0 +1,37 @@
+name: Wallet Service Checks
+on:
+  pull_request:
+    paths:
+      - "wallet/**"
+      - ".github/workflows/wallet-check.yml"
+  push:
+    branches: [main]
+    paths:
+      - "wallet/**"
+      - ".github/workflows/wallet-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wallet:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - name: Install wallet dependencies
+        working-directory: wallet
+        run: npm install --no-audit --no-fund
+      - name: Wallet syntax and regression tests
+        working-directory: wallet
+        run: npm run check
+      - name: Validate D1 migration locally
+        working-directory: wallet
+        run: npx wrangler d1 migrations apply DB --local
+      - name: Verify Cloudflare Worker bundles
+        working-directory: wallet
+        run: npx wrangler deploy --dry-run --outdir /tmp/wallet-dist
