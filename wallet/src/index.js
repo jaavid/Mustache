@@ -2,7 +2,7 @@ import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { getAddress, formatUnits } from 'viem';
 import { telegramId, tokenRaw, batchPlan, rankRewards, safeBatchId, completedTehranWeek } from './logic.js';
 import { wrapKey, tokenEqual, sha256 } from './security.js';
-import { context, balance, distributor, processNext } from './chain.js';
+import { context, balance, distributor, processNext, tokenAbi } from './chain.js';
 
 const reply=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const MAX_BODY=32000;
@@ -59,6 +59,21 @@ async function plan(env,body,source='genesis') {
   ]);
   return {batchId,state:'PLANNED',count:batch.items.length,total:formatUnits(BigInt(batch.sum),decimals)};
 }
+async function approveBatch(env,batchId) {
+  safeBatchId(batchId);
+  const batch=await env.DB.prepare('SELECT * FROM reward_batches WHERE batch_id=?').bind(batchId).first();
+  if(!batch) throw new Error('BATCH_NOT_FOUND');
+  if(batch.state==='APPROVED'||batch.state==='COMPLETE') return {batchId,state:batch.state};
+  if(batch.state!=='PLANNED') throw new Error('BATCH_NOT_APPROVABLE');
+  const {client,contract}=await context(env);
+  const signer=distributor(env);
+  const available=await client.readContract({address:contract,abi:tokenAbi,functionName:'balanceOf',args:[signer.address]});
+  if(available<BigInt(batch.total_raw)) throw new Error('DISTRIBUTOR_LOW_BALANCE');
+  const res=await env.DB.prepare("UPDATE reward_batches SET state='APPROVED' WHERE batch_id=? AND state='PLANNED'")
+    .bind(batchId).run();
+  if(res.meta.changes!==1) throw new Error('BATCH_APPROVAL_CONFLICT');
+  return {batchId,state:'APPROVED'};
+}
 async function genesisPlan(env) {
   if (!env.SCORES_DB) throw new Error('SCORES_DB_MISSING');
   const results=await env.SCORES_DB.prepare(`
@@ -82,13 +97,14 @@ async function genesisPlan(env) {
   const out=await plan(env,{batchId:'genesis-0',allocations:lines.map(r=>({telegramUserId:r.id,amount:formatUnits(BigInt(r.raw),decimals)}))},'genesis');
   return {...out,players:players.map(p=>({telegramUserId:p.telegramUserId,displayName:p.displayName}))};
 }
-async function weeklyPlan(env,nowMs) {
+async function weeklyPlan(env,nowMs,autoApprove=false) {
   if(env.AUTO_REWARDS_ENABLED!=='true') return {state:'DISABLED'};
   if(!env.SCORES_DB) throw new Error('SCORES_DB_MISSING');
   const {start,end}=completedTehranWeek(nowMs);
   const batchId='weekly-'+start;
   const old=await env.DB.prepare('SELECT batch_id FROM reward_batches WHERE batch_id=?').bind(batchId).first();
-  if(old) return {batchId,state:'ALREADY_PLANNED'};
+  if(old) return autoApprove && env.AUTO_REWARDS_ENABLED==='true'
+    ? approveBatch(env,batchId) : {batchId,state:'ALREADY_PLANNED'};
   // One highest server-accepted Classic/Gold Rush round per player, never
   // SUM(score). Same tie-break as the live game: score, golden, user ID.
   const result=await env.SCORES_DB.prepare(`
@@ -109,7 +125,9 @@ async function weeklyPlan(env,nowMs) {
   for(const id of ids) if(!await walletFor(env.DB,id)) return {batchId,state:'MISSING_WALLETS'};
   const {decimals}=await context(env);
   const rewards=rankRewards(ids,tokenRaw(env.WEEKLY_POOL_TOKENS||'10000',decimals));
-  return plan(env,{batchId,allocations:rewards.map(r=>({telegramUserId:r.id,amount:formatUnits(BigInt(r.raw),decimals)}))},'weekly');
+  const prepared=await plan(env,{batchId,allocations:rewards.map(r=>({telegramUserId:r.id,amount:formatUnits(BigInt(r.raw),decimals)}))},'weekly');
+  if(autoApprove && env.AUTO_REWARDS_ENABLED==='true') return {...prepared,approval:await approveBatch(env,batchId)};
+  return prepared;
 }
 async function summary(env,userId) {
   const wallet=await walletFor(env.DB,userId);
@@ -137,7 +155,7 @@ async function requestWithdrawal(env,userId,body) {
   if(dest.toLowerCase()===wallet.address.toLowerCase() || /^0x0{40}$/i.test(dest) || dest.toLowerCase()===contract.toLowerCase()) throw new Error('INVALID_DESTINATION');
   const amount=tokenRaw(body.amount,decimals);
   if(amount>tokenRaw(env.MAX_WITHDRAWAL_TOKENS||'1000',decimals)) throw new Error('WITHDRAWAL_LIMIT');
-  const current=await client.readContract({address:contract,abi:(await import('./chain.js')).tokenAbi,functionName:'balanceOf',args:[getAddress(wallet.address)]});
+  const current=await client.readContract({address:contract,abi:tokenAbi,functionName:'balanceOf',args:[getAddress(wallet.address)]});
   if(current<amount) throw new Error('INSUFFICIENT_NFIVE');
   // Expire unconfirmed button prompts after 15 minutes; cap sponsored gas
   // use by allowing at most one new withdrawal request every 24 hours.
@@ -199,6 +217,8 @@ export default {
         if(path==='/admin/bootstrap'&&method==='POST') return reply(await bootstrap(env,await payload(request)),201);
         if(path==='/admin/batches'&&method==='POST') return reply(await plan(env,await payload(request)),201);
         if(path==='/admin/genesis/prepare'&&method==='POST') return reply(await genesisPlan(env),201);
+        const approval=/^\/admin\/batches\/([a-zA-Z0-9_-]{3,75})\/approve$/.exec(path);
+        if(approval&&method==='POST') return reply(await approveBatch(env,approval[1]));
         if(path==='/admin/process'&&method==='POST') return serial(env);
         if(path==='/admin/weekly/plan'&&method==='POST') return reply(await weeklyPlan({...env,AUTO_REWARDS_ENABLED:'true'},Date.now()));
         if(path==='/admin/overview'&&method==='GET') {
@@ -224,7 +244,7 @@ export default {
   },
   async scheduled(controller,env,ctx) {
     ctx.waitUntil((async()=>{
-      if(controller.cron==='35 20 * * 5'&&env.AUTO_REWARDS_ENABLED==='true') await weeklyPlan(env,controller.scheduledTime);
+      if(controller.cron==='35 20 * * 5'&&env.AUTO_REWARDS_ENABLED==='true') await weeklyPlan(env,controller.scheduledTime,true);
       if(env.TRANSFERS_ENABLED==='true') await serial(env);
     })());
   }
