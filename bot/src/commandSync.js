@@ -7,9 +7,9 @@ export const GAME_COMMANDS = [
   { command: 'profile', description: '〰️ پروفایل، XP و مرحله طلایی' },
   { command: 'invite', description: '〰️ لینک دعوت دوستان و بوست روزانه' },
   { command: 'wallet', description: '〰️ موجودی و آدرس کیف پول تستی NFIVE' },
-  { command: 'rewards', description: '🎁 پاداش‌های هفتگی NFIVE' },
-  { command: 'transactions', description: '📜 تاریخچه تراکنش‌های تستی' },
-  { command: 'withdraw', description: '↗️ برداشت NFIVE به کیف پول شخصی' },
+  { command: 'rewards', description: '〰️🎁 پاداش‌های هفتگی NFIVE' },
+  { command: 'transactions', description: '〰️📜 تاریخچه تراکنش‌های تستی' },
+  { command: 'withdraw', description: '〰️↗️ برداشت NFIVE به کیف پول شخصی' },
   { command: 'help', description: '〰️🧭 سیبیل‌اولی؟ فوت‌وفن بازی اینجاست!' },
 ];
 
