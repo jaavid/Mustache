@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS reward_batches (
   batch_id TEXT PRIMARY KEY,
   digest TEXT NOT NULL,
   source TEXT NOT NULL CHECK(source IN ('genesis','weekly')),
-  state TEXT NOT NULL DEFAULT 'PLANNED',
+  state TEXT NOT NULL DEFAULT 'PLANNED' CHECK(state IN ('PLANNED','APPROVED','COMPLETE','REVIEW_REQUIRED')),
   total_raw TEXT NOT NULL,
   decimals INTEGER NOT NULL,
   created_at INTEGER NOT NULL
