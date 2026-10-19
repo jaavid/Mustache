@@ -3,11 +3,17 @@ on:
   pull_request:
     paths:
       - "wallet/**"
+      - "bot/src/walletCommands.js"
+      - "bot/src/index.js"
+      - "bot/tests/wallet-commands.test.mjs"
       - ".github/workflows/wallet-check.yml"
   push:
     branches: [main]
     paths:
       - "wallet/**"
+      - "bot/src/walletCommands.js"
+      - "bot/src/index.js"
+      - "bot/tests/wallet-commands.test.mjs"
       - ".github/workflows/wallet-check.yml"
   workflow_dispatch:
 
@@ -29,6 +35,8 @@ jobs:
       - name: Wallet syntax and regression tests
         working-directory: wallet
         run: npm run check
+      - name: Verify Telegram bot command regression suite
+        run: npm run test:bot
       - name: Validate D1 migration locally
         working-directory: wallet
         run: npx wrangler d1 migrations apply DB --local
