@@ -71,11 +71,13 @@ async function existingJob(env,client,key) {
   const found=await env.DB.prepare('SELECT * FROM tx_jobs WHERE operation_key=?').bind(key).first();
   if (!found) return null;
   const result=await receiptState(client,found,env.DB);
-  if (result.state==='PENDING' && found.state==='SIGNED') {
+  if (result.state==='PENDING') {
     try {
       await client.sendRawTransaction({serializedTransaction:found.signed_raw});
-      await env.DB.prepare("UPDATE tx_jobs SET state='SUBMITTED',updated_at=? WHERE operation_key=? AND state='SIGNED'")
-        .bind(Date.now(),key).run();
+      if (found.state==='SIGNED') {
+        await env.DB.prepare("UPDATE tx_jobs SET state='SUBMITTED',updated_at=? WHERE operation_key=? AND state='SIGNED'")
+          .bind(Date.now(),key).run();
+      }
     } catch {
       // A timeout, already-known transaction or RPC error is ambiguous.
       // Keep signed raw transaction for an exact replay; never sign again.
