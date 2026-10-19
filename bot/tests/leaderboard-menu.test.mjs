@@ -33,8 +33,8 @@ async function dispatch(update, db = mockDB(), sender = async () => {}) {
 }
 
 test('all managed Telegram command descriptions carry the 〰️ moustache and fun copy', () => {
-  assert.equal(GAME_COMMANDS.length, 7);
-  const expected = new Set(['play', 'leaderboard', 'top', 'score', 'profile', 'invite', 'help']);
+  assert.equal(GAME_COMMANDS.length, 11);
+  const expected = new Set(['play', 'leaderboard', 'top', 'score', 'profile', 'invite', 'help', 'wallet', 'rewards', 'transactions', 'withdraw']);
   for (const item of GAME_COMMANDS) {
     assert.ok(expected.has(item.command), item.command);
     assert.match(item.description, /〰️/);

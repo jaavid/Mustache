@@ -4,6 +4,7 @@
 import { issueSession, authenticate, startRound, finishRound, leaderboard } from './sessions.js';
 import { parseLeaderboardCallback, formatLeaderboardMessage, formatRichLeaderboardMessage } from './leaderboardMenu.js';
 import { registerReferral, playerProfile, goldCatchUpEligible } from './progression.js';
+import { walletCommand, confirmWalletCallback } from './walletCommands.js';
 export const DEFAULT_GAME_URL = 'https://mustache.alexa.ir/';
 export const DEFAULT_GAME_SHORT_NAME = 'mustache';
 export const DEFAULT_BOT_USERNAME = 'rjttobot';
@@ -22,7 +23,7 @@ export function isSameSecret(actual, expected) {
 
 export function parseGameCommand(input, botUsername = DEFAULT_BOT_USERNAME) {
   const first = String(input ?? '').trim().split(/\s+/)[0];
-  const match = /^\/(start|play|help|top|score|leaderboard|profile|invite)(?:@([a-zA-Z0-9_]+))?$/i.exec(first);
+  const match = /^\/(start|play|help|top|score|leaderboard|profile|invite|wallet|rewards|transactions|withdraw)(?:@([a-zA-Z0-9_]+))?$/i.exec(first);
   if (!match) return null;
   if (match[2] && match[2].toLowerCase() !== botUsername.toLowerCase()) return null;
   return match[1].toLowerCase();
@@ -107,16 +108,23 @@ export async function handleTelegramUpdate(update, env, send) {
           '\nرکورد Classic: ' + profile.bestClassic + ' · Gold Rush: ' + profile.bestGoldRush +
           '\nGold Rush: ' + goldStatus + '\nدعوت‌های امروز: ' + profile.dailyInvites + '/3';
       await send('sendMessage', { chat_id: message.chat.id, text: output });
+    } else if (['wallet','rewards','transactions','withdraw'].includes(command)) {
+      await walletCommand(message,command,env,send);
     } else if (command === 'help') {
       await send('sendMessage', {
         chat_id: message.chat.id,
-        text: '〰️ به جنگل سیبیل خوش اومدی! 🎩\n\n🎯 /play — بزن سیبیل رو بنشون سر جاش!\n👤 /profile — سطح و کارنامه سیبیلی\n〰️ /invite — دعوت دوستان و بوست روزانه\n🏆 /leaderboard — جدول مشترک Classic و Gold Rush\n👑 /top — ده نفر برتر جنگل\n📈 /score — ببین سیبیلات چند امتیاز آوردن\n🧭 /help — همین راهنمای سیبیلی\n\n🗓 رقابت هفتگی: شنبه تا شنبه به وقت تهران\n⚠️ جایزه توکنی هنوز فعال نیست.',
+        text: '〰️ به جنگل سیبیل خوش اومدی! 🎩\n\n🎯 /play — بزن سیبیل رو بنشون سر جاش!\n👤 /profile — سطح و کارنامه سیبیلی\n〰️ /invite — دعوت دوستان و بوست روزانه\n🏆 /leaderboard — جدول مشترک Classic و Gold Rush\n👑 /top — ده نفر برتر جنگل\n📈 /score — ببین سیبیلات چند امتیاز آوردن\n💰 /wallet — موجودی توکن تستی\n🎁 /rewards — پاداش‌های من\n📜 /transactions — تاریخچه\n↗️ /withdraw — برداشت تستی\n🧭 /help — همین راهنمای سیبیلی\n\n🗓 رقابت هفتگی: شنبه تا شنبه به وقت تهران\n⚠️ جایزه توکنی هنوز فعال نیست.',
       });
     } else if (command === 'top' || command === 'score' || command === 'leaderboard') {
       if (!env.DB) throw new Error('D1_NOT_CONFIGURED');
       const board = await leaderboard(env.DB, Date.now(), { userId: message.from?.id });
       await sendLeaderboard(message.chat.id, board, send);
     }
+    return;
+  }
+
+  if (update.callback_query?.id && update.callback_query.data?.startsWith('wd:')) {
+    await confirmWalletCallback(update.callback_query,env,send);
     return;
   }
 

@@ -1,0 +1,35 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "n5-wallet-service-amoy",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "vars": {
+    "CHAIN_ID": "80002",
+    "NFIVE_CONTRACT": "0xb0762E4EB2a1c4e4c3d65b93048972aBB60dFaa7",
+    "ADMIN_ADDRESS": "0x45046A011987c5CB76AfCc0249730697E7C7efa7",
+    "MAX_BATCH_TOKENS": "10000",
+    "WEEKLY_POOL_TOKENS": "10000",
+    "TRANSFERS_ENABLED": "false",
+    "AUTO_REWARDS_ENABLED": "false"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "n5-wallet-db",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    },
+    {
+      "binding": "SCORES_DB",
+      "database_name": "n5-mustache-scores",
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "SERIAL", "class_name": "WalletSerial" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["WalletSerial"] }],
+  "triggers": { "crons": ["35 20 * * 5", "*/10 * * * *"] },
+  "observability": { "enabled": true }
+}
