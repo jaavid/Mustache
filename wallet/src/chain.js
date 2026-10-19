@@ -141,7 +141,7 @@ export async function withdrawalStep(env,row) {
   const recorded=await existingJob(env,client,opToken);
   if (recorded) {
     if (recorded.state==='CONFIRMED') await env.DB.prepare("UPDATE withdrawals SET state='COMPLETE' WHERE id=?").bind(row.id).run();
-    if (recorded.state==='FAILED') await env.DB.prepare("UPDATE withdrawals SET state='REVIEW_REQUIRED' WHERE id=?").bind(row.id).run();
+    if (recorded.state==='FAILED'||recorded.state==='REVIEW_REQUIRED') await env.DB.prepare("UPDATE withdrawals SET state='REVIEW_REQUIRED' WHERE id=?").bind(row.id).run();
     return recorded;
   }
   const tokenBalance=await client.readContract({address:contract,abi:tokenAbi,functionName:'balanceOf',args:[getAddress(wallet.address)]});
@@ -178,7 +178,19 @@ export async function processNext(env) {
   // until its previous signed job reaches a terminal receipt state.
   const outstanding=await env.DB.prepare("SELECT * FROM tx_jobs WHERE state IN ('SIGNED','SUBMITTED') ORDER BY created_at LIMIT 30").all();
   for (const job of outstanding.results) await existingJob(env,client,job.operation_key);
-  const line=await env.DB.prepare("SELECT a.*,w.address FROM allocations a JOIN wallets w USING(telegram_user_id) WHERE NOT EXISTS(SELECT 1 FROM tx_jobs t WHERE t.operation_key=a.operation_key AND t.state IN ('CONFIRMED','FAILED','REVIEW_REQUIRED')) ORDER BY a.batch_id,a.telegram_user_id LIMIT 1").first();
+  await env.DB.prepare(`UPDATE reward_batches SET state='REVIEW_REQUIRED' WHERE state='APPROVED'
+    AND EXISTS (SELECT 1 FROM allocations a JOIN tx_jobs t ON t.operation_key=a.operation_key
+      WHERE a.batch_id=reward_batches.batch_id AND t.state IN ('FAILED','REVIEW_REQUIRED'))`).run();
+  await env.DB.prepare(`UPDATE reward_batches SET state='COMPLETE' WHERE state='APPROVED'
+    AND NOT EXISTS (SELECT 1 FROM allocations a LEFT JOIN tx_jobs t ON t.operation_key=a.operation_key
+      WHERE a.batch_id=reward_batches.batch_id AND COALESCE(t.state,'NOT_SENT')!='CONFIRMED')`).run();
+  // Only independently approved batches can create signed blockchain transactions.
+  const line=await env.DB.prepare(`SELECT a.*,w.address FROM allocations a
+    JOIN wallets w USING(telegram_user_id)
+    JOIN reward_batches b ON b.batch_id=a.batch_id AND b.state='APPROVED'
+    WHERE NOT EXISTS(SELECT 1 FROM tx_jobs t WHERE t.operation_key=a.operation_key
+      AND t.state IN ('CONFIRMED','FAILED','REVIEW_REQUIRED'))
+    ORDER BY a.batch_id,a.telegram_user_id LIMIT 1`).first();
   if (line) {
     const outcome=await tokenTransfer(env,line.operation_key,distributor(env),line.address,line.amount_raw);
     return {operation:line.operation_key,...outcome};
