@@ -157,6 +157,7 @@ export async function withdrawalStep(env,row) {
     const previous=await existingJob(env,client,gasOp);
     if (previous?.state==='FAILED') throw new Error('GAS_TRANSFER_FAILED');
     if (previous?.state==='PENDING') return previous;
+    if (previous?.state==='CONFIRMED') throw new Error('GAS_TOPUP_INADEQUATE');
     const topup=needed*2n-pol;
     if (topup>tokenRaw(env.MAX_GAS_TOPUP_POL||'0.005',18)) throw new Error('GAS_TOPUP_LIMIT');
     const outcome=await gasTransfer(env,gasOp,wallet.address,topup);
