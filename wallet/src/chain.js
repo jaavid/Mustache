@@ -19,7 +19,8 @@ export async function context(env) {
   const client=rpc(env);
   if ((await client.getChainId())!==80002) throw new Error('CHAIN_MISMATCH');
   const contract=getAddress(env.NFIVE_CONTRACT);
-  if (!(await client.getCode({address:contract}))) throw new Error('CONTRACT_NOT_DEPLOYED');
+  const bytecode=await client.getCode({address:contract});
+  if(!bytecode || bytecode==='0x') throw new Error('CONTRACT_NOT_DEPLOYED');
   const [decimals,symbol]=await Promise.all([
     client.readContract({address:contract,abi:tokenAbi,functionName:'decimals'}),
     client.readContract({address:contract,abi:tokenAbi,functionName:'symbol'})
@@ -55,6 +56,8 @@ async function receiptState(client,job,db) {
   if (!isPending(job.state)) return {state:job.state,txHash:job.tx_hash};
   try {
     const receipt=await client.getTransactionReceipt({hash:job.tx_hash});
+    const head=await client.getBlockNumber();
+    if(head < receipt.blockNumber + 2n) return {state:'PENDING',txHash:job.tx_hash};
     const state=receipt.status==='success'?'CONFIRMED':'FAILED';
     await db.prepare('UPDATE tx_jobs SET state=?,updated_at=? WHERE operation_key=? AND state IN (\'SIGNED\',\'SUBMITTED\')')
       .bind(state,Date.now(),job.operation_key).run();
@@ -142,12 +145,13 @@ export async function withdrawalStep(env,row) {
   const tokenBalance=await client.readContract({address:contract,abi:tokenAbi,functionName:'balanceOf',args:[getAddress(wallet.address)]});
   if (tokenBalance<BigInt(row.amount_raw)) throw new Error('INSUFFICIENT_NFIVE');
   const data=encodeFunctionData({abi:tokenAbi,functionName:'transfer',args:[destination,BigInt(row.amount_raw)]});
-  const [estimated,price,pol]=await Promise.all([
-    client.estimateGas({account:getAddress(wallet.address),to:contract,data,value:0n}),
+  // eth_estimateGas may reject an unfunded sender before token execution.
+  // Prefund conservatively, then sendOnce estimates the actual ERC-20 gas.
+  const [price,pol]=await Promise.all([
     client.getGasPrice(),
     client.getBalance({address:getAddress(wallet.address)})
   ]);
-  const needed=(estimated*12n/10n+1000n)*(price*12n/10n+1n);
+  const needed=125000n*(price*12n/10n+1n);
   if (pol<needed) {
     const gasOp='withdraw:'+row.id+':gas';
     const previous=await existingJob(env,client,gasOp);
