@@ -8,7 +8,7 @@ Separate Cloudflare Worker within the existing `jaavid/Mustache` monorepo. **TES
 - Wallets indexed by numeric Telegram User ID, **not display name**.
 - D1 encrypted private keys (AES-GCM, unique nonce and AAD per player), D1 immutable signed-transaction journal, global serial Durable Object.
 - Game D1 is read solely for completed Tehran-week snapshots. Existing score verification is not prize-grade.
-- Weekly pool is `10000` test tNFIVE by default; 40% participation + 60% rank. No minted or transferred tokens until explicitly configured.
+- Weekly pool is `10000` test tNFIVE by default; 40% participation + 60% rank. Genesis batches require independent manual approval. No minted or transferred tokens until explicitly configured.
 
 ## Production deployment (manual approval)
 
@@ -23,7 +23,7 @@ This PR has no automatic wallet deployment and **cannot move assets just by bein
 7. Call `GET /admin/preflight` with `Authorization: Bearer <ADMIN_API_TOKEN>`. Confirm contract bytecode, chain 80002, ERC-20 symbol/decimals, admin and operational balances. Stop if unexpected.
 8. For the original 20 test players, prefer **POST /admin/genesis/prepare** (admin token): it selects the all-time top 20 accepted-score players from `SCORES_DB`, creates any missing encrypted wallets, and saves a deterministic `genesis-0` reward plan. It does **not** transfer tokens. Confirm all IDs before enabling payouts. Alternatively, export real Telegram IDs from the existing scores D1: `SELECT CAST(user_id AS TEXT) AS telegramUserId,display_name AS displayName FROM game_users ORDER BY user_id;`. Pick exactly the authorized test users and `POST /admin/bootstrap` with `{"players":[{"telegramUserId":"1234","displayName":"Member"}]}`. Repeat is idempotent.
 9. `POST /admin/batches` using `{"batchId":"genesis-0","allocations":[{"telegramUserId":"1234","amount":"10"}]}`. No chain transaction occurs yet.
-10. Verify a small test transfer and reconcile receipt using `POST /admin/process`. First turn `TRANSFERS_ENABLED` to `true` in **trusted deployment configuration** and redeploy; keep default `false` in Git. Run `GET /admin/overview` and Polygonscan.
+10. **Explicitly approve** the audited Genesis batch using `POST /admin/batches/genesis-0/approve` (requires distributor funds). Merely planning a batch NEVER allows transfer. Then verify a small test transfer and reconcile receipt using `POST /admin/process`. First turn `TRANSFERS_ENABLED` to `true` in **trusted deployment configuration** and redeploy; keep default `false` in Git. Run `GET /admin/overview` and Polygonscan.
 11. Before weekly automation, confirm all eligible users have wallets and score rules are appropriate. Enable `AUTO_REWARDS_ENABLED` only after explicit review. Cron **Friday 20:35 UTC = Saturday 00:05 Tehran** creates a snapshot for the completed week; a 10-minute Cron resumes submitted jobs. On RPC ambiguity, only the persisted signed payload may be rebroadcast, never a newly signed transaction.
 
 Note: The deployed code cannot be meaningfully end-to-end tested for real token delivery until Cloudflare secrets, active Amoy RPC, D1 bindings, and distributor wallet are provided by the account administrator. CI covers pure logic and deployment bundling.
@@ -34,7 +34,8 @@ Admin routes (Bearer admin token):
 - `GET /admin/preflight`
 - `POST /admin/bootstrap` (create encrypted per-user wallets)
 - `POST /admin/genesis/prepare` (top 20 accepted all-time game records → wallets → dry batch)
-- `POST /admin/batches` (immutable idempotent batch plan)
+- `POST /admin/batches` (immutable idempotent batch plan; not executable)
+- `POST /admin/batches/<id>/approve` (authorized, funding-checked release gate)
 - `POST /admin/process` (advance one tx job through serial coordinator)
 - `POST /admin/weekly/plan` (manual prior-week dry planning)
 - `GET /admin/overview`
