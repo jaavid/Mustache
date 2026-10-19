@@ -21,7 +21,7 @@ This PR has no automatic wallet deployment and **cannot move assets just by bein
 5. Configure secrets with `npx wrangler secret put AMOY_RPC_URL`, `ADMIN_API_TOKEN`, `WALLET_ENCRYPTION_KEY` and `WALLET_SERVICE_KEY`. Generate the admin/service token with `openssl rand -hex 32`; encryption key with `openssl rand -base64 32` and **back it up securely**. NEVER paste values into GitHub, chat, issue or log.
 6. Generate **a distinct, limited-funds operational wallet outside this repository**. Fund it from the original admin wallet with small quantities of tNFIVE and test POL; never use the treasury/admin key as `DISTRIBUTOR_PRIVATE_KEY`. Configure `npx wrangler secret put DISTRIBUTOR_PRIVATE_KEY` using a protected local console. The API rejects accidental use of the treasury key.
 7. Call `GET /admin/preflight` with `Authorization: Bearer <ADMIN_API_TOKEN>`. Confirm contract bytecode, chain 80002, ERC-20 symbol/decimals, admin and operational balances. Stop if unexpected.
-8. Export real Telegram IDs from the existing scores D1: `SELECT CAST(user_id AS TEXT) AS telegramUserId,display_name AS displayName FROM game_users ORDER BY user_id;`. Pick exactly the authorized test users and `POST /admin/bootstrap` with `{"players":[{"telegramUserId":"1234","displayName":"Member"}]}`. Repeat is idempotent.
+8. For the original 20 test players, prefer **POST /admin/genesis/prepare** (admin token): it selects the all-time top 20 accepted-score players from `SCORES_DB`, creates any missing encrypted wallets, and saves a deterministic `genesis-0` reward plan. It does **not** transfer tokens. Confirm all IDs before enabling payouts. Alternatively, export real Telegram IDs from the existing scores D1: `SELECT CAST(user_id AS TEXT) AS telegramUserId,display_name AS displayName FROM game_users ORDER BY user_id;`. Pick exactly the authorized test users and `POST /admin/bootstrap` with `{"players":[{"telegramUserId":"1234","displayName":"Member"}]}`. Repeat is idempotent.
 9. `POST /admin/batches` using `{"batchId":"genesis-0","allocations":[{"telegramUserId":"1234","amount":"10"}]}`. No chain transaction occurs yet.
 10. Verify a small test transfer and reconcile receipt using `POST /admin/process`. First turn `TRANSFERS_ENABLED` to `true` in **trusted deployment configuration** and redeploy; keep default `false` in Git. Run `GET /admin/overview` and Polygonscan.
 11. Before weekly automation, confirm all eligible users have wallets and score rules are appropriate. Enable `AUTO_REWARDS_ENABLED` only after explicit review. Cron **Friday 20:35 UTC = Saturday 00:05 Tehran** creates a snapshot for the completed week; a 10-minute Cron resumes submitted jobs. On RPC ambiguity, only the persisted signed payload may be rebroadcast, never a newly signed transaction.
@@ -33,6 +33,7 @@ Note: The deployed code cannot be meaningfully end-to-end tested for real token 
 Admin routes (Bearer admin token):
 - `GET /admin/preflight`
 - `POST /admin/bootstrap` (create encrypted per-user wallets)
+- `POST /admin/genesis/prepare` (top 20 accepted all-time game records → wallets → dry batch)
 - `POST /admin/batches` (immutable idempotent batch plan)
 - `POST /admin/process` (advance one tx job through serial coordinator)
 - `POST /admin/weekly/plan` (manual prior-week dry planning)
