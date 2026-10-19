@@ -44,7 +44,40 @@ Internal bot routes (Service Binding AND `X-Wallet-Service-Key` and server-deriv
 - `POST /internal/withdrawals` with `{"destination":"0x...","amount":"50"}`
 - `POST /internal/withdrawals/<uuid>/confirm` from an authenticated Telegram callback.
 
-Only invoke internal routes from the trusted Telegram webhook, never from the client. Require **private Telegram chats** for sensitive wallet commands, and verify the callback belongs to the requesting Telegram user. The bot integration must be deployed after the Wallet Worker/service secrets are configured.
+Only invoke internal routes from the trusted Telegram webhook, never from the client. Require **private Telegram chats** for sensitive wallet commands, and verify the callback belongs to the requesting Telegram user. The bot code is included in this PR, but remains fail-closed until the Wallet Worker and its service secrets are configured.
+
+## Connect the existing @RJTtobot
+
+The existing bot and game webhook are **not replaced**. This PR implements
+`/wallet`, `/rewards`, `/transactions`, and a private-chat
+`/withdraw 25 0x...` flow that requires an explicit inline confirmation.
+
+After deploying the Wallet Worker in safe mode, set two Cloudflare **bot Worker**
+secrets (never commit or paste actual secret values):
+
+- `WALLET_API_URL`: exact HTTPS base URL of the new wallet Worker (e.g. its workers.dev URL)
+- `WALLET_SERVICE_KEY`: the same distinct random secret configured on the Wallet Worker.
+
+Use `npx wrangler secret put WALLET_API_URL --name n5-mustache-rjttobot` and
+`npx wrangler secret put WALLET_SERVICE_KEY --name n5-mustache-rjttobot`,
+or manage them in Cloudflare Dashboard. Both must be present; the bot fails
+closed without them. After setup, verify `/wallet` in a **private** chat with
+a provisioned test user, then `/withdraw` confirmation (transfers disabled
+until explicitly enabled). No Telegram `setWebhook` call is necessary.
+
+Alternatively, after Wallet Worker deployment, prefer a private Cloudflare
+Service Binding `WALLET` and keep only `WALLET_SERVICE_KEY` on the bot
+for defense in depth. Do not put an undeployed binding into the existing bot
+Wrangler config because it can break production rollout.
+
+### Manual deployment workflow
+
+The `Deploy N5 Wallet (Amoy manual)` GitHub Action is opt-in via
+`workflow_dispatch`, with `wallet-testnet` Environment approval. Supply
+the existing `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` action
+secrets and Environment variables `N5_WALLET_D1_ID` and
+`N5_SCORES_D1_ID`. It fills D1 IDs at build time and deploys with signing
+and auto-rewards disabled. No on-chain transactions occur as part of CI.
 
 ## Custody and incident handling
 
@@ -52,7 +85,7 @@ Only invoke internal routes from the trusted Telegram webhook, never from the cl
 - Signed raw transactions in D1 are already authorized for their specific nonce/recipient/amount; protect D1 read access. Replay of the *same* raw tx cannot create a second transfer, while resubmitting a *newly signed* tx can.
 - Durable Object serializes tx creation to avoid competing nonces. `SIGNED` or `SUBMITTED` tx states block new nonces from the same sender until a receipt is known. A stuck tx requires manual inspection; no automatic fee bump.
 - Never enable public user wallet creation, export-key APIs, arbitrary contract calls or open withdrawals.
-- The gas station only covers **a bounded withdrawal** from a registered user; default cap 0.005 test POL per funding request and 1000 tNFIVE per withdrawal. Monitor funding wallet/testnet faucet depletion.
+- The gas station only covers **a bounded withdrawal** from a registered user; default cap 0.005 test POL per funding request and 1000 tNFIVE per withdrawal. Users are limited to one withdrawal request every 24 hours; confirmation expires after 15 minutes. Monitor funding wallet/testnet faucet depletion.
 - To pause signing immediately set `TRANSFERS_ENABLED=false` and deploy; outstanding signed raw transfers may still be accepted by the chain.
 - In case of RPC errors or nonce collisions reconcile the transaction hash via Amoy Polygonscan and D1 first. Do not blindly reset records.
 - **Not exchange-ready**: Swap, AMM pool creation and ERC-20 allowance management are separate reviewed phases. Holding mock USDC/WETH in the treasury does not establish a tradable market.
