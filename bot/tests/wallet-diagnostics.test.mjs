@@ -102,3 +102,37 @@ test('Telegram /start myid opens identity instead of launching a game',async()=>
   assert.match(outputs[0].data.text,/208627/);
   assert.ok(!outputs.some(x=>x.method==='sendGame'));
 });
+
+test('Wallet 503 shows stage-specific RPC fix and never exposes provider credentials',async()=>{
+  const calls=[];
+  const env={
+    ...envFor([],calls),
+    WALLET:{async fetch(url,opts){
+      calls.push({url,opts});
+      if(url.endsWith('/health'))return new Response(JSON.stringify({chainId:80002,transfersEnabled:false,autoRewardsEnabled:false}));
+      if(url.endsWith('/internal/history'))return new Response(JSON.stringify({rewards:[],withdrawals:[]}));
+      if(url.endsWith('/internal/wallet'))return new Response(JSON.stringify({error:'OPERATION_FAILED'}),{status:503});
+      if(url.endsWith('/internal/admin/diagnostics'))return new Response(JSON.stringify({
+        ok:false,stage:'configuration',code:'RPC_URL_MISSING_OR_INVALID'
+      }));
+      throw Error('unexpected');
+    }}
+  };
+  const result=await diagnoseWallet(env,208627);
+  assert.match(result,/نمایش موجودی — 503/);
+  assert.match(result,/RPC_URL_MISSING_OR_INVALID/);
+  assert.match(result,/AMOY_RPC_URL/);
+  assert.equal(result.includes(env.WALLET_SERVICE_KEY),false);
+  assert.ok(calls.some(x=>x.url.endsWith('/internal/admin/diagnostics')));
+  assert.ok(calls.every(x=>!x.opts?.headers?.['x-telegram-user-id']||x.opts.headers['x-telegram-user-id']==='208627'));
+});
+test('Wallet 503 offers fallback when new diagnostics are not yet deployed',async()=>{
+  const env={...envFor([],[]),WALLET:{async fetch(url){
+    if(url.endsWith('/health'))return new Response(JSON.stringify({chainId:80002}));
+    if(url.endsWith('/internal/history'))return new Response(JSON.stringify({rewards:[]}));
+    if(url.endsWith('/internal/wallet'))return new Response(JSON.stringify({error:'OPERATION_FAILED'}),{status:503});
+    return new Response('Not found',{status:404});
+  }}};
+  const result=await diagnoseWallet(env,208627);
+  assert.match(result,/هنوز روی Wallet Worker دیپلوی نشده/);
+});
