@@ -62,5 +62,30 @@ as a service credential. Protect its value, configure HTTPS or a Cloudflare
 Service Binding between Workers, and do **not** expose this route publicly
 without service authentication. Player identity is server-derived only.
 
-`ADMIN_TELEGRAM_USER_ID=208627` does not activate an admin interface:
-a separate reviewed implementation is required for privileged Telegram actions.
+## Telegram management dashboard (read-only)
+
+The private `/admin` command uses a **separate**, read-only internal
+`GET /internal/admin/overview` route. It shows service switches, wallet
+count, treasury/Distributor public balances, latest batches and transaction
+state counts. It cannot approve batches, send NFIVE or expose private keys.
+
+For the operator's Telegram account, configure the following **in BOTH the
+`n5-mustache-rjttobot` and `n5-wallet-service-amoy` Workers**:
+
+```text
+ADMIN_TELEGRAM_USER_ID=208627
+```
+
+Provision this value as a Cloudflare secret (even though a numeric Telegram
+ID is not itself a secret) so automated Worker code deployments preserve it
+without hardcoding this account identifier into a public Git repository.
+Never store `ADMIN_API_TOKEN` in the Telegram bot Worker.
+
+Security enforces all of: valid Telegram webhook, private chat owner,
+Telegram ID equality on the bot, shared-key Worker request, and server-side
+operator ID equality on the Wallet Worker. There are **no admin write
+endpoints** available through this Telegram interface.
+
+Send `/admin` from the authorized Telegram account after redeploy and
+confirm it shows the correct read-only wallet count. The command is not
+placed in the global BotFather menu because ordinary players cannot use it.
