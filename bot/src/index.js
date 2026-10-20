@@ -61,20 +61,20 @@ async function sendLeaderboard(chatId, board, send) {
   }
 }
 
-async function editLeaderboard(destination, board, presentation, send) {
+async function editLeaderboard(destination, board, presentation, expanded, send) {
   if (presentation === 'text') {
     return send('editMessageText', {
-      ...destination, ...formatLeaderboardMessage(board),
+      ...destination, ...formatLeaderboardMessage(board, 'text', expanded),
     });
   }
   try {
     await send('editMessageText', {
-      ...destination, ...formatRichLeaderboardMessage(board),
+      ...destination, ...formatRichLeaderboardMessage(board, { expanded }),
     });
   } catch (error) {
     if (!isRichUnsupported(error)) throw error;
     await send('editMessageText', {
-      ...destination, ...formatLeaderboardMessage(board),
+      ...destination, ...formatLeaderboardMessage(board, 'text', expanded),
     });
   }
 }
@@ -130,12 +130,23 @@ export async function handleTelegramUpdate(update, env, send) {
             ? 'بلیت طلایی امروز فعال (یک شروع)'
             : profile.roundsPlayed + '/12 راند · ' + profile.activeDays + '/2 روز فعال';
       const output = command === 'invite'
-        ? '〰️ لینک دعوت شما:\n' + profile.inviteUrl + '\n\nهر دوست جدید پس از تکمیل اولین بازی معتبر ۵٪ بوست روزانه (حداکثر ۳ نفر و ۲۰۰ امتیاز در هر راند) فعال می‌کند.'
-        : '〰️ پروفایل ' + profile.name + '\nLevel ' + profile.level + ' · XP ' + profile.xp +
-          '\nراندها: ' + profile.roundsPlayed + ' · روزهای فعال: ' + profile.activeDays +
-          '\nرکورد Classic: ' + profile.bestClassic + ' · Gold Rush: ' + profile.bestGoldRush +
-          '\nGold Rush: ' + goldStatus + '\nدعوت‌های امروز: ' + profile.dailyInvites + '/3';
-      await send('sendMessage', { chat_id: message.chat.id, text: output });
+        ? '〰️🎁 دعوت دوستان\n' + profile.inviteUrl +
+          '\n\nهر دوست جدید پس از اولین بازی معتبر، ۵٪ بوست روزانه فعال می‌کند (تا ۳ نفر و ۲۰۰ امتیاز در هر راند).'
+        : '〰️👤 ' + profile.name + ' · Level ' + profile.level + ' · XP ' + profile.xp +
+          '\n🎮 ' + profile.roundsPlayed + ' راند · ' + profile.activeDays + ' روز فعال' +
+          '\n🏆 Classic: ' + profile.bestClassic + ' · Gold Rush: ' + profile.bestGoldRush +
+          '\n🪙 Gold Rush: ' + goldStatus +
+          '\n🎁 دعوت امروز: ' + profile.dailyInvites + '/3';
+      await send('sendMessage', {
+        chat_id: message.chat.id, text: output,
+        ...(command === 'invite' ? {
+          // Telegram can show a huge auto-generated preview inside the chat.
+          link_preview_options: { is_disabled: true },
+          reply_markup: { inline_keyboard: [[{
+            text: '📋 کپی لینک دعوت', copy_text: { text: profile.inviteUrl },
+          }]] },
+        } : {}),
+      });
     } else if (command === 'myid') {
       // Telegram's authenticated from.id is the only identity authority.
       // Never return identity information inside a shared/group chat.
@@ -234,7 +245,7 @@ export async function handleTelegramUpdate(update, env, send) {
       ? { inline_message_id: inlineId }
       : { chat_id: chatId, message_id: messageId };
     try {
-      await editLeaderboard(destination, board, target.presentation, send);
+      await editLeaderboard(destination, board, target.presentation, target.expanded === true, send);
       await send('answerCallbackQuery', { callback_query_id: callback.id, cache_time: 0 });
     } catch (error) {
       // Re-tapping the active tab is normal, not a failed webhook delivery.
