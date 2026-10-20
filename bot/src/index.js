@@ -7,6 +7,7 @@ import { registerReferral, playerProfile, goldCatchUpEligible } from './progress
 import { walletCommand, confirmWalletCallback, handleWalletNavigation, ensureTelegramWallet } from './walletCommands.js';
 import { adminCommand, adminCallback } from './adminDashboard.js';
 import { walletDiagnosticCommand } from './walletDiagnostics.js';
+import { isPrivateChatOwner, mainReplyKeyboard, parseMainMenuMessage, installMainKeyboard } from './mainMenu.js';
 export const DEFAULT_GAME_URL = 'https://mustache.alexa.ir/';
 export const DEFAULT_GAME_SHORT_NAME = 'mustache';
 export const DEFAULT_BOT_USERNAME = 'rjttobot';
@@ -83,12 +84,16 @@ export async function handleTelegramUpdate(update, env, send) {
 
   if (update.message?.chat?.id !== undefined) {
     const message = update.message;
-    const command = parseGameCommand(message.text, botUsername);
+    // Reply keyboard sends ordinary text, not a slash command. Never accept
+    // private-wallet shortcuts in a group or forwarded-message context.
+    const command = parseGameCommand(message.text, botUsername) ||
+      (isPrivateChatOwner(message) ? parseMainMenuMessage(message.text) : null);
     if (command === 'start' || command === 'play') {
       // A wallet deep link must open Wallet, not launch a Game Card.
       // Parse the exact Telegram /start payload; do not trust arbitrary text.
       if (command === 'start' && /^\/start(?:@[a-zA-Z0-9_]+)?\s+wallet\s*$/i.test(String(message.text || '').trim())) {
         await walletCommand(message, 'wallet', env, send);
+        await installMainKeyboard(message, send);
         return;
       }
       if (command === 'start' && /^\/start(?:@[a-zA-Z0-9_]+)?\s+myid\s*$/i.test(String(message.text || '').trim())) {
@@ -107,6 +112,7 @@ export async function handleTelegramUpdate(update, env, send) {
         try { await ensureTelegramWallet(env, message.from); } catch { /* wallet may not be deployed yet */ }
       }
       await send('sendGame', { chat_id: message.chat.id, game_short_name: gameShortName });
+      if (command === 'start') await installMainKeyboard(message, send);
     } else if (command === 'profile' || command === 'invite') {
       if (!env.DB || !Number.isSafeInteger(message.from?.id)) return;
       await env.DB.prepare('INSERT INTO game_users(user_id, display_name, updated_at) VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET display_name=excluded.display_name, updated_at=excluded.updated_at')
@@ -169,7 +175,7 @@ export async function handleTelegramUpdate(update, env, send) {
           'برای امکانات کیف پول و بازه‌های جدول، از دکمه‌های داخل هر بخش استفاده کن.\n' +
           '🗓 رقابت هفتگی: شنبه تا شنبه به وقت تهران\n' +
           '⚠️ پرداخت پاداش توکنی هنوز فعال نشده است.',
-        reply_markup: { inline_keyboard: [
+        reply_markup: isPrivateChatOwner(message) ? mainReplyKeyboard() : { inline_keyboard: [
           [{ text: '🏆 رتبه‌بندی', callback_data: 'lb:w:0' }, { text: '💰 کیف پول', callback_data: 'nw:w' }],
           [{ text: '🎁 پاداش‌ها', callback_data: 'nw:r' }, { text: '📜 تراکنش‌ها', callback_data: 'nw:t' }],
           [{ text: '〰️🎮 شروع بازی', url: 'https://t.me/RJTtobot?game=mustache' }],

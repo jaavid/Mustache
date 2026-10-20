@@ -30,8 +30,10 @@ test('wallet deep-link /start wallet shows Wallet rather than launching Game',as
   assert.equal(parseGameCommand('/start wallet'),'start');
   await handleTelegramUpdate({message:{text:'/start wallet',chat:{id:user.id,type:'private'},from:user}},env,
     async(method,data)=>messages.push({method,data}));
-  assert.equal(messages.length,1);
+  assert.equal(messages.length,2);
   assert.equal(messages[0].method,'sendRichMessage');
+  assert.equal(messages[1].method,'sendMessage');
+  assert.equal(messages[1].data.reply_markup.is_persistent,true);
   assert.equal(messages.some(m=>m.method==='sendGame'),false);
   assert.match(JSON.stringify(messages[0].data.rich_message),/42/);
   assert.equal(requests.some(x=>x.url.endsWith('/internal/wallet')),true);
