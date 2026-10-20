@@ -2,7 +2,6 @@
  * Read-only private bot-side diagnostics. Do not send tokens, keys, admin
  * credentials, Telegram sessions, raw headers, or runtime errors to chat.
  */
-const WALLET_ORIGIN = 'https://n5-wallet-service-amoy.zed-ai.workers.dev';
 function isOwner(message,env) {
   const chat=message?.chat,from=message?.from;
   return chat?.type==='private' && Number.isSafeInteger(from?.id) &&
