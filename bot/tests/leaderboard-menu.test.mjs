@@ -77,7 +77,7 @@ test('Help message lists only six primary commands and contextual navigation but
   for (const hidden of ['top', 'score', 'rewards', 'transactions', 'withdraw']) {
     assert.equal(help.text.includes('/' + hidden + ' '), false);
   }
-  assert.ok(help.text.includes('\\n'));
+  assert.ok(help.text.includes('\n'));
   const actions = help.reply_markup.inline_keyboard.flat().map(x => x.callback_data || x.url);
   assert.ok(actions.includes('lb:w:0'));
   assert.ok(actions.includes('nw:w'));
