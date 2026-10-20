@@ -159,10 +159,19 @@ export async function handleTelegramUpdate(update, env, send) {
     } else if (command === 'help') {
       await send('sendMessage', {
         chat_id: message.chat.id,
-        text: '〰️ به جنگل سیبیل خوش اومدی! 🎩\n\n🎯 /play — بزن سیبیل رو بنشون سر جاش!\n👤 /profile — سطح و کارنامه سیبیلی\n〰️ /invite — دعوت دوستان و بوست روزانه\n🏆 /leaderboard — جدول مشترک Classic و Gold Rush\n👑 /top — ده نفر برتر جنگل\n📈 /score — ببین سیبیلات چند امتیاز آوردن\n💰 /wallet — موجودی توکن تستی\n🎁 /rewards — پاداش‌های من\n📜 /transactions — تاریخچه\n↗️ /withdraw — برداشت تستی\n🧭 /help — همین راهنمای سیبیلی\n\n🗓 رقابت هفتگی: شنبه تا شنبه به وقت تهران\n⚠️ جایزه توکنی هنوز فعال نیست.',
+        text: '〰️ به جنگل سیبیل خوش اومدی! 🎩\n\n' +
+          '🎮 /play — شروع بازی\n' +
+          '🏆 /leaderboard — جدول رتبه‌بندی و رتبه خودت\n' +
+          '👤 /profile — سطح، XP و رکوردهای بازی\n' +
+          '🎁 /invite — لینک دعوت و بوست دوستان\n' +
+          '💰 /wallet — موجودی، پاداش‌ها، تراکنش‌ها و برداشت\n' +
+          '🧭 /help — همین راهنما\n\n' +
+          'برای امکانات کیف پول و بازه‌های جدول، از دکمه‌های داخل هر بخش استفاده کن.\n' +
+          '🗓 رقابت هفتگی: شنبه تا شنبه به وقت تهران\n' +
+          '⚠️ پرداخت پاداش توکنی هنوز فعال نشده است.',
         reply_markup: { inline_keyboard: [
-          [{ text: '💰 کیف پول', callback_data: 'nw:w' }, { text: '🎁 پاداش‌ها', callback_data: 'nw:r' }],
-          [{ text: '📜 تراکنش‌ها', callback_data: 'nw:t' }, { text: '↗️ برداشت', callback_data: 'nw:x' }],
+          [{ text: '🏆 رتبه‌بندی', callback_data: 'lb:w:0' }, { text: '💰 کیف پول', callback_data: 'nw:w' }],
+          [{ text: '🎁 پاداش‌ها', callback_data: 'nw:r' }, { text: '📜 تراکنش‌ها', callback_data: 'nw:t' }],
           [{ text: '〰️🎮 شروع بازی', url: 'https://t.me/RJTtobot?game=mustache' }],
         ] },
       });

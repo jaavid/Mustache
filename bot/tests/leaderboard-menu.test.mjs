@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { handleTelegramUpdate, parseGameCommand, callTelegram } from '../src/index.js';
 import { leaderboardKeyboard, formatLeaderboardMessage, formatRichLeaderboardMessage, parseLeaderboardCallback } from '../src/leaderboardMenu.js';
-import { GAME_COMMANDS, mergeBotCommands, syncBotCommands } from '../src/commandSync.js';
+import { GAME_COMMANDS, HIDDEN_MENU_COMMANDS, mergeBotCommands, syncBotCommands } from '../src/commandSync.js';
 
 const config = { GAME_URL: 'https://mustache.alexa.ir/', BOT_USERNAME: 'rjttobot' };
 function mockDB() {
@@ -33,13 +33,56 @@ async function dispatch(update, db = mockDB(), sender = async () => {}) {
 }
 
 test('all managed Telegram command descriptions carry the 〰️ moustache and fun copy', () => {
-  assert.equal(GAME_COMMANDS.length, 11);
-  const expected = new Set(['play', 'leaderboard', 'top', 'score', 'profile', 'invite', 'help', 'wallet', 'rewards', 'transactions', 'withdraw']);
+  assert.equal(GAME_COMMANDS.length, 6);
+  const expected = new Set(['play', 'leaderboard', 'profile', 'invite', 'wallet', 'help']);
   for (const item of GAME_COMMANDS) {
     assert.ok(expected.has(item.command), item.command);
     assert.match(item.description, /〰️/);
     assert.ok(item.description.length >= 3 && item.description.length <= 256);
   }
+});
+
+test('legacy aliases and diagnostics are hidden from picker, but remain available as commands', () => {
+  const listed = new Set(GAME_COMMANDS.map(item => item.command));
+  assert.ok(HIDDEN_MENU_COMMANDS.includes('top'));
+  assert.ok(HIDDEN_MENU_COMMANDS.includes('score'));
+  assert.ok(HIDDEN_MENU_COMMANDS.includes('withdraw'));
+  assert.ok(HIDDEN_MENU_COMMANDS.includes('admin'));
+  assert.ok(HIDDEN_MENU_COMMANDS.includes('walletcheck'));
+  for (const name of HIDDEN_MENU_COMMANDS) assert.equal(listed.has(name), false);
+  const existing = [
+    { command: 'top', description: 'Old Top' },
+    { command: 'score', description: 'Old Score' },
+    { command: 'withdraw', description: 'Old Withdraw' },
+    { command: 'admin', description: 'Old Admin' },
+    { command: 'walletcheck', description: 'Old Diagnostics' },
+    { command: 'contact', description: 'Independent customer support' },
+  ];
+  const updated = mergeBotCommands(existing);
+  assert.deepEqual(updated.map(x => x.command),
+    [...GAME_COMMANDS.map(x => x.command), 'contact']);
+  assert.deepEqual(mergeBotCommands(updated), updated);
+  for (const alias of ['top', 'score', 'withdraw', 'rewards', 'transactions', 'admin', 'walletcheck']) {
+    assert.equal(parseGameCommand('/' + alias), alias);
+  }
+});
+
+test('Help message lists only six primary commands and contextual navigation buttons', async () => {
+  const { calls } = await dispatch({ message: { chat: { id: 43 }, from: { id: 999 }, text: '/help' } });
+  assert.equal(calls[0].method, 'sendMessage');
+  const help = calls[0].payload;
+  for (const name of GAME_COMMANDS.map(x => x.command)) {
+    assert.match(help.text, new RegExp('/' + name + '(?:\\s|$)'));
+  }
+  for (const hidden of ['top', 'score', 'rewards', 'transactions', 'withdraw']) {
+    assert.equal(help.text.includes('/' + hidden + ' '), false);
+  }
+  assert.ok(help.text.includes('\n'));
+  const actions = help.reply_markup.inline_keyboard.flat().map(x => x.callback_data || x.url);
+  assert.ok(actions.includes('lb:w:0'));
+  assert.ok(actions.includes('nw:w'));
+  assert.ok(actions.includes('nw:r'));
+  assert.ok(actions.includes('nw:t'));
 });
 
 test('new slash command, bot username matching and aliases', () => {

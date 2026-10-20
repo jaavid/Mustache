@@ -1,21 +1,24 @@
-/** Non-destructive merge of our bot menu commands with any existing commands. */
+/** The public Telegram command menu should be brief; richer flows live behind inline buttons. */
 export const GAME_COMMANDS = [
-  { command: 'play', description: '〰️🎯 آماده‌ای رامین رو سیبیلو کنی؟ بزن بریم!' },
-  { command: 'leaderboard', description: '〰️🏆 جدول مشترک Classic و Gold Rush؛ روز، هفته، ماه و تاریخ!' },
-  { command: 'top', description: '〰️👑 ۱۰ سیبیل‌زن برتر جنگل رو بشناس!' },
-  { command: 'score', description: '〰️📈 سیبیلات چند امتیاز آوردن؟ رتبه‌تو ببین!' },
-  { command: 'profile', description: '〰️ پروفایل، XP و مرحله طلایی' },
-  { command: 'invite', description: '〰️ لینک دعوت دوستان و بوست روزانه' },
-  { command: 'wallet', description: '〰️ موجودی و آدرس کیف پول تستی NFIVE' },
-  { command: 'rewards', description: '〰️🎁 پاداش‌های هفتگی NFIVE' },
-  { command: 'transactions', description: '〰️📜 تاریخچه تراکنش‌های تستی' },
-  { command: 'withdraw', description: '〰️↗️ برداشت NFIVE به کیف پول شخصی' },
-  { command: 'help', description: '〰️🧭 سیبیل‌اولی؟ فوت‌وفن بازی اینجاست!' },
+  { command: 'play', description: '〰️🎮 شروع نبرد سیبیل‌ها!' },
+  { command: 'leaderboard', description: '〰️🏆 رتبه‌بندی روز، هفته، ماه و امتیاز من' },
+  { command: 'profile', description: '〰️👤 سطح، XP، رکوردها و نشان‌ها' },
+  { command: 'invite', description: '〰️🎁 دعوت دوستان و بوست بازی' },
+  { command: 'wallet', description: '〰️💰 کیف پول، پاداش‌ها، تراکنش‌ها و برداشت' },
+  { command: 'help', description: '〰️🧭 راهنما و دسترسی به امکانات' },
+];
+
+// Hide these legacy and administrative commands from the public Telegram picker,
+// but retain their existing slash-command handlers and private access checks.
+// They may have been registered in BotFather or previous releases.
+export const HIDDEN_MENU_COMMANDS = [
+  'start', 'top', 'score', 'rewards', 'transactions', 'withdraw',
+  'wallethelp', 'admin', 'walletcheck', 'myid',
 ];
 
 export function mergeBotCommands(existing = []) {
   if (!Array.isArray(existing)) throw new Error('INVALID_BOT_COMMANDS');
-  const managed = new Set(GAME_COMMANDS.map(item => item.command));
+  const managed = new Set([...GAME_COMMANDS.map(item => item.command), ...HIDDEN_MENU_COMMANDS]);
   const other = existing.filter(item => item && typeof item.command === 'string' &&
     typeof item.description === 'string' && !managed.has(item.command));
   if (other.length + GAME_COMMANDS.length > 100) throw new Error('BOT_COMMAND_LIMIT');
