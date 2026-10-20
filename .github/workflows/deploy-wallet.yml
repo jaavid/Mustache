@@ -30,15 +30,21 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           N5_WALLET_D1_ID: ${{ vars.N5_WALLET_D1_ID }}
           N5_SCORES_D1_ID: ${{ vars.N5_SCORES_D1_ID }}
+          WALLET_SERVICE_KEY: ${{ secrets.WALLET_SERVICE_KEY }}
+          ADMIN_TELEGRAM_USER_ID: ${{ vars.ADMIN_TELEGRAM_USER_ID }}
         run: |
           set -euo pipefail
-          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID N5_WALLET_D1_ID N5_SCORES_D1_ID; do
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID N5_WALLET_D1_ID N5_SCORES_D1_ID WALLET_SERVICE_KEY ADMIN_TELEGRAM_USER_ID; do
             if [[ -z "${!name:-}" ]]; then echo "::error::Missing $name"; exit 1; fi
           done
+          if [[ ! "${ADMIN_TELEGRAM_USER_ID}" =~ ^[1-9][0-9]{0,18}$ ]]; then
+            echo "::error::ADMIN_TELEGRAM_USER_ID must be a numeric Telegram ID"; exit 1
+          fi
       - name: Replace D1 placeholders
         env:
           WALLET_D1_ID: ${{ vars.N5_WALLET_D1_ID }}
           SCORES_D1_ID: ${{ vars.N5_SCORES_D1_ID }}
+          ADMIN_TELEGRAM_USER_ID: ${{ vars.ADMIN_TELEGRAM_USER_ID }}
         run: |
           python3 - <<'PY'
           import json,os,re
@@ -54,6 +60,10 @@ jobs:
           data['d1_databases'][1]['database_id']=os.environ['SCORES_D1_ID']
           assert data['vars']['TRANSFERS_ENABLED'] == 'false'
           assert data['vars']['AUTO_REWARDS_ENABLED'] == 'false'
+          operator_id=os.environ['ADMIN_TELEGRAM_USER_ID']
+          if not re.fullmatch(r'[1-9][0-9]{0,18}',operator_id):
+              raise SystemExit('Invalid operator Telegram ID')
+          data['vars']['ADMIN_TELEGRAM_USER_ID']=operator_id
           path.write_text(json.dumps(data,indent=2)+'\n')
           PY
       - name: Apply wallet D1 migrations remotely
@@ -70,6 +80,10 @@ jobs:
           workingDirectory: wallet
           wranglerVersion: "4"
           command: deploy
+          secrets: |
+            WALLET_SERVICE_KEY
+        env:
+          WALLET_SERVICE_KEY: ${{ secrets.WALLET_SERVICE_KEY }}
       - name: Release safety note
         run: |
           echo "Wallet Worker deployed in safe (non-signing) mode. Set Cloudflare secrets, verify preflight, then enable test transfers only after explicit review." >> "$GITHUB_STEP_SUMMARY"

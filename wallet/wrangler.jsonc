@@ -27,9 +27,29 @@
     }
   ],
   "durable_objects": {
-    "bindings": [{ "name": "SERIAL", "class_name": "WalletSerial" }]
+    "bindings": [
+      {
+        "name": "SERIAL",
+        "class_name": "WalletSerial"
+      }
+    ]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["WalletSerial"] }],
-  "triggers": { "crons": ["35 20 * * 5", "*/10 * * * *"] },
-  "observability": { "enabled": true }
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "WalletSerial"
+      ]
+    }
+  ],
+  "triggers": {
+    "crons": [
+      "35 20 * * 5",
+      "*/10 * * * *"
+    ]
+  },
+  "observability": {
+    "enabled": true
+  },
+  "keep_vars": true
 }
