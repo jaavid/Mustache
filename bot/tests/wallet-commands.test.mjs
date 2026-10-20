@@ -123,7 +123,10 @@ test('invalid bot identity cannot auto-create wallet',async()=>{
 
 test('official Telegram Game Card callback provisions by authenticated callback.from without blocking session',async()=>{
   const requests=[],out=[];
-  const env={...mockEnv(requests),DB:{async batch(statements){return statements.map(()=>({meta:{changes:1}}))}}};
+  const env={...mockEnv(requests),DB:{
+    prepare(){return {bind(){return this;}}},
+    async batch(statements){return statements.map(()=>({meta:{changes:1}}))}
+  }};
   await handleTelegramUpdate({callback_query:{
     id:'cb-game',game_short_name:'mustache',from:owner,
     message:{chat:{id:owner.id,type:'private'},message_id:100}
