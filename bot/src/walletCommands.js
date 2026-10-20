@@ -1,6 +1,31 @@
 // Telegram wallet interface. All identities originate from the verified bot webhook,
 // never client-provided user IDs or forwarded messages.
-const ERROR_MESSAGE = '〰️ سرویس کیف پول موقتاً در دسترس نیست. کمی بعد دوباره امتحان کن.';
+// Read-only panels retry safely; not every failure is caused by the blockchain.
+const READABLE_SECTIONS = new Set(['w', 'r', 't', 'f']);
+function walletReadError(error, section, env, userId) {
+  const code = String(error?.message || '');
+  const configuration = /^(WALLET_NOT_CONFIGURED|WALLET_API_ERROR_(401|403|404)|INVALID_WALLET_RESPONSE)$/.test(code);
+  const limited = code === 'WALLET_API_ERROR_429';
+  const title = configuration
+    ? '〰️⚠️ اتصال کیف پول نیاز به بررسی دارد.'
+    : limited ? '〰️⏳ درخواست‌های کیف پول موقتاً محدود شده‌اند.'
+      : '〰️⏳ ارتباط با کیف پول موقتاً برقرار نشد.';
+  const detail = configuration
+    ? 'احتمالاً تنظیمات یا پاسخ سرویس Wallet مشکل دارد. لطفاً به پشتیبانی N5 اطلاع بده.'
+    : limited ? 'تعداد درخواست‌ها زیاد بوده است؛ کمی صبر کن و دوباره تلاش کن.'
+      : 'ممکن است ارتباط با شبکه آزمایشی Polygon Amoy یا سرویس Wallet موقتاً کند یا قطع شده باشد.';
+  const adminHint = env.ADMIN_TELEGRAM_USER_ID && String(userId) === String(env.ADMIN_TELEGRAM_USER_ID)
+    ? '\n\n🛠 بررسی فنی ادمین: /walletcheck' : '';
+  return {
+    text: [title, '', detail,
+      'ℹ️ این خطا به معنی از دست رفتن توکن‌ها یا تغییر آدرس کیف پول شما نیست.',
+      '👇 برای بارگذاری دوباره روی «تلاش مجدد» بزن.'].join('\n') + adminHint,
+    reply_markup: { inline_keyboard: [
+      [{ text: '🔄 تلاش مجدد', callback_data: 'nw:retry:' + (READABLE_SECTIONS.has(section) ? section : 'w'), style: 'primary' }],
+      [button('💰 کیف پول', 'w'), button('🧭 راهنما', 'm')],
+    ] },
+  };
+}
 const paragraph = text => ({ type: 'paragraph', text });
 const heading = text => ({ type: 'heading', size: 2, text });
 const divider = () => ({ type: 'divider' });
@@ -300,8 +325,8 @@ export async function walletCommand(message, command, env, send) {
     return;
   }
   const destination = { chat_id: chat.id };
-  try {
-    if (command === 'withdraw') {
+  if (command === 'withdraw') {
+    try {
       const form = parseWithdraw(message.text);
       if (!form) return dispatch(send, 'sendRichMessage', destination, withdrawalGuide());
       // Keep existing withdrawals usable during a staggered bot/Wallet deploy.
@@ -322,30 +347,66 @@ export async function walletCommand(message, command, env, send) {
         [button('❎ بازگشت بدون تأیید', 'w')],
       ] });
       return dispatch(send, 'sendRichMessage', destination, confirm);
+
+    } catch (error) {
+      // Withdrawals may already have been recorded when a connection timed out.
+      // Never offer a one-tap retry which could generate a duplicate request.
+      if (error instanceof Error && error.message.startsWith('Telegram Bot API failed')) throw error;
+      return send('sendMessage', {
+        ...destination,
+        text: '〰️⚠️ وضعیت درخواست برداشت نامشخص است.\\n\\n'
+          + 'ممکن است سرویس یا شبکه آزمایشی موقتاً پاسخ ندهد. '
+          + 'برای جلوگیری از درخواست تکراری، اول «تراکنش‌ها» را بررسی کن.',
+        reply_markup: { inline_keyboard: [
+          [button('📜 بررسی تراکنش‌ها', 't')],
+          [button('↗️ راهنمای برداشت', 'x')],
+        ] },
+      });
     }
-    const section = ({ wallet: 'w', rewards: 'r', transactions: 't', wallethelp: 'm' })[command];
-    return dispatch(send, 'sendRichMessage', destination, await view(env, user, section || 'm'));
-  } catch {
-    const adminHint = env.ADMIN_TELEGRAM_USER_ID && String(user.id) === String(env.ADMIN_TELEGRAM_USER_ID)
-      ? '\n\n🛠 برای بررسی اتصال دو Worker: /walletcheck' : '';
-    return send('sendMessage', { ...destination, text: ERROR_MESSAGE + adminHint, reply_markup: walletKeyboard() });
   }
+  const section = ({ wallet: 'w', rewards: 'r', transactions: 't', wallethelp: 'm' })[command] || 'm';
+  let doc;
+  try {
+    doc = await view(env, user, section);
+  } catch (error) {
+    return send('sendMessage', { ...destination, ...walletReadError(error, section, env, user.id) });
+  }
+  // Do not mask errors sending the Telegram message as a blockchain outage.
+  return dispatch(send, 'sendRichMessage', destination, doc);
 }
 export async function handleWalletNavigation(callback, env, send) {
   const finish = text => send('answerCallbackQuery', {
     callback_query_id: callback.id, ...(text ? { text, show_alert: false } : { cache_time: 0 }),
   });
   if (!isPrivateOwner(callback.message?.chat, callback.from)) return finish('برای دسترسی، چت شخصی خودت را باز کن.');
-  const section = /^nw:([wrtxmf])$/.exec(callback.data || '')?.[1];
+  const data = String(callback.data || '');
+  const navigation = /^nw:([wrtxmf])$/.exec(data);
+  const retry = /^nw:retry:([wrtf])$/.exec(data);
+  const section = navigation?.[1] || retry?.[1];
   if (!section) return finish('گزینه نامعتبر است.');
   const destination = { chat_id: callback.message.chat.id, message_id: callback.message.message_id };
   if (!Number.isSafeInteger(destination.message_id)) return finish('این پیام قدیمی است. /wallet را بفرست.');
+  let doc;
   try {
-    await dispatch(send, 'editMessageText', destination, await view(env, callback.from, section));
+    doc = await view(env, callback.from, section);
+  } catch (error) {
+    // Edit the existing message; a failed read must never start a transfer.
+    try {
+      await send('editMessageText', {
+        ...destination, ...walletReadError(error, section, env, callback.from.id),
+      });
+      return finish('ارتباط برقرار نشد؛ کمی بعد دوباره تلاش کن.');
+    } catch (sendError) {
+      if (isNoChange(sendError)) return finish('ارتباط برقرار نشد؛ کمی بعد دوباره تلاش کن.');
+      return finish('بارگذاری ممکن نشد. بعداً دوباره /wallet را بفرست.');
+    }
+  }
+  try {
+    await dispatch(send, 'editMessageText', destination, doc);
     return finish();
   } catch (error) {
     if (isNoChange(error)) return finish();
-    return finish('فعلاً اطلاعات در دسترس نیست. دوباره /wallet را بفرست.');
+    return finish('نمایش اطلاعات ممکن نشد. دوباره /wallet را بفرست.');
   }
 }
 export async function confirmWalletCallback(callback, env, send) {
