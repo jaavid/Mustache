@@ -23,7 +23,8 @@ async function getOverview(env,userId) {
       ? env.WALLET_API_URL.replace(/\/$/,'')+'/internal/admin/overview':null;
   if(!url) throw Error('UNCONFIGURED');
   const headers={'x-wallet-service-key':env.WALLET_SERVICE_KEY,'x-telegram-user-id':String(userId)};
-  const response=await (env.WALLET?env.WALLET.fetch(url,{headers}):fetch(url,{headers}));
+  const options={headers,signal:AbortSignal.timeout(9000)};
+  const response=await (env.WALLET?env.WALLET.fetch(url,options):fetch(url,options));
   if(!response.ok) throw Error('OVERVIEW_UNAVAILABLE');
   return response.json();
 }
