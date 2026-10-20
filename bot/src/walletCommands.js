@@ -22,7 +22,6 @@ function walletReadError(error, section, env, userId) {
       '👇 برای بارگذاری دوباره روی «تلاش مجدد» بزن.'].join('\n') + adminHint,
     reply_markup: { inline_keyboard: [
       [{ text: '🔄 تلاش مجدد', callback_data: 'nw:retry:' + (READABLE_SECTIONS.has(section) ? section : 'w'), style: 'primary' }],
-      [button('💰 کیف پول', 'w'), button('🧭 راهنما', 'm')],
     ] },
   };
 }
@@ -31,7 +30,6 @@ const heading = text => ({ type: 'heading', size: 2, text });
 const divider = () => ({ type: 'divider' });
 const button = (text, action) => ({ text, callback_data: 'nw:' + action });
 const TG_WALLET_LINK = 'https://t.me/RJTtobot?start=wallet';
-const GAME_LINK = 'https://t.me/RJTtobot?game=mustache';
 export const WITHDRAW_EXAMPLE = '/withdraw 25 0xYourPolygonAddress';
 const copyButton = (label, value) => ({
   text: label,
