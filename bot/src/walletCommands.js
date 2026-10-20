@@ -39,7 +39,7 @@ const copyButton = (label, value) => ({
   style: 'primary',
 });
 function withdrawCopyKeyboard() {
-  const keyboard = walletKeyboard();
+  const keyboard = walletKeyboard('x');
   keyboard.inline_keyboard.unshift([
     copyButton('📋 کپی نمونه دستور برداشت', WITHDRAW_EXAMPLE),
   ]);
@@ -63,13 +63,23 @@ export function isPrivateOwner(chat, user) {
   return chat?.type === 'private' && Number.isSafeInteger(chat.id) &&
     Number.isSafeInteger(user?.id) && user.id > 0 && chat.id === user.id;
 }
-function walletKeyboard() {
-  return { inline_keyboard: [
-    [button('💰 کیف پول', 'w'), button('🎁 پاداش‌ها', 'r')],
-    [button('📜 تراکنش‌ها', 't'), button('↗️ راهنمای برداشت', 'x')],
-    [button('⛽ POL تستی (Faucet)', 'f'), button('🧭 راهنما', 'm')],
-    [{ text: '〰️🎮 بازی', url: GAME_LINK }],
-  ] };
+function walletKeyboard(section = 'w') {
+  // Three permanent reply buttons own Play, Wallet and Help. Keep inline actions
+  // contextual, with one "back to wallet" action only on nested pages.
+  const back = button('↩️ بازگشت به کیف پول', 'w');
+  const rewards = button('🎁 پاداش‌ها', 'r');
+  const history = button('📜 تراکنش‌ها', 't');
+  const withdraw = button('↗️ برداشت', 'x');
+  const faucet = button('⛽ POL تستی', 'f');
+  const actions = ({
+    w: [[rewards, history], [withdraw, faucet]],
+    r: [[back, history], [withdraw]],
+    t: [[back, rewards], [withdraw]],
+    x: [[back, faucet]],
+    f: [[back, withdraw]],
+    m: [[back, rewards], [history, withdraw], [faucet]],
+  })[section] || [[rewards, history], [withdraw, faucet]];
+  return { inline_keyboard: actions };
 }
 function format(amountRaw, decimals = 18) {
   const d = Number(decimals);
@@ -126,7 +136,7 @@ function intro() {
     paragraph('↗️ برداشت: /withdraw 25 0xADDRESS'),
     paragraph('⛽ تأمین کارمزد برداشت با N5 است؛ Faucet فقط POL تستی می‌دهد، نه tNFIVE.'),
     paragraph('⚠️ دارایی‌ها صرفاً آزمایشی‌اند.'),
-  ], content);
+  ], content, walletKeyboard('m'));
 }
 function accountView(wallet) {
   const address = validAddress(wallet?.address);
@@ -199,7 +209,7 @@ function historyView(data, mode) {
     }
   } else blocks.push(paragraph('هنوز تراکنش یا پاداشی ثبت نشده است.'));
   blocks.push(paragraph('📌 تأییدشده یعنی رسید تراکنش روی شبکه ثبت شده است.'));
-  const keys=walletKeyboard();
+  const keys=walletKeyboard(isRewards ? 'r' : 't');
   const links=rows.filter(x=>x.hash).slice(0,3)
     .map((x,i)=>[{text:'🔗 رسید تراکنش '+(i+1),url:'https://amoy.polygonscan.com/tx/'+x.hash}]);
   if (links.length) keys.inline_keyboard.unshift(...links);
@@ -208,7 +218,7 @@ function historyView(data, mode) {
 function faucetGuide(wallet) {
   const address = validAddress(wallet?.address);
   if (!address) throw new Error('INVALID_WALLET_RESPONSE');
-  const keyboard = walletKeyboard();
+  const keyboard = walletKeyboard('f');
   keyboard.inline_keyboard.unshift(
     [copyButton('📋 کپی آدرس کیف پول', address)],
     [{ text: '⛽ بازکردن Polygon Faucet', url: AMOY_FAUCET_URL }]);
