@@ -183,7 +183,7 @@ async function service(env, userId, path, method = 'GET', data) {
       ? env.WALLET_API_URL.replace(/\/$/, '') + path
       : null;
   if (!endpoint) throw new Error('WALLET_NOT_CONFIGURED');
-  const opts = { method, headers: {
+  const opts = { method, signal: AbortSignal.timeout(path.endsWith('/ensure') ? 2500 : 12000), headers: {
     'x-wallet-service-key': env.WALLET_SERVICE_KEY,
     'x-telegram-user-id': String(userId),
   } };
