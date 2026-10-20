@@ -56,9 +56,16 @@ test('verified internal bot route automatically persists an encrypted wallet',as
   const stored=db.wallets.get('208627');
   assert.equal(stored.address,result.address);
   assert.match(stored.key_cipher,/^[a-zA-Z0-9+/=]+$/);
-  assert.equal(stored.key_cipher.includes('0x'),false);
   const key=await unwrapKey(stored,'208627',SECRET);
   assert.match(key,/^0x[0-9a-f]{64}$/i);
+  const plaintext=Buffer.from(key,'utf8');
+  const ciphertext=Buffer.from(stored.key_cipher,'base64');
+  // AES-GCM authenticates its payload with a 16-byte tag. Arbitrary
+  // Base64 substrings (including "0x") are valid ciphertext and must not
+  // be used to assert whether sensitive key material is encrypted.
+  assert.equal(ciphertext.byteLength,plaintext.byteLength+16);
+  assert.notDeepEqual(ciphertext,plaintext);
+  assert.equal(Buffer.from(stored.key_iv,'base64').byteLength,12);
 });
 test('a second request never replaces the original address or encrypted key',async()=>{
   const db=dbMock(),env={...base,DB:db};
