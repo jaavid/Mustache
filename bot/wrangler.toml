@@ -20,6 +20,12 @@ GAME_ORIGIN = "https://mustache.alexa.ir"
 # Github Pages preview/origin is owned by the same game repository.
 GAME_ORIGINS = "https://jaavid.github.io"
 
+# Internal Worker-to-Worker transport. This is configuration, NOT a credential.
+# Wrangler must own the binding so GitHub deploys do not remove dashboard edits.
+[[services]]
+binding = "WALLET"
+service = "n5-wallet-service-amoy"
+
 # Automatically replaced by GitHub Actions using CLOUDFLARE_D1_DATABASE_ID.
 # Never deploy this placeholder; create D1 and supply its UUID first.
 [[d1_databases]]
