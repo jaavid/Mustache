@@ -10,8 +10,8 @@
     "ADMIN_ADDRESS": "0x45046A011987c5CB76AfCc0249730697E7C7efa7",
     "MAX_BATCH_TOKENS": "10000",
     "WEEKLY_POOL_TOKENS": "10000",
-    "TRANSFERS_ENABLED": "true",
-    "AUTO_REWARDS_ENABLED": "true"
+    "TRANSFERS_ENABLED": "false",
+    "AUTO_REWARDS_ENABLED": "false"
   },
   "d1_databases": [
     {

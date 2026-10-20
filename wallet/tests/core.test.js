@@ -32,3 +32,11 @@ test('wallet key ciphertext bound to telegram identity',async()=>{
   assert.ok(tokenEqual('Bearer x','Bearer x'));
   assert.ok(!tokenEqual('Bearer x','Bearer z'));
 });
+
+test('wallet Cloudflare deploy config is safe by default',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const config=JSON.parse(readFileSync(new URL('../wrangler.jsonc',import.meta.url),'utf8'));
+  assert.equal(config.vars.CHAIN_ID,'80002');
+  assert.equal(config.vars.TRANSFERS_ENABLED,'false');
+  assert.equal(config.vars.AUTO_REWARDS_ENABLED,'false');
+});
