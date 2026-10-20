@@ -7,6 +7,7 @@ const divider = () => ({ type: 'divider' });
 const button = (text, action) => ({ text, callback_data: 'nw:' + action });
 const TG_WALLET_LINK = 'https://t.me/RJTtobot?start=wallet';
 const GAME_LINK = 'https://t.me/RJTtobot?game=mustache';
+const AMOY_FAUCET_URL = 'https://faucet.polygon.technology/';
 
 function safe(value, max = 80) {
   return String(value ?? '')
@@ -28,7 +29,8 @@ function walletKeyboard() {
   return { inline_keyboard: [
     [button('💰 کیف پول', 'w'), button('🎁 پاداش‌ها', 'r')],
     [button('📜 تراکنش‌ها', 't'), button('↗️ راهنمای برداشت', 'x')],
-    [button('🧭 راهنما', 'm'), { text: '〰️🎮 بازی', url: GAME_LINK }],
+    [button('⛽ POL تستی (Faucet)', 'f'), button('🧭 راهنما', 'm')],
+    [{ text: '〰️🎮 بازی', url: GAME_LINK }],
   ] };
 }
 function format(amountRaw, decimals = 18) {
@@ -75,6 +77,7 @@ function intro() {
     '↗️ /withdraw AMOUNT 0xADDRESS — درخواست برداشت', '',
     '🌐 شبکه: Polygon Amoy Testnet',
     '⛽ کارمزد برداشت را N5 تأمین می‌کند.',
+    '🔗 برای دریافت POL تستیِ Gas از دکمه Faucet استفاده کن؛ Faucet توکن tNFIVE نمی‌دهد.',
     '⚠️ توکن‌ها آزمایشی هستند و ارزش مالی ندارند.',
   ].join('\n');
   return response([
@@ -83,7 +86,7 @@ function intro() {
     divider(),
     paragraph('💰 کیف پول · 🎁 پاداش‌ها · 📜 تاریخچه'),
     paragraph('↗️ برداشت: /withdraw 25 0xADDRESS'),
-    paragraph('⛽ تأمین کارمزد شبکه بر عهده N5 است.'),
+    paragraph('⛽ تأمین کارمزد برداشت با N5 است؛ Faucet فقط POL تستی می‌دهد، نه tNFIVE.'),
     paragraph('⚠️ دارایی‌ها صرفاً آزمایشی‌اند.'),
   ], content);
 }
@@ -114,6 +117,7 @@ function accountView(wallet) {
     paragraph('🏦 آدرس اختصاصی شما:'),
     paragraph(address),
     paragraph('⛽ هزینه برداشت آزمایشی را N5 پرداخت می‌کند.'),
+    paragraph('برای POL تستیِ تراکنش‌های بعدی، دکمه Faucet را بزن. Faucet توکن tNFIVE ارائه نمی‌کند.'),
     paragraph('⚠️ این توکن تستی است.'),
   ], fallback, keyboard);
 }
@@ -161,6 +165,39 @@ function historyView(data, mode) {
   if (links.length) keys.inline_keyboard.unshift(...links);
   return response(blocks, lines.join('\n'),keys);
 }
+function faucetGuide(wallet) {
+  const address = validAddress(wallet?.address);
+  if (!address) throw new Error('INVALID_WALLET_RESPONSE');
+  const keyboard = walletKeyboard();
+  keyboard.inline_keyboard.unshift([{ text: '⛽ بازکردن Polygon Faucet', url: AMOY_FAUCET_URL }]);
+  const content = [
+    '〰️⛽ دریافت POL تستی برای Polygon Amoy', '',
+    '۱. وارد سایت رسمی Polygon Faucet شو.',
+    '۲. شبکه Polygon Amoy (Chain ID: 80002) و توکن POL را انتخاب کن، اگر این گزینه‌ها ارائه می‌شوند.',
+    '۳. برای شارژ کیف پول امانی N5، آدرس نمایش‌داده‌شده در پایین را در Faucet وارد کن.',
+    '۴. درخواست را طبق شرایط Faucet ثبت کن و موجودی POL را در /wallet بررسی کن.', '',
+    '🏦 آدرس کیف پول داخل ربات (امانی N5):', address, '',
+    '⚠️ Faucet فقط POL تستیِ کارمزد شبکه می‌دهد، نه tNFIVE.',
+    '↗️ برای برداشت tNFIVE به MetaMask، آدرس کیف پول شخصی خودت را در /withdraw وارد کن؛ آدرس N5 بالا مقصد برداشت نیست.',
+    '⛽ N5 کارمزد برداشت از ربات را پوشش می‌دهد؛ استفاده از Faucet برای آن الزامی نیست.',
+    '💡 برای ارسال تراکنش از MetaMask در آینده، POL تستی را به آدرس خود MetaMask دریافت کن.',
+    '🔒 هرگز عبارت بازیابی یا Private Key را در Faucet وارد نکن.',
+    '', AMOY_FAUCET_URL
+  ].join('\n');
+  return response([
+    heading('〰️⛽ Polygon Amoy Faucet'),
+    paragraph('۱. سایت رسمی Faucet را باز کن؛ Polygon Amoy / Chain ID: 80002 و POL را انتخاب کن.'),
+    paragraph('۲. اگر می‌خواهی به کیف پول داخل ربات POL تستی بفرستی، این آدرس را کپی و در Faucet وارد کن:'),
+    paragraph(address),
+    paragraph('۳. درخواست POL را ثبت کن؛ دریافت به قوانین و موجودی Faucet بستگی دارد.'),
+    divider(),
+    paragraph('⚠️ Faucet توکن tNFIVE نمی‌دهد؛ فقط POL تستی برای Gas است.'),
+    paragraph('↗️ برای برداشت tNFIVE به کیف پول شخصی، آدرس MetaMask خودت را در /withdraw بده، نه آدرس امانی بالا.'),
+    paragraph('⛽ N5 کارمزد برداشت از ربات را پرداخت می‌کند؛ برای دریافت tNFIVE در MetaMask نیازی به Faucet نداری.'),
+    paragraph('💡 برای ارسال تراکنش از MetaMask در آینده، Faucet را با آدرس همان MetaMask استفاده کن.'),
+    paragraph('🔒 هرگز Seed Phrase یا Private Key را در Faucet وارد نکن.'),
+  ], content, keyboard);
+}
 function withdrawalGuide() {
   return response([
     heading('〰️↗️ برداشت توکن تستی'),
@@ -168,10 +205,12 @@ function withdrawalGuide() {
     paragraph('/withdraw 25 0xYourPolygonAddress'),
     divider(),
     paragraph('✅ قبل از انتقال، مقصد و مقدار نمایش داده می‌شوند و باید دکمه تأیید را بزنی.'),
-    paragraph('⛽ N5 کارمزد شبکه را تأمین می‌کند؛ نیازی به POL نداری.'),
+    paragraph('⛽ N5 کارمزد برداشت از ربات را تأمین می‌کند؛ برای دریافت در کیف پول شخصی POL لازم نیست.'),
+    paragraph('🔗 برای ارسال تراکنش از کیف پول شخصی در آینده، می‌توانی با آدرس همان کیف پول از Polygon Faucet، POL تستی بگیری.'),
+    paragraph('⚠️ Faucet توکن tNFIVE نمی‌دهد؛ فقط POL تستی برای Gas است.'),
     paragraph('🔒 محدودیت برداشت و فاصله زمانی برای محافظت از کیف پول اعمال می‌شود.'),
     paragraph('⚠️ فقط شبکه Polygon Amoy؛ هیچ توکن واقعی ارسال نمی‌شود.'),
-  ], '〰️↗️ راهنمای برداشت\n\nفرمت:\n/withdraw 25 0xYourPolygonAddress\n\n✅ تأیید با دکمه\n⛽ گس برعهده N5\n🌐 فقط Polygon Amoy\n⚠️ توکن آزمایشی');
+  ], '〰️↗️ راهنمای برداشت\n\nفرمت:\n/withdraw 25 0xYourPolygonAddress\n\n✅ تأیید با دکمه\n⛽ گس برداشت برعهده N5 است؛ برای دریافت نیاز به Faucet نیست.\n🔗 برای ارسال‌های بعدی از MetaMask، POL تستی از Polygon Faucet بگیر.\n⚠️ Faucet توکن tNFIVE نمی‌دهد.\n🌐 فقط Polygon Amoy\n⚠️ توکن آزمایشی');
 }
 export function parseWithdraw(text) {
   const parts = String(text ?? '').trim().split(/\s+/);
@@ -213,6 +252,7 @@ async function view(env, user, section) {
   // Existing 20 addresses must stay accessible until the new route goes live.
   try { await ensureTelegramWallet(env, user); } catch { /* read old wallet below */ }
   if (section === 'w') return accountView(await service(env, user.id, '/internal/wallet'));
+  if (section === 'f') return faucetGuide(await service(env, user.id, '/internal/wallet'));
   if (section === 'r' || section === 't') return historyView(await service(env, user.id, '/internal/history'), section);
   throw new Error('UNKNOWN_WALLET_SECTION');
 }
@@ -273,7 +313,7 @@ export async function handleWalletNavigation(callback, env, send) {
     callback_query_id: callback.id, ...(text ? { text, show_alert: false } : { cache_time: 0 }),
   });
   if (!isPrivateOwner(callback.message?.chat, callback.from)) return finish('برای دسترسی، چت شخصی خودت را باز کن.');
-  const section = /^nw:([wrtxm])$/.exec(callback.data || '')?.[1];
+  const section = /^nw:([wrtxmf])$/.exec(callback.data || '')?.[1];
   if (!section) return finish('گزینه نامعتبر است.');
   const destination = { chat_id: callback.message.chat.id, message_id: callback.message.message_id };
   if (!Number.isSafeInteger(destination.message_id)) return finish('این پیام قدیمی است. /wallet را بفرست.');
