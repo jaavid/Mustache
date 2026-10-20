@@ -155,7 +155,11 @@ function historyView(data, mode) {
     }
   } else blocks.push(paragraph('هنوز تراکنش یا پاداشی ثبت نشده است.'));
   blocks.push(paragraph('📌 تأییدشده یعنی رسید تراکنش روی شبکه ثبت شده است.'));
-  return response(blocks, lines.join('\n'));
+  const keys=walletKeyboard();
+  const links=rows.filter(x=>x.hash).slice(0,3)
+    .map((x,i)=>[{text:'🔗 رسید تراکنش '+(i+1),url:'https://amoy.polygonscan.com/tx/'+x.hash}]);
+  if (links.length) keys.inline_keyboard.unshift(...links);
+  return response(blocks, lines.join('\n'),keys);
 }
 function withdrawalGuide() {
   return response([
