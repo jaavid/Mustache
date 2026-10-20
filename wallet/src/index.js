@@ -3,6 +3,7 @@ import { getAddress, formatUnits } from 'viem';
 import { telegramId, tokenRaw, batchPlan, rankRewards, safeBatchId, completedTehranWeek } from './logic.js';
 import { wrapKey, tokenEqual, sha256 } from './security.js';
 import { context, balance, distributor, processNext, tokenAbi } from './chain.js';
+import { diagnoseWalletRead } from './readDiagnostics.js';
 
 const reply=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const MAX_BODY=32000;
@@ -229,6 +230,13 @@ export default {
       }
       if(internal) {
         const id=telegramId(request.headers.get('x-telegram-user-id'));
+        if(path==='/internal/admin/diagnostics'&&method==='GET') {
+          // A valid service key alone is insufficient to inspect diagnostics:
+          // the caller MUST be the explicitly configured Telegram operator.
+          if(!env.ADMIN_TELEGRAM_USER_ID || id!==String(env.ADMIN_TELEGRAM_USER_ID))
+            return reply({error:'FORBIDDEN'},403);
+          return reply(await diagnoseWalletRead(env,id));
+        }
         if(path==='/internal/admin/overview'&&method==='GET') {
           // Server-side authorization is required even when the Telegram bot
           // hides the /admin UI from other users. This endpoint is read-only.
