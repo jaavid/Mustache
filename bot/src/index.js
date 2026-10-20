@@ -6,6 +6,7 @@ import { parseLeaderboardCallback, formatLeaderboardMessage, formatRichLeaderboa
 import { registerReferral, playerProfile, goldCatchUpEligible } from './progression.js';
 import { walletCommand, confirmWalletCallback, handleWalletNavigation, ensureTelegramWallet } from './walletCommands.js';
 import { adminCommand, adminCallback } from './adminDashboard.js';
+import { walletDiagnosticCommand } from './walletDiagnostics.js';
 export const DEFAULT_GAME_URL = 'https://mustache.alexa.ir/';
 export const DEFAULT_GAME_SHORT_NAME = 'mustache';
 export const DEFAULT_BOT_USERNAME = 'rjttobot';
@@ -24,7 +25,7 @@ export function isSameSecret(actual, expected) {
 
 export function parseGameCommand(input, botUsername = DEFAULT_BOT_USERNAME) {
   const first = String(input ?? '').trim().split(/\s+/)[0];
-  const match = /^\/(start|play|help|top|score|leaderboard|profile|invite|wallet|rewards|transactions|withdraw|wallethelp|admin)(?:@([a-zA-Z0-9_]+))?$/i.exec(first);
+  const match = /^\/(start|play|help|top|score|leaderboard|profile|invite|wallet|rewards|transactions|withdraw|wallethelp|admin|walletcheck)(?:@([a-zA-Z0-9_]+))?$/i.exec(first);
   if (!match) return null;
   if (match[2] && match[2].toLowerCase() !== botUsername.toLowerCase()) return null;
   return match[1].toLowerCase();
@@ -84,6 +85,12 @@ export async function handleTelegramUpdate(update, env, send) {
     const message = update.message;
     const command = parseGameCommand(message.text, botUsername);
     if (command === 'start' || command === 'play') {
+      // A wallet deep link must open Wallet, not launch a Game Card.
+      // Parse the exact Telegram /start payload; do not trust arbitrary text.
+      if (command === 'start' && /^\/start(?:@[a-zA-Z0-9_]+)?\s+wallet\s*$/i.test(String(message.text || '').trim())) {
+        await walletCommand(message, 'wallet', env, send);
+        return;
+      }
       if (command === 'start' && env.DB && message.from) await registerReferral(env.DB, message.from, message.text);
       // Wallet creation is free/idempotent and must never interrupt gameplay.
       if (message.chat?.type === 'private' && message.chat.id === message.from?.id) {
@@ -115,6 +122,8 @@ export async function handleTelegramUpdate(update, env, send) {
       await send('sendMessage', { chat_id: message.chat.id, text: output });
     } else if (command === 'admin') {
       await adminCommand(message,env,send);
+    } else if (command === 'walletcheck') {
+      await walletDiagnosticCommand(message,env,send);
     } else if (['wallet','rewards','transactions','withdraw','wallethelp'].includes(command)) {
       await walletCommand(message,command,env,send);
     } else if (command === 'help') {
