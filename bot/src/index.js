@@ -5,6 +5,7 @@ import { issueSession, authenticate, startRound, finishRound, leaderboard } from
 import { parseLeaderboardCallback, formatLeaderboardMessage, formatRichLeaderboardMessage } from './leaderboardMenu.js';
 import { registerReferral, playerProfile, goldCatchUpEligible } from './progression.js';
 import { walletCommand, confirmWalletCallback, handleWalletNavigation, ensureTelegramWallet } from './walletCommands.js';
+import { adminCommand, adminCallback } from './adminDashboard.js';
 export const DEFAULT_GAME_URL = 'https://mustache.alexa.ir/';
 export const DEFAULT_GAME_SHORT_NAME = 'mustache';
 export const DEFAULT_BOT_USERNAME = 'rjttobot';
@@ -23,7 +24,7 @@ export function isSameSecret(actual, expected) {
 
 export function parseGameCommand(input, botUsername = DEFAULT_BOT_USERNAME) {
   const first = String(input ?? '').trim().split(/\s+/)[0];
-  const match = /^\/(start|play|help|top|score|leaderboard|profile|invite|wallet|rewards|transactions|withdraw|wallethelp)(?:@([a-zA-Z0-9_]+))?$/i.exec(first);
+  const match = /^\/(start|play|help|top|score|leaderboard|profile|invite|wallet|rewards|transactions|withdraw|wallethelp|admin)(?:@([a-zA-Z0-9_]+))?$/i.exec(first);
   if (!match) return null;
   if (match[2] && match[2].toLowerCase() !== botUsername.toLowerCase()) return null;
   return match[1].toLowerCase();
@@ -112,6 +113,8 @@ export async function handleTelegramUpdate(update, env, send) {
           '\nرکورد Classic: ' + profile.bestClassic + ' · Gold Rush: ' + profile.bestGoldRush +
           '\nGold Rush: ' + goldStatus + '\nدعوت‌های امروز: ' + profile.dailyInvites + '/3';
       await send('sendMessage', { chat_id: message.chat.id, text: output });
+    } else if (command === 'admin') {
+      await adminCommand(message,env,send);
     } else if (['wallet','rewards','transactions','withdraw','wallethelp'].includes(command)) {
       await walletCommand(message,command,env,send);
     } else if (command === 'help') {
@@ -129,6 +132,11 @@ export async function handleTelegramUpdate(update, env, send) {
       const board = await leaderboard(env.DB, Date.now(), { userId: message.from?.id });
       await sendLeaderboard(message.chat.id, board, send);
     }
+    return;
+  }
+
+  if (update.callback_query?.id && update.callback_query.data?.startsWith('na:')) {
+    await adminCallback(update.callback_query,env,send);
     return;
   }
 
