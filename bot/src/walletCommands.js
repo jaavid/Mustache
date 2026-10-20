@@ -7,6 +7,19 @@ const divider = () => ({ type: 'divider' });
 const button = (text, action) => ({ text, callback_data: 'nw:' + action });
 const TG_WALLET_LINK = 'https://t.me/RJTtobot?start=wallet';
 const GAME_LINK = 'https://t.me/RJTtobot?game=mustache';
+export const WITHDRAW_EXAMPLE = '/withdraw 25 0xYourPolygonAddress';
+const copyButton = (label, value) => ({
+  text: label,
+  copy_text: { text: value },
+  style: 'primary',
+});
+function withdrawCopyKeyboard() {
+  const keyboard = walletKeyboard();
+  keyboard.inline_keyboard.unshift([
+    copyButton('📋 کپی نمونه دستور برداشت', WITHDRAW_EXAMPLE),
+  ]);
+  return keyboard;
+}
 const AMOY_FAUCET_URL = 'https://faucet.polygon.technology/';
 
 function safe(value, max = 80) {
@@ -98,7 +111,9 @@ function accountView(wallet) {
   const symbol = safe(wallet.symbol, 18) || 'tNFIVE';
   const explorer = 'https://amoy.polygonscan.com/address/' + address;
   const keyboard = walletKeyboard();
-  keyboard.inline_keyboard.splice(0, 0, [{ text: '🔗 مشاهده در Polygonscan', url: explorer }]);
+  keyboard.inline_keyboard.splice(0, 0,
+    [copyButton('📋 کپی آدرس کیف پول', address)],
+    [{ text: '🔗 مشاهده در Polygonscan', url: explorer }]);
   const fallback = [
     '〰️💰 کیف پول N5', '',
     'موجودی: ' + balance + ' ' + symbol,
@@ -114,7 +129,7 @@ function accountView(wallet) {
     paragraph('شبکه آزمایشی Polygon Amoy · Chain 80002'),
     table(['دارایی', 'موجودی'], [[symbol, balance], ['POL (Gas)', pol]]),
     divider(),
-    paragraph('🏦 آدرس اختصاصی شما:'),
+    paragraph('🏦 آدرس اختصاصی شما (دکمه «کپی آدرس» در پایین پیام):'),
     paragraph(address),
     paragraph('⛽ هزینه برداشت آزمایشی را N5 پرداخت می‌کند.'),
     paragraph('برای POL تستیِ تراکنش‌های بعدی، دکمه Faucet را بزن. Faucet توکن tNFIVE ارائه نمی‌کند.'),
@@ -169,7 +184,9 @@ function faucetGuide(wallet) {
   const address = validAddress(wallet?.address);
   if (!address) throw new Error('INVALID_WALLET_RESPONSE');
   const keyboard = walletKeyboard();
-  keyboard.inline_keyboard.unshift([{ text: '⛽ بازکردن Polygon Faucet', url: AMOY_FAUCET_URL }]);
+  keyboard.inline_keyboard.unshift(
+    [copyButton('📋 کپی آدرس کیف پول', address)],
+    [{ text: '⛽ بازکردن Polygon Faucet', url: AMOY_FAUCET_URL }]);
   const content = [
     '〰️⛽ دریافت POL تستی برای Polygon Amoy', '',
     '۱. وارد سایت رسمی Polygon Faucet شو.',
@@ -202,7 +219,8 @@ function withdrawalGuide() {
   return response([
     heading('〰️↗️ برداشت توکن تستی'),
     paragraph('برای انتقال tNFIVE به آدرس شخصی، این فرمان را در همین چت بفرست:'),
-    paragraph('/withdraw 25 0xYourPolygonAddress'),
+    paragraph(WITHDRAW_EXAMPLE),
+    paragraph('روی «📋 کپی نمونه دستور برداشت» بزن، در چت Paste کن، سپس 0xYourPolygonAddress را با آدرس واقعی کیف پول شخصی خودت جایگزین کن.'),
     divider(),
     paragraph('✅ قبل از انتقال، مقصد و مقدار نمایش داده می‌شوند و باید دکمه تأیید را بزنی.'),
     paragraph('⛽ N5 کارمزد برداشت از ربات را تأمین می‌کند؛ برای دریافت در کیف پول شخصی POL لازم نیست.'),
@@ -210,7 +228,12 @@ function withdrawalGuide() {
     paragraph('⚠️ Faucet توکن tNFIVE نمی‌دهد؛ فقط POL تستی برای Gas است.'),
     paragraph('🔒 محدودیت برداشت و فاصله زمانی برای محافظت از کیف پول اعمال می‌شود.'),
     paragraph('⚠️ فقط شبکه Polygon Amoy؛ هیچ توکن واقعی ارسال نمی‌شود.'),
-  ], '〰️↗️ راهنمای برداشت\n\nفرمت:\n/withdraw 25 0xYourPolygonAddress\n\n✅ تأیید با دکمه\n⛽ گس برداشت برعهده N5 است؛ برای دریافت نیاز به Faucet نیست.\n🔗 برای ارسال‌های بعدی از MetaMask، POL تستی از Polygon Faucet بگیر.\n⚠️ Faucet توکن tNFIVE نمی‌دهد.\n🌐 فقط Polygon Amoy\n⚠️ توکن آزمایشی');
+  ], '〰️↗️ راهنمای برداشت\n\nنمونه قابل کپی:\n' + WITHDRAW_EXAMPLE +
+    '\n\n📋 روی دکمه کپی بزن، Paste کن و 0xYourPolygonAddress را با آدرس واقعی MetaMask خودت عوض کن.' +
+    '\n✅ تأیید برداشت با دکمه مجزا انجام می‌شود.' +
+    '\n⛽ N5 گس برداشت را می‌دهد؛ برای دریافت، Faucet لازم نیست.' +
+    '\n🔗 برای ارسال‌های بعدی از MetaMask، POL تستی از Faucet بگیر.' +
+    '\n⚠️ Faucet توکن tNFIVE نمی‌دهد.\n🌐 فقط Polygon Amoy', withdrawCopyKeyboard());
 }
 export function parseWithdraw(text) {
   const parts = String(text ?? '').trim().split(/\s+/);
