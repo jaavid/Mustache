@@ -209,7 +209,9 @@ export async function ensureTelegramWallet(env, user) {
 async function view(env, user, section) {
   if (section === 'm') return intro();
   if (section === 'x') return withdrawalGuide();
-  await ensureTelegramWallet(env, user);
+  // Rolling deploy: the existing Wallet Worker may not yet have /ensure.
+  // Existing 20 addresses must stay accessible until the new route goes live.
+  try { await ensureTelegramWallet(env, user); } catch { /* read old wallet below */ }
   if (section === 'w') return accountView(await service(env, user.id, '/internal/wallet'));
   if (section === 'r' || section === 't') return historyView(await service(env, user.id, '/internal/history'), section);
   throw new Error('UNKNOWN_WALLET_SECTION');
@@ -239,7 +241,8 @@ export async function walletCommand(message, command, env, send) {
     if (command === 'withdraw') {
       const form = parseWithdraw(message.text);
       if (!form) return dispatch(send, 'sendRichMessage', destination, withdrawalGuide());
-      await ensureTelegramWallet(env, user);
+      // Keep existing withdrawals usable during a staggered bot/Wallet deploy.
+      try { await ensureTelegramWallet(env, user); } catch { /* use existing account */ }
       const withdrawal = await service(env, user.id, '/internal/withdrawals', 'POST', form);
       const address = validAddress(withdrawal.destination);
       if (!address || !/^[a-f0-9-]{36}$/i.test(withdrawal.requestId)) throw new Error('INVALID_WITHDRAWAL_RESPONSE');
