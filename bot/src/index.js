@@ -25,7 +25,7 @@ export function isSameSecret(actual, expected) {
 
 export function parseGameCommand(input, botUsername = DEFAULT_BOT_USERNAME) {
   const first = String(input ?? '').trim().split(/\s+/)[0];
-  const match = /^\/(start|play|help|top|score|leaderboard|profile|invite|wallet|rewards|transactions|withdraw|wallethelp|admin|walletcheck)(?:@([a-zA-Z0-9_]+))?$/i.exec(first);
+  const match = /^\/(start|play|help|top|score|leaderboard|profile|invite|wallet|rewards|transactions|withdraw|wallethelp|admin|walletcheck|myid)(?:@([a-zA-Z0-9_]+))?$/i.exec(first);
   if (!match) return null;
   if (match[2] && match[2].toLowerCase() !== botUsername.toLowerCase()) return null;
   return match[1].toLowerCase();
@@ -91,6 +91,16 @@ export async function handleTelegramUpdate(update, env, send) {
         await walletCommand(message, 'wallet', env, send);
         return;
       }
+      if (command === 'start' && /^\/start(?:@[a-zA-Z0-9_]+)?\s+myid\s*$/i.test(String(message.text || '').trim())) {
+        if (message.chat?.type === 'private' && Number.isSafeInteger(message.from?.id) &&
+          message.from.id === message.chat.id) {
+          await send('sendMessage', {
+            chat_id: message.chat.id, text: '〰️ شناسه عددی حساب تلگرام شما:\n' +
+              message.from.id + '\n\nبرای تنظیم ادمین، همین مقدار را در Cloudflare روی هر دو Worker قرار بده.'
+          });
+        }
+        return;
+      }
       if (command === 'start' && env.DB && message.from) await registerReferral(env.DB, message.from, message.text);
       // Wallet creation is free/idempotent and must never interrupt gameplay.
       if (message.chat?.type === 'private' && message.chat.id === message.from?.id) {
@@ -120,6 +130,26 @@ export async function handleTelegramUpdate(update, env, send) {
           '\nرکورد Classic: ' + profile.bestClassic + ' · Gold Rush: ' + profile.bestGoldRush +
           '\nGold Rush: ' + goldStatus + '\nدعوت‌های امروز: ' + profile.dailyInvites + '/3';
       await send('sendMessage', { chat_id: message.chat.id, text: output });
+    } else if (command === 'myid') {
+      // Telegram's authenticated from.id is the only identity authority.
+      // Never return identity information inside a shared/group chat.
+      if (message.chat?.type === 'private' &&
+        Number.isSafeInteger(message.from?.id) &&
+        message.from.id === message.chat.id) {
+        await send('sendMessage', {
+          chat_id: message.chat.id,
+          text: '〰️ شناسه عددی حساب تلگرام شما:\n' + message.from.id +
+            '\n\nبرای دسترسی مدیریتی N5 باید ADMIN_TELEGRAM_USER_ID در هر دو Worker با این مقدار یکسان باشد.'
+        });
+      } else if (Number.isSafeInteger(message.chat?.id)) {
+        await send('sendMessage', {
+          chat_id: message.chat.id,
+          text: '〰️ برای دریافت شناسه عددی خودت، /myid را در چت خصوصی ربات بفرست.',
+          reply_markup: { inline_keyboard: [[{
+            text: '🔐 گفت‌وگوی خصوصی با ربات', url: 'https://t.me/RJTtobot?start=myid'
+          }]] }
+        });
+      }
     } else if (command === 'admin') {
       await adminCommand(message,env,send);
     } else if (command === 'walletcheck') {

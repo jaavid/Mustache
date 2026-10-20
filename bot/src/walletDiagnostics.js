@@ -84,9 +84,18 @@ export async function diagnoseWallet(env,userId) {
 }
 export async function walletDiagnosticCommand(message,env,send) {
   if(!isOwner(message,env)){
-    if(message?.chat?.type==='private')await send('sendMessage',{
-      chat_id:message.chat.id,text:'این فرمان فقط برای ادمین N5 مجاز است.'
-    });
+    if(message?.chat?.type==='private' &&
+      Number.isSafeInteger(message.chat.id) &&
+      Number.isSafeInteger(message.from?.id) &&
+      message.from.id===message.chat.id) {
+      await send('sendMessage',{
+        chat_id:message.chat.id,
+        text:'〰️ این حساب هنوز مجوز بررسی مدیریتی Wallet را ندارد.\n\n' +
+          'Telegram User ID شما: ' + message.from.id +
+          '\n\nدر Cloudflare، مقدار ADMIN_TELEGRAM_USER_ID را روی هر دو Worker بررسی کن. ' +
+          'مقدار باید دقیقاً برابر شناسه نمایش‌داده‌شده باشد.'
+      });
+    }
     return;
   }
   const output=await diagnoseWallet(env,message.from.id);
