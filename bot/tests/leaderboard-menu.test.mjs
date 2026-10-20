@@ -134,8 +134,8 @@ test('week navigation and invalid callbacks are tightly bounded', async () => {
       message: { message_id: 2, chat: { id: 44 } } },
   });
   const buttons = calls[0].payload.reply_markup.inline_keyboard.flat().map(b => b.callback_data);
-  assert.ok(buttons.includes('lb:w:2'));
-  assert.ok(buttons.includes('lb:w:0'));
+  assert.ok(buttons.includes('lb:v:w:2'));
+  assert.ok(buttons.includes('lb:v:w:0'));
   assert.equal(parseLeaderboardCallback('lb:w:0').mode, 'combined');
   assert.deepEqual(parseLeaderboardCallback('lb:g:w:1'), { period: 'week', offset: 1, mode: 'combined' });
   assert.equal(parseLeaderboardCallback('lb:w:12').offset, 12);
@@ -204,7 +204,7 @@ test('legacy mode callbacks open unified standings without separate mode tabs', 
   assert.equal(calls[0].method, 'editMessageText');
   assert.ok(calls[0].payload.rich_message.blocks.some(b => b.text?.includes('Classic + 🪙 Gold Rush')));
   const buttons = calls[0].payload.reply_markup.inline_keyboard.flat();
-  assert.ok(buttons.some(item => item.callback_data === 'lb:w:3'));
+  assert.ok(buttons.some(item => item.callback_data === 'lb:v:w:3'));
   assert.ok(buttons.some(item => item.callback_data === 'lb:d:0'));
   assert.ok(buttons.every(item => !item.callback_data || !/lb:[cg]:/.test(item.callback_data)));
   assert.ok(buttons.every(item => !item.callback_data || item.callback_data.length <= 64));
