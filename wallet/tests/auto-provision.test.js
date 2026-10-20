@@ -85,3 +85,15 @@ test('plaintext secret key not returned by internal route',async()=>{
   assert.equal(text.includes('key_iv'),false);
   assert.equal(text.includes('privateKey'),false);
 });
+
+test('read-only admin overview rejects wrong user ID and missing configuration',async()=>{
+  const db=dbMock();
+  const env={...base,DB:db,ADMIN_TELEGRAM_USER_ID:'208627'};
+  const requestAdmin=(id)=>new Request('https://wallet.internal/internal/admin/overview',{
+    method:'GET',headers:{'x-wallet-service-key':base.WALLET_SERVICE_KEY,'x-telegram-user-id':id}
+  });
+  const forbidden=await walletWorker.fetch(requestAdmin('42'),env);
+  assert.equal(forbidden.status,403);
+  const disabled=await walletWorker.fetch(requestAdmin('208627'),{...env,ADMIN_TELEGRAM_USER_ID:undefined});
+  assert.equal(disabled.status,403);
+});
