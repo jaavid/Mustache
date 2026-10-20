@@ -263,7 +263,9 @@ export async function walletCommand(message, command, env, send) {
     const section = ({ wallet: 'w', rewards: 'r', transactions: 't', wallethelp: 'm' })[command];
     return dispatch(send, 'sendRichMessage', destination, await view(env, user, section || 'm'));
   } catch {
-    return send('sendMessage', { ...destination, text: ERROR_MESSAGE, reply_markup: walletKeyboard() });
+    const adminHint = env.ADMIN_TELEGRAM_USER_ID && String(user.id) === String(env.ADMIN_TELEGRAM_USER_ID)
+      ? '\n\n🛠 برای بررسی اتصال دو Worker: /walletcheck' : '';
+    return send('sendMessage', { ...destination, text: ERROR_MESSAGE + adminHint, reply_markup: walletKeyboard() });
   }
 }
 export async function handleWalletNavigation(callback, env, send) {

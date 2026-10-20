@@ -89,3 +89,37 @@ endpoints** available through this Telegram interface.
 Send `/admin` from the authorized Telegram account after redeploy and
 confirm it shows the correct read-only wallet count. The command is not
 placed in the global BotFather menu because ordinary players cannot use it.
+
+## Troubleshooting /wallet after bot deployment
+
+The Telegram bot command menu and rich keyboard being visible only proves that
+the **Bot Worker** was deployed. Wallet balance requires a working connection
+to the independent **Wallet Worker** and the correct per-bot credentials.
+
+1. From [GitHub Actions](https://github.com/jaavid/Mustache/actions/workflows/deploy-wallet.yml),
+   run `Deploy N5 Wallet (Amoy manual)` against `main`. A success is required
+   for `POST /internal/wallet/ensure`; the bot itself is deployed on commits
+   affecting `bot/**`.
+2. In Cloudflare Worker `n5-mustache-rjttobot`, check the **presence** of
+   `WALLET_API_URL=https://n5-wallet-service-amoy.zed-ai.workers.dev` and
+   `WALLET_SERVICE_KEY` (matching the Wallet Worker's secret). Never reveal
+   this secret to users, logs, issue comments or chat.
+3. `GET https://n5-wallet-service-amoy.zed-ai.workers.dev/health` should
+   return `chainId:80002` with `transfersEnabled:false` and
+   `autoRewardsEnabled:false`. This health check **does not validate** the
+   internal shared secret.
+4. Set `ADMIN_TELEGRAM_USER_ID` to the approved numeric Telegram user ID
+   in the bot Worker. The admin can run **`/walletcheck`** in a private
+   Telegram chat to validate health, internal authentication, D1, and
+   their own wallet without exposing API keys.
+5. If the diagnostic says `401`, check the shared-key secret on **both**
+   Workers. If `404`, confirm the Worker URL and redeploy the Wallet route.
+   If `503`, verify Amoy RPC and Wallet Worker logs.
+6. Share `https://t.me/RJTtobot?start=wallet` with users. The deep link now
+   shows the wallet, rather than sending a Telegram Game Card.
+7. Users with wallets built previously do not need individual enablement;
+   `/wallet` must display the same address. A newly authenticated user is
+   provisioned idempotently on private `/start` or first Wallet request.
+
+**Never enable transfers or auto rewards to fix the /wallet command.**
+Balance is a read-only operation.

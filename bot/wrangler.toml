@@ -1,6 +1,8 @@
 name = "n5-mustache-rjttobot"
 main = "src/index.js"
 compatibility_date = "2026-09-01"
+# Preserve Cloudflare dashboard variables such as WALLET_API_URL across CI deploys.
+keep_vars = true
 workers_dev = true
 
 # The Telegram webhook and score API must use the SAME deployed Worker.
