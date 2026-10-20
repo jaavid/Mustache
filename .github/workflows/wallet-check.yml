@@ -4,16 +4,20 @@ on:
     paths:
       - "wallet/**"
       - "bot/src/walletCommands.js"
+      - "bot/src/adminDashboard.js"
       - "bot/src/index.js"
       - "bot/tests/wallet-commands.test.mjs"
+      - "bot/tests/admin-dashboard.test.mjs"
       - ".github/workflows/wallet-check.yml"
   push:
     branches: [main]
     paths:
       - "wallet/**"
       - "bot/src/walletCommands.js"
+      - "bot/src/adminDashboard.js"
       - "bot/src/index.js"
       - "bot/tests/wallet-commands.test.mjs"
+      - "bot/tests/admin-dashboard.test.mjs"
       - ".github/workflows/wallet-check.yml"
   workflow_dispatch:
 

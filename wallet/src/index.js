@@ -229,6 +229,42 @@ export default {
       }
       if(internal) {
         const id=telegramId(request.headers.get('x-telegram-user-id'));
+        if(path==='/internal/admin/overview'&&method==='GET') {
+          // Server-side authorization is required even when the Telegram bot
+          // hides the /admin UI from other users. This endpoint is read-only.
+          if(!env.ADMIN_TELEGRAM_USER_ID || id!==String(env.ADMIN_TELEGRAM_USER_ID))
+            return reply({error:'FORBIDDEN'},403);
+          const [count,batches,txStates]=await Promise.all([
+            env.DB.prepare('SELECT COUNT(*) AS total FROM wallets').first(),
+            env.DB.prepare('SELECT batch_id,state,source,total_raw,decimals FROM reward_batches ORDER BY created_at DESC LIMIT 12').all(),
+            env.DB.prepare('SELECT state,COUNT(*) AS count FROM tx_jobs GROUP BY state').all()
+          ]);
+          const {contract,decimals,symbol}=await context(env);
+          const treasury=await balance(env,getAddress(env.ADMIN_ADDRESS));
+          let operational;
+          try { operational=await balance(env,distributor(env).address); }
+          catch { operational={state:'NOT_CONFIGURED'}; }
+          return reply({
+            chainId:80002,contract,decimals,symbol,
+            transfersEnabled:env.TRANSFERS_ENABLED==='true',
+            autoRewardsEnabled:env.AUTO_REWARDS_ENABLED==='true',
+            walletCount:Number(count?.total||0),
+            treasury,distributor:operational,
+            batches:batches.results||[],txStates:txStates.results||[]
+          });
+        }
+        if(path==='/internal/wallet/ensure'&&method==='POST') {
+          const input=await payload(request);
+          // The verified webhook supplies Telegram ID in X-Telegram-User-Id;
+          // clients cannot choose a different account through JSON input.
+          const name=String(input?.displayName||'Player')
+            .replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g,' ')
+            .replace(/\s+/g,' ').trim().slice(0,48)||'Player';
+          const existing=await walletFor(env.DB,id);
+          if(existing) return reply({address:existing.address,telegramUserId:id,created:false});
+          const created=await bootstrap(env,{players:[{telegramUserId:id,displayName:name}]});
+          return reply({address:created.wallets[0].address,telegramUserId:id,created:true},201);
+        }
         if(path==='/internal/wallet'&&method==='GET') return reply(await summary(env,id));
         if(path==='/internal/history'&&method==='GET') return reply(await history(env,id));
         if(path==='/internal/withdrawals'&&method==='POST') return reply(await requestWithdrawal(env,id,await payload(request)),201);
