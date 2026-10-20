@@ -155,3 +155,70 @@ test('existing wallets remain readable while the new /ensure endpoint is not yet
   assert.equal(sent[0].method,'sendRichMessage');
   assert.match(JSON.stringify(sent[0].data.rich_message.blocks),/13/);
 });
+
+test('Polygon Faucet navigation shows authenticated custodial address, Amoy chain and POL-only guidance',async()=>{
+  const requests=[],messages=[];
+  const env=mockEnv(requests);
+  await handleWalletNavigation({
+    id:'faucet-cb',data:'nw:f',from:owner,
+    message:{chat:{id:owner.id,type:'private'},message_id:77}
+  },env,async(method,data)=>messages.push({method,data}));
+  assert.deepEqual(messages.map(x=>x.method),['editMessageText','answerCallbackQuery']);
+  assert.equal(messages[0].data.message_id,77);
+  const doc=messages[0].data.rich_message;
+  const paragraphs=JSON.stringify(doc.blocks);
+  assert.match(paragraphs,/Polygon Amoy/);
+  assert.match(paragraphs,/80002/);
+  assert.match(paragraphs,/POL تستی/);
+  assert.match(paragraphs,/Faucet توکن tNFIVE نمی‌دهد/);
+  assert.match(paragraphs,/N5 کارمزد برداشت/);
+  assert.match(paragraphs,/Seed Phrase/);
+  assert.match(paragraphs,new RegExp(address));
+  assert.ok(messages[0].data.reply_markup.inline_keyboard.flat()
+    .some(button=>button.url==='https://faucet.polygon.technology/'));
+  assert.ok(messages[0].data.reply_markup.inline_keyboard.flat()
+    .some(button=>button.callback_data==='nw:w'));
+  assert.equal(requests.some(r=>r.url.includes('/internal/withdrawals')),false);
+  assert.equal(requests.some(r=>r.opts.method==='POST' && !r.url.endsWith('/ensure')),false);
+  assert.ok(requests.every(r=>r.opts.headers['x-telegram-user-id']===String(owner.id)));
+});
+test('Faucet button is available from both Wallet and withdrawal guides; never gates withdrawals',async()=>{
+  const records=[],calls=[];
+  const send=async(method,data)=>calls.push({method,data});
+  await walletCommand({text:'/wallet',chat:{id:owner.id,type:'private'},from:owner},'wallet',mockEnv(records),send);
+  assert.ok(calls[0].data.reply_markup.inline_keyboard.flat()
+    .some(button=>button.callback_data==='nw:f'));
+  calls.length=0;
+  await walletCommand({text:'/withdraw',chat:{id:owner.id,type:'private'},from:owner},'withdraw',mockEnv(records),send);
+  const guide=JSON.stringify(calls[0].data.rich_message.blocks);
+  assert.match(guide,/برای دریافت در کیف پول شخصی POL لازم نیست/);
+  assert.match(guide,/Faucet توکن tNFIVE نمی‌دهد/);
+  assert.ok(calls[0].data.reply_markup.inline_keyboard.flat()
+    .some(button=>button.callback_data==='nw:f'));
+  assert.equal(records.some(r=>r.url.endsWith('/internal/withdrawals')),false);
+});
+test('Faucet guide remains usable if Telegram rich messages are unsupported',async()=>{
+  const records=[],sent=[];
+  await handleWalletNavigation({
+    id:'callback-f',data:'nw:f',from:owner,
+    message:{chat:{id:owner.id,type:'private'},message_id:24}
+  },mockEnv(records),async(method,data)=>{
+    sent.push({method,data});
+    if(method==='editMessageText' && data.rich_message)
+      throw new Error('TELEGRAM_RICH_UNSUPPORTED');
+  });
+  assert.deepEqual(sent.map(x=>x.method),
+    ['editMessageText','editMessageText','answerCallbackQuery']);
+  assert.match(sent[1].data.text,/https:\/\/faucet\.polygon\.technology\//);
+  assert.match(sent[1].data.text,/POL تستی/);
+  assert.match(sent[1].data.text,new RegExp(address));
+});
+test('Faucet navigation is private and does not reveal a user wallet to another account',async()=>{
+  const requests=[],out=[];
+  await handleWalletNavigation({
+    id:'faucet-cb',data:'nw:f',from:{id:42},
+    message:{chat:{id:owner.id,type:'private'},message_id:77}
+  },mockEnv(requests),async(method,data)=>out.push({method,data}));
+  assert.equal(requests.length,0);
+  assert.deepEqual(out.map(o=>o.method),['answerCallbackQuery']);
+});
