@@ -137,3 +137,21 @@ test('official Telegram Game Card callback provisions by authenticated callback.
   assert.equal(out[0].method,'answerCallbackQuery');
   assert.match(out[0].data.url,/tg_session=/);
 });
+
+test('existing wallets remain readable while the new /ensure endpoint is not yet deployed',async()=>{
+  const requests=[],sent=[];
+  const original=mockEnv(requests);
+  const env={...original,WALLET:{async fetch(url,opts){
+    requests.push({url,opts});
+    if(url.endsWith('/internal/wallet/ensure')) return new Response('Not found',{status:404});
+    if(url.endsWith('/internal/wallet')) return new Response(JSON.stringify({
+      address,balance:'13',symbol:'tNFIVE',pol:'0.01'
+    }));
+    throw Error('Unexpected route');
+  }}};
+  await walletCommand({text:'/wallet',chat:{id:owner.id,type:'private'},from:owner},'wallet',env,
+    async(method,data)=>sent.push({method,data}));
+  assert.equal(requests.length,2);
+  assert.equal(sent[0].method,'sendRichMessage');
+  assert.match(JSON.stringify(sent[0].data.rich_message.blocks),/13/);
+});
