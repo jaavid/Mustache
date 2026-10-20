@@ -222,3 +222,47 @@ test('Faucet navigation is private and does not reveal a user wallet to another 
   assert.equal(requests.length,0);
   assert.deepEqual(out.map(o=>o.method),['answerCallbackQuery']);
 });
+
+test('withdrawal instructions expose copy-text template in rich message and fallback',async()=>{
+  const requests=[],calls=[];
+  await walletCommand({text:'/withdraw',from:owner,chat:{id:owner.id,type:'private'}},
+    'withdraw',mockEnv(requests),async(method,data)=>calls.push({method,data}));
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].method,'sendRichMessage');
+  const msg=calls[0].data;
+  const button=msg.reply_markup.inline_keyboard.flat().find(b=>b.copy_text);
+  assert.equal(button.copy_text.text,'/withdraw 25 0xYourPolygonAddress');
+  assert.equal(button.style,'primary');
+  assert.match(JSON.stringify(msg.rich_message.blocks),/آدرس واقعی/);
+  assert.equal(requests.length,0);
+  assert.equal(parseWithdraw(button.copy_text.text),null);
+});
+
+test('withdraw help plain-text fallback retains the same clipboard button',async()=>{
+  const out=[];
+  await walletCommand({text:'/withdraw',from:owner,chat:{id:owner.id,type:'private'}},'withdraw',
+    mockEnv([]),async(method,data)=>{
+      out.push({method,data});
+      if(method==='sendRichMessage')throw new Error('TELEGRAM_RICH_UNSUPPORTED');
+    });
+  assert.deepEqual(out.map(x=>x.method),['sendRichMessage','sendMessage']);
+  assert.match(out[1].data.text,/Paste کن/);
+  assert.equal(out[1].data.reply_markup.inline_keyboard.flat()
+    .find(x=>x.copy_text)?.copy_text.text,'/withdraw 25 0xYourPolygonAddress');
+});
+
+test('wallet and faucet offer copy button for only the authenticated public wallet address',async()=>{
+  const requests=[],walletMessages=[];
+  await walletCommand({text:'/wallet',from:owner,chat:{id:owner.id,type:'private'}},
+    'wallet',mockEnv(requests),async(method,data)=>walletMessages.push({method,data}));
+  assert.equal(walletMessages[0].data.reply_markup.inline_keyboard.flat()
+    .find(x=>x.copy_text)?.copy_text.text,address);
+  const faucet=[];
+  await handleWalletNavigation({
+    id:'f1',data:'nw:f',from:owner,
+    message:{chat:{id:owner.id,type:'private'},message_id:88}
+  },mockEnv(requests),async(method,data)=>faucet.push({method,data}));
+  assert.equal(faucet[0].data.reply_markup.inline_keyboard.flat()
+    .find(x=>x.copy_text)?.copy_text.text,address);
+  assert.equal(requests.some(x=>x.url.includes('/withdrawals')),false);
+});
