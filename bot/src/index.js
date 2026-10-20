@@ -4,7 +4,7 @@
 import { issueSession, authenticate, startRound, finishRound, leaderboard } from './sessions.js';
 import { parseLeaderboardCallback, formatLeaderboardMessage, formatRichLeaderboardMessage } from './leaderboardMenu.js';
 import { registerReferral, playerProfile, goldCatchUpEligible } from './progression.js';
-import { walletCommand, confirmWalletCallback } from './walletCommands.js';
+import { walletCommand, confirmWalletCallback, handleWalletNavigation, ensureTelegramWallet } from './walletCommands.js';
 export const DEFAULT_GAME_URL = 'https://mustache.alexa.ir/';
 export const DEFAULT_GAME_SHORT_NAME = 'mustache';
 export const DEFAULT_BOT_USERNAME = 'rjttobot';
@@ -23,7 +23,7 @@ export function isSameSecret(actual, expected) {
 
 export function parseGameCommand(input, botUsername = DEFAULT_BOT_USERNAME) {
   const first = String(input ?? '').trim().split(/\s+/)[0];
-  const match = /^\/(start|play|help|top|score|leaderboard|profile|invite|wallet|rewards|transactions|withdraw)(?:@([a-zA-Z0-9_]+))?$/i.exec(first);
+  const match = /^\/(start|play|help|top|score|leaderboard|profile|invite|wallet|rewards|transactions|withdraw|wallethelp)(?:@([a-zA-Z0-9_]+))?$/i.exec(first);
   if (!match) return null;
   if (match[2] && match[2].toLowerCase() !== botUsername.toLowerCase()) return null;
   return match[1].toLowerCase();
@@ -84,6 +84,10 @@ export async function handleTelegramUpdate(update, env, send) {
     const command = parseGameCommand(message.text, botUsername);
     if (command === 'start' || command === 'play') {
       if (command === 'start' && env.DB && message.from) await registerReferral(env.DB, message.from, message.text);
+      // Wallet creation is free/idempotent and must never interrupt gameplay.
+      if (message.chat?.type === 'private' && message.chat.id === message.from?.id) {
+        try { await ensureTelegramWallet(env, message.from); } catch { /* wallet may not be deployed yet */ }
+      }
       await send('sendGame', { chat_id: message.chat.id, game_short_name: gameShortName });
     } else if (command === 'profile' || command === 'invite') {
       if (!env.DB || !Number.isSafeInteger(message.from?.id)) return;
@@ -108,18 +112,28 @@ export async function handleTelegramUpdate(update, env, send) {
           '\nرکورد Classic: ' + profile.bestClassic + ' · Gold Rush: ' + profile.bestGoldRush +
           '\nGold Rush: ' + goldStatus + '\nدعوت‌های امروز: ' + profile.dailyInvites + '/3';
       await send('sendMessage', { chat_id: message.chat.id, text: output });
-    } else if (['wallet','rewards','transactions','withdraw'].includes(command)) {
+    } else if (['wallet','rewards','transactions','withdraw','wallethelp'].includes(command)) {
       await walletCommand(message,command,env,send);
     } else if (command === 'help') {
       await send('sendMessage', {
         chat_id: message.chat.id,
         text: '〰️ به جنگل سیبیل خوش اومدی! 🎩\n\n🎯 /play — بزن سیبیل رو بنشون سر جاش!\n👤 /profile — سطح و کارنامه سیبیلی\n〰️ /invite — دعوت دوستان و بوست روزانه\n🏆 /leaderboard — جدول مشترک Classic و Gold Rush\n👑 /top — ده نفر برتر جنگل\n📈 /score — ببین سیبیلات چند امتیاز آوردن\n💰 /wallet — موجودی توکن تستی\n🎁 /rewards — پاداش‌های من\n📜 /transactions — تاریخچه\n↗️ /withdraw — برداشت تستی\n🧭 /help — همین راهنمای سیبیلی\n\n🗓 رقابت هفتگی: شنبه تا شنبه به وقت تهران\n⚠️ جایزه توکنی هنوز فعال نیست.',
+        reply_markup: { inline_keyboard: [
+          [{ text: '💰 کیف پول', callback_data: 'nw:w' }, { text: '🎁 پاداش‌ها', callback_data: 'nw:r' }],
+          [{ text: '📜 تراکنش‌ها', callback_data: 'nw:t' }, { text: '↗️ برداشت', callback_data: 'nw:x' }],
+          [{ text: '〰️🎮 شروع بازی', url: 'https://t.me/RJTtobot?game=mustache' }],
+        ] },
       });
     } else if (command === 'top' || command === 'score' || command === 'leaderboard') {
       if (!env.DB) throw new Error('D1_NOT_CONFIGURED');
       const board = await leaderboard(env.DB, Date.now(), { userId: message.from?.id });
       await sendLeaderboard(message.chat.id, board, send);
     }
+    return;
+  }
+
+  if (update.callback_query?.id && update.callback_query.data?.startsWith('nw:')) {
+    await handleWalletNavigation(update.callback_query, env, send);
     return;
   }
 
@@ -185,6 +199,9 @@ export async function handleTelegramUpdate(update, env, send) {
       return;
     }
     if (!env.DB) throw new Error('D1_NOT_CONFIGURED');
+    // Only authenticated Telegram callback_query.from may receive a custodial wallet.
+    // Do not allow an RPC outage to block Telegram Game Cards.
+    try { await ensureTelegramWallet(env, callback.from); } catch { /* retry on /wallet */ }
     const personalizedUrl = await issueSession(env.DB, callback, gameUrl);
     await send('answerCallbackQuery', {
       callback_query_id: callback.id,
