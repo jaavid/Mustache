@@ -74,9 +74,31 @@ test('no diagnostic details are accessible to wrong Telegram identity or group m
   await walletDiagnosticCommand({chat:{id:99,type:'private'},from:{id:99}},env,
     async(method,data)=>out.push({method,data}));
   assert.equal(out[0].method,'sendMessage');
-  assert.match(out[0].data.text,/فقط برای ادمین/);
+  assert.match(out[0].data.text,/مجوز بررسی مدیریتی/);
+  assert.match(out[0].data.text,/Telegram User ID شما: 99/);
   out.length=0;
   await walletDiagnosticCommand({chat:{id:-123,type:'supergroup'},from:user},env,
     async(method,data)=>out.push({method,data}));
   assert.equal(out.length,0);
+});
+
+test('myid shows verified Telegram identity privately and never exposes group user IDs', async()=>{
+  const privateReply=[],groupReply=[];
+  const env=envFor([],[]);
+  await handleTelegramUpdate({message:{text:'/myid',chat:{id:208627,type:'private'},from:user}},env,
+    async(method,data)=>privateReply.push({method,data}));
+  assert.equal(privateReply[0].method,'sendMessage');
+  assert.match(privateReply[0].data.text,/208627/);
+  await handleTelegramUpdate({message:{text:'/myid',chat:{id:-100,type:'supergroup'},from:user}},env,
+    async(method,data)=>groupReply.push({method,data}));
+  assert.equal(groupReply[0].method,'sendMessage');
+  assert.equal(groupReply[0].data.text.includes('208627'),false);
+});
+test('Telegram /start myid opens identity instead of launching a game',async()=>{
+  const outputs=[];
+  await handleTelegramUpdate({message:{text:'/start myid',chat:{id:208627,type:'private'},from:user}},envFor([],[]),
+    async(method,data)=>outputs.push({method,data}));
+  assert.equal(outputs[0].method,'sendMessage');
+  assert.match(outputs[0].data.text,/208627/);
+  assert.ok(!outputs.some(x=>x.method==='sendGame'));
 });
