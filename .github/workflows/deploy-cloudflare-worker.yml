@@ -50,18 +50,25 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
           CLOUDFLARE_D1_DATABASE_ID: ${{ secrets.CLOUDFLARE_D1_DATABASE_ID }}
+          WALLET_SERVICE_KEY: ${{ secrets.WALLET_SERVICE_KEY }}
+          ADMIN_TELEGRAM_USER_ID: ${{ vars.ADMIN_TELEGRAM_USER_ID }}
         run: |
           set -euo pipefail
-          for secret in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID TELEGRAM_BOT_TOKEN TELEGRAM_WEBHOOK_SECRET CLOUDFLARE_D1_DATABASE_ID; do
+          for secret in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID TELEGRAM_BOT_TOKEN TELEGRAM_WEBHOOK_SECRET CLOUDFLARE_D1_DATABASE_ID WALLET_SERVICE_KEY ADMIN_TELEGRAM_USER_ID; do
             if [[ -z "${!secret:-}" ]]; then
               echo "::error title=Missing production secret::Configure ${secret} in GitHub Actions secrets (production environment or repository)."
               exit 1
             fi
           done
+          if [[ ! "${ADMIN_TELEGRAM_USER_ID}" =~ ^[1-9][0-9]{0,18}$ ]]; then
+            echo "::error::ADMIN_TELEGRAM_USER_ID must be a numeric Telegram ID."
+            exit 1
+          fi
 
       - name: Bind existing D1 database ID
         env:
           D1_ID: ${{ secrets.CLOUDFLARE_D1_DATABASE_ID }}
+          ADMIN_TELEGRAM_USER_ID: ${{ vars.ADMIN_TELEGRAM_USER_ID }}
         run: |
           python3 - <<'PY'
           import os, re
@@ -74,6 +81,13 @@ jobs:
           placeholder = '00000000-0000-0000-0000-000000000000'
           if text.count(placeholder) != 1:
               raise SystemExit('Missing D1 database placeholder')
+          operator_id = os.environ['ADMIN_TELEGRAM_USER_ID']
+          if not re.fullmatch(r'[1-9][0-9]{0,18}', operator_id):
+              raise SystemExit('Invalid operator Telegram ID')
+          section = '[vars]\n'
+          if text.count(section) != 1 or 'ADMIN_TELEGRAM_USER_ID =' in text:
+              raise SystemExit('Cannot safely bind operator ID into Wrangler vars')
+          text = text.replace(section, section + 'ADMIN_TELEGRAM_USER_ID = "' + operator_id + '"\n', 1)
           path.write_text(text.replace(placeholder, value))
           PY
 
@@ -96,9 +110,11 @@ jobs:
           secrets: |
             BOT_TOKEN
             WEBHOOK_SECRET
+            WALLET_SERVICE_KEY
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+          WALLET_SERVICE_KEY: ${{ secrets.WALLET_SERVICE_KEY }}
 
       - name: Register bot command menu without overwriting unrelated commands
         env:
