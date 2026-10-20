@@ -27,7 +27,7 @@ function statusNote(status) {
 }
 async function call(env,url,opts) {
   try {
-    const config={...opts,signal:AbortSignal.timeout(6500)};
+    const config={...opts,signal:AbortSignal.timeout(url.endsWith('/internal/admin/diagnostics')?18500:6500)};
     const response=await (env.WALLET ? env.WALLET.fetch(url,config) : fetch(url,config));
     let body=null;
     if(response.ok){
@@ -78,6 +78,37 @@ export async function diagnoseWallet(env,userId) {
   }else{
     lines.push('❌ نمایش موجودی — '+(wallet.status ?? 'عدم اتصال'),
       '↳ '+(wallet.status===null?'Timeout یا قطع ارتباط با RPC.':statusNote(wallet.status)));
+    if(wallet.status===503){
+      const diagnostic=await call(env,walletUrl(env,'/internal/admin/diagnostics'),{
+        method:'GET',headers:{'x-wallet-service-key':env.WALLET_SERVICE_KEY,
+          'x-telegram-user-id':String(userId)}
+      });
+      const hints={
+        WALLET_NOT_FOUND:'برای این حساب کیف پول ثبت نشده؛ ساخت خودکار و تنظیم کلید رمزنگاری را بررسی کن.',
+        WALLET_DB_READ_FAILED:'اتصال D1 کیف پول را بررسی کن.',
+        RPC_URL_MISSING_OR_INVALID:'در Wallet Worker، Secret به نام AMOY_RPC_URL وجود ندارد یا HTTPS معتبر نیست.',
+        INVALID_RPC_OR_TOKEN_CONFIG:'آدرس قرارداد یا تنظیمات اتصال Wallet را بررسی کن.',
+        RPC_UNREACHABLE:'Endpoint مربوط به Amoy پاسخ نمی‌دهد؛ اعتبار و محدودیت RPC را در ارائه‌دهنده بررسی کن.',
+        RPC_CHAIN_MISMATCH:'RPC به Polygon Amoy با Chain ID برابر 80002 متصل نیست.',
+        RPC_GET_CODE_FAILED:'خواندن Bytecode قرارداد از RPC ناموفق است.',
+        TOKEN_CONTRACT_NOT_FOUND:'قرارداد tNFIVE روی RPC مورد استفاده پیدا نشد.',
+        TOKEN_METADATA_READ_FAILED:'خواندن Symbol یا Decimals توکن ناموفق است.',
+        TOKEN_METADATA_INVALID:'Metadata قرارداد معتبر نیست.',
+        TOKEN_BALANCE_READ_FAILED:'فراخوانی balanceOf توکن از RPC شکست خورده است.',
+        POL_BALANCE_READ_FAILED:'خواندن موجودی POL از RPC شکست خورده است.'
+      };
+      if(diagnostic.status===200 && diagnostic.body?.code){
+        const stage=diagnostic.body.code;
+        lines.push('🔎 تشخیص دقیق: '+stage,
+          '↳ '+(hints[stage] || (stage==='BALANCE_READ_OK'
+            ? 'مسیر خواندن RPC سالم است؛ خطا احتمالاً گذرا یا مربوط به درخواست قبلی بوده.'
+            : 'به لاگ‌های Wallet Worker مراجعه کن.')));
+      }else if(diagnostic.status===404){
+        lines.push('🔎 تست دقیق هنوز روی Wallet Worker دیپلوی نشده است.');
+      }else{
+        lines.push('🔎 تست دقیق RPC اجرا نشد؛ وضعیت '+(diagnostic.status ?? 'Timeout'));
+      }
+    }
   }
   lines.push('','⚠️ اگر /wallet هنوز خطا می‌دهد، نتیجه این گزارش را بدون اطلاعات محرمانه ارسال کن.');
   return lines.join('\n');

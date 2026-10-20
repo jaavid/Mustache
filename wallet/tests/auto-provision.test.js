@@ -104,3 +104,17 @@ test('read-only admin overview rejects wrong user ID and missing configuration',
   const disabled=await walletWorker.fetch(requestAdmin('208627'),{...env,ADMIN_TELEGRAM_USER_ID:undefined});
   assert.equal(disabled.status,403);
 });
+
+test('operator-only detailed RPC checks reject other users even with correct service key',async()=>{
+  const db=dbMock(),env={...base,DB:db,ADMIN_TELEGRAM_USER_ID:'208627'};
+  const requestAs=id=>new Request('https://wallet.internal/internal/admin/diagnostics',{
+    method:'GET',headers:{'x-wallet-service-key':base.WALLET_SERVICE_KEY,'x-telegram-user-id':id}
+  });
+  assert.equal((await walletWorker.fetch(requestAs('123'),env)).status,403);
+  assert.equal((await walletWorker.fetch(requestAs('208627'),{
+    ...env,ADMIN_TELEGRAM_USER_ID:undefined
+  })).status,403);
+  assert.equal((await walletWorker.fetch(new Request('https://wallet.internal/internal/admin/diagnostics',{
+    headers:{'x-wallet-service-key':'bad-key','x-telegram-user-id':'208627'}
+  }),env)).status,401);
+});
