@@ -92,7 +92,7 @@ test('new slash command, bot username matching and aliases', () => {
   assert.equal(parseGameCommand('/score'), 'score');
 });
 
-test('slash commands show weekly top ten, own rank, all tabs and game URL', async () => {
+test('legacy slash commands show compact five-player board, user rank and four periods', async () => {
   for (const command of ['/leaderboard', '/top', '/score']) {
     const { calls } = await dispatch({ message: { chat: { id: 43 }, from: { id: 999 }, text: command } });
     assert.equal(calls.length, 1);
@@ -101,12 +101,14 @@ test('slash commands show weekly top ten, own rank, all tabs and game URL', asyn
     assert.equal(out.chat_id, 43);
     assert.equal(out.rich_message.is_rtl, true);
     assert.equal(out.rich_message.blocks.find(b => b.type === 'table').is_compact, true);
-    assert.match(out.rich_message.blocks.at(-3).text, /رتبه شما: 11/);
+    assert.match(out.rich_message.blocks.at(-2).text, /رتبه شما: 11/);
+    assert.equal(out.rich_message.blocks.find(b => b.type === 'table').cells[0].length, 3);
     const buttons = out.reply_markup.inline_keyboard.flat();
     for (const key of ['lb:d:0', 'lb:w:0', 'lb:m:0', 'lb:a:0']) {
       assert.ok(buttons.some(b => b.callback_data === key));
     }
-    assert.ok(buttons.some(b => b.url === 'https://t.me/RJTtobot?game=mustache'));
+    assert.ok(buttons.some(b => b.callback_data === 'lb:v:w:0'));
+    assert.equal(buttons.some(b => b.url && b.url.includes('?game=')),false);
   }
 });
 
@@ -121,14 +123,14 @@ test('callback changes the same message instead of flooding the chat', async () 
   assert.equal(calls[0].payload.chat_id, -45);
   assert.equal(calls[0].payload.message_id, 4);
   assert.equal(calls[0].payload.text, undefined);
-  assert.ok(calls[0].payload.rich_message.blocks.some(b => b.text?.includes('ماه شمسی')));
+  assert.ok(calls[0].payload.rich_message.blocks.some(b => b.text?.includes('ماهانه')));
   assert.ok(calls[0].payload.rich_message.blocks.some(b => b.text?.includes('رتبه شما: 11')));
   assert.equal(db.binds[0].length, 4);
 });
 
 test('week navigation and invalid callbacks are tightly bounded', async () => {
   const { calls } = await dispatch({
-    callback_query: { id: 'cb2', data: 'lb:w:1', from: { id: 999 },
+    callback_query: { id: 'cb2', data: 'lb:v:w:1', from: { id: 999 },
       message: { message_id: 2, chat: { id: 44 } } },
   });
   const buttons = calls[0].payload.reply_markup.inline_keyboard.flat().map(b => b.callback_data);
@@ -164,7 +166,7 @@ test('golden-perfect achievers show badge without HTML injection', () => {
     me: { rank: 1, name: 'Gold', score: 450, goldenPerfect: 1 },
   });
   assert.match(view.text, /🥇 Gold — 450 🎮 〰️✨/);
-  assert.match(view.text, /🎮 کلاسیک · 🪙 گلدراش/);
+  assert.match(view.text, /🎮/);
 });
 
 test('rendered leaderboard stays plain text, independent of player name formatting', () => {
@@ -196,7 +198,7 @@ test('command picker preserves unrelated commands and avoids redundant updates',
 
 test('legacy mode callbacks open unified standings without separate mode tabs', async () => {
   const { calls } = await dispatch({ callback_query: {
-    id: 'gold', data: 'lb:g:w:2', from: { id: 999 },
+    id: 'gold', data: 'lb:v:w:2', from: { id: 999 },
     message: { message_id: 8, chat: { id: 44 } },
   } });
   assert.equal(calls[0].method, 'editMessageText');
@@ -239,7 +241,7 @@ test('rich leaderboard uses typed striped compact table with separate rank and g
     ],
     me: { rank: 4, score: 1300, mode: 'goldRush' },
   };
-  const view = formatRichLeaderboardMessage(board);
+  const view = formatRichLeaderboardMessage(board, { expanded: true });
   assert.equal(view.rich_message.is_rtl, true);
   assert.equal(view.rich_message.skip_entity_detection, true);
   assert.deepEqual(Object.keys(view.rich_message).sort(), ['blocks', 'is_rtl', 'skip_entity_detection']);
@@ -263,13 +265,13 @@ test('rich leaderboard is safe for malicious names, empty weeks and at most ten 
     { rank: 1, name: '<img src=x> @name' + String.fromCharCode(10) + 'Injected' + String.fromCharCode(0x202e), score: 55, mode: 'classic' },
     ...Array.from({ length: 10 }, (_, i) => ({ rank: i + 2, name: 'Player ' + i, score: 50 - i })),
   ] };
-  const rich = formatRichLeaderboardMessage(board);
+  const rich = formatRichLeaderboardMessage(board, { expanded: true });
   const table = rich.rich_message.blocks.find(b => b.type === 'table');
   assert.equal(table.cells.length, 11);
   assert.equal(table.cells[1][1].text.includes(String.fromCharCode(10)), false);
   assert.equal(table.cells[1][1].text.includes(String.fromCharCode(0x202e)), false);
   assert.match(table.cells[1][1].text, /<img src=x>/);
-  const empty = formatRichLeaderboardMessage({ period: 'week', offset: 1, playerCount: 0, players: [], me: null });
+  const empty = formatRichLeaderboardMessage({ period: 'week', offset: 1, playerCount: 0, players: [], me: null }, { expanded: true });
   assert.equal(empty.rich_message.blocks.some(b => b.type === 'table'), false);
   assert.ok(empty.rich_message.blocks.some(b => b.text?.includes('هنوز امتیازی')));
   assert.ok(empty.rich_message.blocks.some(b => b.text?.includes('هفته قبل')));
@@ -282,16 +284,23 @@ test('text-only presentation can be selected and navigated without retrying rich
   assert.deepEqual(parseLeaderboardCallback('lb:r:w:2'), {
     period: 'week', offset: 2, mode: 'combined',
   });
+  assert.deepEqual(parseLeaderboardCallback('lb:u:w:2'), {
+    period: 'week', offset: 2, mode: 'combined', presentation: 'text', expanded: true,
+  });
+  assert.deepEqual(parseLeaderboardCallback('lb:v:w:2'), {
+    period: 'week', offset: 2, mode: 'combined', expanded: true,
+  });
   const { calls } = await dispatch({ callback_query: {
-    id: 'cb-text', data: 'lb:t:w:2', from: { id: 999 },
+    id: 'cb-text', data: 'lb:u:w:2', from: { id: 999 },
     message: { message_id: 8, chat: { id: 44 } },
   } });
   assert.deepEqual(calls.map(call => call.method), ['editMessageText', 'answerCallbackQuery']);
   assert.equal(calls[0].payload.rich_message, undefined);
   assert.match(calls[0].payload.text, /رتبه شما: 11/);
   const buttons = calls[0].payload.reply_markup.inline_keyboard.flat();
-  assert.ok(buttons.some(b => b.callback_data === 'lb:t:w:3'));
-  assert.ok(buttons.some(b => b.callback_data === 'lb:r:w:2'));
+  assert.ok(buttons.some(b => b.callback_data === 'lb:u:w:3'));
+  assert.ok(buttons.some(b => b.callback_data === 'lb:v:w:2'));
+  assert.ok(buttons.some(b => b.callback_data === 'lb:t:w:2'));
 });
 
 test('unsupported Telegram Rich Messages fall back to plaintext without extra messages', async () => {
@@ -345,4 +354,57 @@ test('Telegram API classifies only explicit rich rejection and preserves not-mod
       mock(403, 'Forbidden: bot was blocked by the user')),
     /Telegram Bot API failed/,
   );
+});
+
+test('compact leaderboard has exactly four requested period labels in two rows',()=>{
+  const rows=leaderboardKeyboard('week',0).inline_keyboard;
+  assert.deepEqual(rows.slice(0,2).map(row=>row.map(x=>x.text)),[
+    ['روزانه','هفتگی'],['ماهانه','کامل'],
+  ]);
+  assert.deepEqual(rows.slice(0,2).flat().map(b=>b.callback_data),[
+    'lb:d:0','lb:w:0','lb:m:0','lb:a:0',
+  ]);
+  assert.equal(rows.length,3);
+  assert.equal(rows[2][0].callback_data,'lb:v:w:0');
+  assert.equal(rows.some(row=>row.some(b=>b.url?.includes('game'))),false);
+});
+
+test('compact board shows five leaders and separate personal rank, expanded retains ten',()=>{
+  const board={
+    period:'week',offset:0,startLabel:'این هفته',playerCount:37,
+    players:Array.from({length:10},(_,i)=>({rank:i+1,name:'Player'+i,score:2000-i*100,mode:'classic'})),
+    me:{rank:29,name:'Me',score:500,mode:'goldRush'},
+  };
+  const compact=formatRichLeaderboardMessage(board);
+  const shortTable=compact.rich_message.blocks.find(b=>b.type==='table');
+  assert.equal(shortTable.cells.length,6);
+  assert.equal(shortTable.cells[0].length,3);
+  assert.equal(shortTable.is_compact,true);
+  assert.ok(compact.rich_message.blocks.some(b=>b.text?.includes('رتبه شما: 29')));
+  assert.ok(compact.rich_message.blocks.some(b=>b.text?.includes('37 بازیکن')));
+  assert.equal(compact.rich_message.blocks.some(b=>b.text?.includes('شنبه ۰۰:۰۰')),false);
+  assert.equal(compact.reply_markup.inline_keyboard.flat().some(b=>b.text?.includes('نمایش متنی')),false);
+  const expanded=formatRichLeaderboardMessage(board,{expanded:true});
+  assert.equal(expanded.rich_message.blocks.find(b=>b.type==='table').cells.length,11);
+  assert.equal(expanded.rich_message.blocks.find(b=>b.type==='table').cells[0].length,4);
+  assert.equal(expanded.reply_markup.inline_keyboard.flat().some(b=>b.callback_data==='lb:w:1'),false);
+  assert.ok(expanded.reply_markup.inline_keyboard.flat().some(b=>b.callback_data==='lb:v:w:1'));
+  assert.ok(expanded.reply_markup.inline_keyboard.flat().some(b=>b.callback_data==='lb:w:0'));
+  assert.ok(expanded.reply_markup.inline_keyboard.flat().some(b=>b.callback_data==='lb:u:w:0'));
+  const fallback=formatLeaderboardMessage(board);
+  assert.equal(fallback.text.split('\n').filter(x=>/Player[0-9]/.test(x)).length,5);
+  assert.match(fallback.text,/رتبه شما: 29/);
+  assert.equal(formatLeaderboardMessage(board,'text',true).text.split('\n').filter(x=>/Player[0-9]/.test(x)).length,10);
+});
+test('four period buttons change the same message and retain viewer ranking',async()=>{
+  for(const [code,label] of [['d','روزانه'],['w','هفتگی'],['m','ماهانه'],['a','کامل']]){
+    const {calls}=await dispatch({callback_query:{
+      id:'period-'+code,data:'lb:'+code+':0',from:{id:999},
+      message:{message_id:22,chat:{id:999,type:'private'}},
+    }});
+    assert.deepEqual(calls.map(x=>x.method),['editMessageText','answerCallbackQuery']);
+    assert.ok(calls[0].payload.rich_message.blocks[0].text.includes(label));
+    assert.equal(calls[0].payload.message_id,22);
+    assert.ok(calls[0].payload.rich_message.blocks.some(b=>b.text?.includes('رتبه شما')));
+  }
 });
