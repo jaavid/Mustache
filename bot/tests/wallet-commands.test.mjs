@@ -266,3 +266,111 @@ test('wallet and faucet offer copy button for only the authenticated public wall
     .find(x=>x.copy_text)?.copy_text.text,address);
   assert.equal(requests.some(x=>x.url.includes('/withdrawals')),false);
 });
+
+test('a temporary Amoy Wallet 503 displays contextual network/service warning with one-tap retry',async()=>{
+  const requests=[],messages=[];
+  const env={...mockEnv(requests),ADMIN_TELEGRAM_USER_ID:String(owner.id),WALLET:{
+    async fetch(url,opts){
+      requests.push({url,opts});
+      if(url.endsWith('/ensure'))return Response.json({created:false,address});
+      if(url.endsWith('/internal/wallet'))return Response.json({error:'OPERATION_FAILED'},{status:503});
+      throw Error('Unexpected endpoint');
+    }
+  }};
+  await walletCommand({text:'/wallet',from:owner,chat:{id:owner.id,type:'private'}},
+    'wallet',env,async(method,data)=>messages.push({method,data}));
+  assert.deepEqual(messages.map(x=>x.method),['sendMessage']);
+  const failure=messages[0].data;
+  assert.match(failure.text,/Polygon Amoy/);
+  assert.match(failure.text,/ممکن است/);
+  assert.match(failure.text,/سرویس Wallet/);
+  assert.match(failure.text,/از دست رفتن توکن‌ها/);
+  assert.match(failure.text,/\/walletcheck/);
+  assert.equal(failure.reply_markup.inline_keyboard[0][0].callback_data,'nw:retry:w');
+  assert.equal(failure.reply_markup.inline_keyboard[0][0].text,'🔄 تلاش مجدد');
+  assert.ok(requests.every(x=>!x.url.includes('withdrawals')));
+});
+test('configuration or unauthorized Worker response does not falsely blame Polygon RPC',async()=>{
+  const out=[];
+  await walletCommand({text:'/wallet',from:owner,chat:{id:owner.id,type:'private'}},
+    'wallet',{...mockEnv([]),WALLET_SERVICE_KEY:undefined},
+    async(method,data)=>out.push({method,data}));
+  assert.equal(out[0].method,'sendMessage');
+  assert.match(out[0].data.text,/تنظیمات یا پاسخ سرویس Wallet/);
+  assert.doesNotMatch(out[0].data.text,/Polygon Amoy/);
+  assert.equal(out[0].data.reply_markup.inline_keyboard[0][0].callback_data,'nw:retry:w');
+});
+test('retry wallet callback replaces previous error with live wallet information after recovery',async()=>{
+  const calls=[],requests=[];
+  await handleWalletNavigation({id:'retry-1',data:'nw:retry:w',from:owner,
+    message:{chat:{id:owner.id,type:'private'},message_id:201}},
+    mockEnv(requests),async(method,data)=>calls.push({method,data}));
+  assert.deepEqual(calls.map(x=>x.method),['editMessageText','answerCallbackQuery']);
+  assert.equal(calls[0].data.message_id,201);
+  assert.match(JSON.stringify(calls[0].data.rich_message.blocks),/42/);
+  assert.ok(requests.some(x=>x.url.endsWith('/internal/wallet')));
+  assert.ok(requests.every(x=>!x.url.includes('/withdrawals')));
+});
+test('retry of unavailable Wallet replaces error card and acknowledges callback without duplicate sends',async()=>{
+  const sent=[],requests=[];
+  const env={...mockEnv(requests),WALLET:{async fetch(url,opts){
+    requests.push({url,opts});
+    if(url.endsWith('/ensure'))return Response.json({created:false,address});
+    return Response.json({error:'OPERATION_FAILED'},{status:503});
+  }}};
+  await handleWalletNavigation({id:'retry-2',data:'nw:retry:w',from:owner,
+    message:{chat:{id:owner.id,type:'private'},message_id:202}},
+    env,async(method,data)=>sent.push({method,data}));
+  assert.deepEqual(sent.map(x=>x.method),['editMessageText','answerCallbackQuery']);
+  assert.equal(sent[0].data.reply_markup.inline_keyboard[0][0].callback_data,'nw:retry:w');
+  assert.match(sent[0].data.text,/ممکن است/);
+  assert.equal(sent[0].data.message_id,202);
+});
+test('history retry remains read-only and keeps correct section',async()=>{
+  const calls=[],requests=[];
+  await handleWalletNavigation({id:'retry-t',data:'nw:retry:t',from:owner,
+    message:{chat:{id:owner.id,type:'private'},message_id:203}},
+    mockEnv(requests),async(method,data)=>calls.push({method,data}));
+  assert.deepEqual(calls.map(x=>x.method),['editMessageText','answerCallbackQuery']);
+  assert.match(JSON.stringify(calls[0].data.rich_message.blocks),/تاریخچه/);
+  assert.ok(requests.some(x=>x.url.endsWith('/internal/history')));
+  assert.equal(requests.some(x=>x.url.includes('/withdrawals')),false);
+});
+test('retry never exposes wallet details across chats or triggers withdrawal operations',async()=>{
+  const requests=[],out=[];
+  const env=mockEnv(requests);
+  await handleWalletNavigation({id:'retry-other',data:'nw:retry:w',from:{id:11},
+    message:{chat:{id:owner.id,type:'private'},message_id:204}},
+    env,async(method,data)=>out.push({method,data}));
+  assert.deepEqual(out.map(x=>x.method),['answerCallbackQuery']);
+  assert.equal(requests.length,0);
+  out.length=0;
+  await handleWalletNavigation({id:'retry-x',data:'nw:retry:x',from:owner,
+    message:{chat:{id:owner.id,type:'private'},message_id:205}},
+    env,async(method,data)=>out.push({method,data}));
+  assert.deepEqual(out.map(x=>x.method),['answerCallbackQuery']);
+  assert.equal(requests.length,0);
+});
+test('failures sending Telegram messages are not misreported as Polygon Wallet outages',async()=>{
+  await assert.rejects(
+    walletCommand({text:'/wallet',from:owner,chat:{id:owner.id,type:'private'}},
+      'wallet',mockEnv([]),async()=>{throw new Error('TELEGRAM_DELIVERY_ERROR');}),
+    /TELEGRAM_DELIVERY_ERROR/
+  );
+});
+test('withdraw submission error offers transaction inspection but never a retry button',async()=>{
+  const calls=[],requests=[];
+  const env={...mockEnv(requests),WALLET:{async fetch(url,opts){
+    requests.push({url,opts});
+    if(url.endsWith('/ensure'))return Response.json({created:false,address});
+    return Response.json({error:'OPERATION_FAILED'},{status:503});
+  }}};
+  await walletCommand({text:'/withdraw 25 '+address,from:owner,
+    chat:{id:owner.id,type:'private'}},'withdraw',env,
+    async(method,data)=>calls.push({method,data}));
+  assert.equal(calls[0].method,'sendMessage');
+  assert.match(calls[0].data.text,/وضعیت درخواست برداشت نامشخص/);
+  assert.ok(calls[0].data.reply_markup.inline_keyboard.flat().some(x=>x.callback_data==='nw:t'));
+  assert.ok(calls[0].data.reply_markup.inline_keyboard.flat().every(x=>!String(x.callback_data).includes('retry')));
+  assert.equal(requests.filter(x=>x.url.endsWith('/internal/withdrawals')).length,1);
+});
