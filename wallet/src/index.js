@@ -229,6 +229,18 @@ export default {
       }
       if(internal) {
         const id=telegramId(request.headers.get('x-telegram-user-id'));
+        if(path==='/internal/wallet/ensure'&&method==='POST') {
+          const input=await payload(request);
+          // The verified webhook supplies Telegram ID in X-Telegram-User-Id;
+          // clients cannot choose a different account through JSON input.
+          const name=String(input?.displayName||'Player')
+            .replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g,' ')
+            .replace(/\s+/g,' ').trim().slice(0,48)||'Player';
+          const existing=await walletFor(env.DB,id);
+          if(existing) return reply({address:existing.address,telegramUserId:id,created:false});
+          const created=await bootstrap(env,{players:[{telegramUserId:id,displayName:name}]});
+          return reply({address:created.wallets[0].address,telegramUserId:id,created:true},201);
+        }
         if(path==='/internal/wallet'&&method==='GET') return reply(await summary(env,id));
         if(path==='/internal/history'&&method==='GET') return reply(await history(env,id));
         if(path==='/internal/withdrawals'&&method==='POST') return reply(await requestWithdrawal(env,id,await payload(request)),201);
