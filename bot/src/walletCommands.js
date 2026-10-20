@@ -354,7 +354,7 @@ export async function walletCommand(message, command, env, send) {
       if (error instanceof Error && error.message.startsWith('Telegram Bot API failed')) throw error;
       return send('sendMessage', {
         ...destination,
-        text: '〰️⚠️ وضعیت درخواست برداشت نامشخص است.\\n\\n'
+        text: '〰️⚠️ وضعیت درخواست برداشت نامشخص است.\n\n'
           + 'ممکن است سرویس یا شبکه آزمایشی موقتاً پاسخ ندهد. '
           + 'برای جلوگیری از درخواست تکراری، اول «تراکنش‌ها» را بررسی کن.',
         reply_markup: { inline_keyboard: [
