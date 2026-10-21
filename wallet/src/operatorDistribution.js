@@ -205,11 +205,18 @@ export async function operatorAction(env,body,planFn,weeklyPlanFn,approveFn) {
   if(action==='preview')return batchForKind(env,kind);
   if(action==='prepare')return prepareOperatorBatch(env,kind,planFn,weeklyPlanFn);
   if(action==='pause'){
-    const batch=await batchForKind(env,kind);
+    if(!VALID.has(kind))throw Error('INVALID_OPERATOR_KIND');
+    // Pause is offline-safe: RPC outages must never prevent stopping FUTURE sends.
+    const run=await env.DB.prepare(
+      "SELECT r.batch_id FROM operator_payout_runs r JOIN reward_batches b ON b.batch_id=r.batch_id "+
+      "WHERE r.phase IN ('PILOT','ALL') AND b.source=? LIMIT 1"
+    ).bind(kind==='welcome'?'genesis':'weekly').first();
+    if(!run)return {phase:'UNCHANGED'};
     const result=await env.DB.prepare(
       "UPDATE operator_payout_runs SET phase='PAUSED',updated_at=? WHERE batch_id=? AND phase IN ('PILOT','ALL')"
-    ).bind(Date.now(),batch.batchId).run();
-    return {batchId:batch.batchId,phase:result.meta?.changes===1?'PAUSED':'UNCHANGED'};
+    ).bind(Date.now(),run.batch_id).run();
+    return {batchId:run.batch_id,phase:result.meta?.changes===1?'PAUSED':'UNCHANGED',
+      note:'Previously broadcast transactions cannot be cancelled.'};
   }
   if(action==='ticket'){
     if(!['PILOT','ALL'].includes(body?.stage))throw Error('INVALID_OPERATOR_STAGE');
