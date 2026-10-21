@@ -4,7 +4,7 @@ import { telegramId, tokenRaw, batchPlan, rankRewards, safeBatchId, completedTeh
 import { wrapKey, tokenEqual, sha256 } from './security.js';
 import { context, balance, distributor, processNext, tokenAbi } from './chain.js';
 import { diagnoseWalletRead } from './readDiagnostics.js';
-import {operatorOverview,operatorAction,prepareWelcome} from './operatorDistribution.js';
+import {operatorOverview,operatorAction,prepareWelcome,claimOperatorMilestone,acknowledgeOperatorMilestone} from './operatorDistribution.js';
 import {
   welcomeAllocations, weeklyPreview, adminBatchSummary, adminBatchRecipients,
   claimConfirmedNotification, acknowledgeNotification
@@ -281,6 +281,16 @@ export default {
           if(!env.ADMIN_TELEGRAM_USER_ID || id!==String(env.ADMIN_TELEGRAM_USER_ID))
             return reply({error:'FORBIDDEN'},403);
           return reply(await operatorOverview(env));
+        }
+        if(path==='/internal/admin/operator/notice/claim'&&method==='POST') {
+          if(!env.ADMIN_TELEGRAM_USER_ID || id!==String(env.ADMIN_TELEGRAM_USER_ID))
+            return reply({error:'FORBIDDEN'},403);
+          return reply(await claimOperatorMilestone(env.DB));
+        }
+        if(path==='/internal/admin/operator/notice/ack'&&method==='POST') {
+          if(!env.ADMIN_TELEGRAM_USER_ID || id!==String(env.ADMIN_TELEGRAM_USER_ID))
+            return reply({error:'FORBIDDEN'},403);
+          return reply(await acknowledgeOperatorMilestone(env.DB,await payload(request)));
         }
         if(path==='/internal/admin/weekly/preview'&&method==='GET') {
           if(!env.ADMIN_TELEGRAM_USER_ID || id!==String(env.ADMIN_TELEGRAM_USER_ID))
