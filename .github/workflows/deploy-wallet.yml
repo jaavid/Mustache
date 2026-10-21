@@ -60,6 +60,7 @@ jobs:
           data['d1_databases'][1]['database_id']=os.environ['SCORES_D1_ID']
           assert data['vars']['TRANSFERS_ENABLED'] == 'false'
           assert data['vars']['AUTO_REWARDS_ENABLED'] == 'false'
+          assert data['vars']['MANUAL_REWARDS_ONLY'] == 'true'
           operator_id=os.environ['ADMIN_TELEGRAM_USER_ID']
           if not re.fullmatch(r'[1-9][0-9]{0,18}',operator_id):
               raise SystemExit('Invalid operator Telegram ID')
