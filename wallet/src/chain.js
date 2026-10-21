@@ -200,7 +200,9 @@ export async function withdrawalStep(env,row) {
 export async function processNext(env) {
   // Fail closed: this campaign must NEVER fall back to legacy automatic payout.
   if (env.MANUAL_REWARDS_ONLY!=='true') return {state:'DISABLED',reason:'MANUAL_MODE_REQUIRED'};
-  if (env.TRANSFERS_ENABLED!=='true') return {state:'DISABLED'};
+  // Disabling sends cannot undo an on-chain transfer. Keep reconciling
+  // existing receipts and completing confirmed batches, without broadcasting.
+  const sendingEnabled=env.TRANSFERS_ENABLED==='true';
   const {client}=await context(env);
   // Reconcile all outstanding jobs first. A sender cannot advance its nonce
   // until its previous signed job reaches a terminal receipt state.
@@ -212,7 +214,7 @@ export async function processNext(env) {
   for (const job of outstanding.results) {
     // Pausing never sends any new raw data, including a previous signed job.
     // Receipt reconciliation can continue without rebroadcasting.
-    await existingJob(env,client,job.operation_key,['PILOT','ALL'].includes(job.run_phase));
+    await existingJob(env,client,job.operation_key,sendingEnabled && ['PILOT','ALL'].includes(job.run_phase));
   }
   await env.DB.prepare(`UPDATE reward_batches SET state='REVIEW_REQUIRED' WHERE state='APPROVED'
     AND EXISTS (SELECT 1 FROM allocations a JOIN tx_jobs t ON t.operation_key=a.operation_key
@@ -246,6 +248,7 @@ export async function processNext(env) {
         .bind(phase,Date.now(),phase).run();
     }
   }
+  if(!sendingEnabled)return {state:'DISABLED',mode:'RECONCILE_ONLY'};
   const line=env.MANUAL_REWARDS_ONLY==='true'
     ? await env.DB.prepare(`SELECT a.*,w.address FROM allocations a
       JOIN wallets w USING(telegram_user_id)
