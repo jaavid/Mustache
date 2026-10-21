@@ -261,6 +261,13 @@ export default {
             batches:batches.results||[],txStates:txStates.results||[],progress
           });
         }
+        if(path==='/internal/admin/weekly/preview'&&method==='GET') {
+          if(!env.ADMIN_TELEGRAM_USER_ID || id!==String(env.ADMIN_TELEGRAM_USER_ID))
+            return reply({error:'FORBIDDEN'},403);
+          const {decimals}=await context(env);
+          const preview=await weeklyPreview(env,Date.now(),env.WEEKLY_POOL_TOKENS||'10000',decimals);
+          return reply(preview);
+        }
         const detail=/^\/internal\/admin\/batches\/([a-zA-Z0-9_-]{3,75})$/.exec(path);
         if((path==='/internal/admin/notifications/claim'&&method==='POST') ||
            (path==='/internal/admin/notifications/ack'&&method==='POST') ||
