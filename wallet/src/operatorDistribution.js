@@ -184,8 +184,23 @@ async function safeToStart(env,batchId,stage) {
     throw Error('UNSAFE_LEGACY_GENESIS_AMOUNT');
   const existing=rows.filter(x=>x.tx_state);
   if(stage==='PILOT'&&existing.length)throw Error('PILOT_ALREADY_ATTEMPTED');
+  const run=await env.DB.prepare('SELECT phase,pilot_user_id FROM operator_payout_runs WHERE batch_id=?')
+    .bind(batchId).first();
+  let resumePhase=null;
+  if(stage==='RESUME'){
+    if(run?.phase!=='PAUSED')throw Error('OPERATOR_RUN_NOT_PAUSED');
+    const pilot=rows.find(x=>String(x.telegram_user_id)===String(run.pilot_user_id));
+    if(!pilot || rows.some(x=>['FAILED','REVIEW_REQUIRED'].includes(x.tx_state)))
+      throw Error('OPERATOR_RESUME_REVIEW_REQUIRED');
+    // Pending pilot must resume ONLY its original signed bytes (same op key);
+    // never skip to the remaining recipients without an on-chain receipt.
+    resumePhase=pilot.tx_state==='CONFIRMED'?'ALL':'PILOT';
+    if(resumePhase==='PILOT'&&pilot.tx_state &&
+       !['SIGNED','SUBMITTED'].includes(pilot.tx_state))
+      throw Error('OPERATOR_RESUME_REVIEW_REQUIRED');
+  }
   const remaining=rows.filter(x=>!x.tx_state);
-  const gasCount=stage==='PILOT'?1:remaining.length;
+  const gasCount=(stage==='PILOT'||resumePhase==='PILOT')?1:remaining.length;
   const [balance,pol,price]=await Promise.all([
     client.readContract({address:contract,abi:tokenAbi,functionName:'balanceOf',args:[signer.address]}),
     client.getBalance({address:signer.address}),client.getGasPrice()
@@ -201,8 +216,6 @@ async function safeToStart(env,batchId,stage) {
   // insufficient POL; if estimates change, the sender still checks per tx.
   const minimum=gas*price*BigInt(gasCount)*2n+5n*10n**15n;
   if(pol<minimum)throw Error('DISTRIBUTOR_LOW_GAS');
-  const run=await env.DB.prepare('SELECT phase,pilot_user_id FROM operator_payout_runs WHERE batch_id=?')
-    .bind(batchId).first();
   if(stage==='ALL'&&run?.phase!=='PILOT_OK')throw Error('PILOT_NOT_CONFIRMED');
   if(stage==='PILOT'&&run)throw Error('PILOT_ALREADY_CREATED');
   const running=await env.DB.prepare(
@@ -210,7 +223,9 @@ async function safeToStart(env,batchId,stage) {
   ).bind(batchId).first();
   if(running)throw Error('ANOTHER_BATCH_RUNNING');
   return {batchId,stage,recipients:rows.length,remaining:remaining.length,
-    pilotUserId:String(rows[0].telegram_user_id),budget:numAmount(outstanding,decimals),
+    pilotUserId:String(run?.pilot_user_id||rows[0].telegram_user_id),
+    ...(resumePhase?{resumePhase}:{}),
+    budget:numAmount(outstanding,decimals),
     estimatedGasPol:numAmount(minimum,18)};
 }
 
@@ -247,7 +262,7 @@ export async function operatorAction(env,body,planFn,weeklyPlanFn,approveFn) {
       note:'Previously broadcast transactions cannot be cancelled.'};
   }
   if(action==='ticket'){
-    if(!['PILOT','ALL'].includes(body?.stage))throw Error('INVALID_OPERATOR_STAGE');
+    if(!['PILOT','ALL','RESUME'].includes(body?.stage))throw Error('INVALID_OPERATOR_STAGE');
     const batch=await batchForKind(env,kind);
     const safe=await safeToStart(env,batch.batchId,body.stage);
     const ticket=crypto.randomUUID(),now=Date.now();
@@ -261,7 +276,7 @@ export async function operatorAction(env,body,planFn,weeklyPlanFn,approveFn) {
     if(!/^[a-f0-9-]{36}$/i.test(ticket))throw Error('INVALID_OPERATOR_TICKET');
     const row=await env.DB.prepare('SELECT * FROM operator_payout_tickets WHERE ticket=?').bind(ticket).first();
     if(!row||row.consumed_at||row.expires_at<Date.now())throw Error('OPERATOR_TICKET_EXPIRED');
-    await safeToStart(env,row.batch_id,row.operation);
+    const preflight=await safeToStart(env,row.batch_id,row.operation);
     const now=Date.now();
     const consume=await env.DB.prepare(
       'UPDATE operator_payout_tickets SET consumed_at=? WHERE ticket=? AND consumed_at IS NULL AND expires_at>=?'
@@ -276,13 +291,20 @@ export async function operatorAction(env,body,planFn,weeklyPlanFn,approveFn) {
       await env.DB.prepare(
         "INSERT INTO operator_payout_runs(batch_id,phase,pilot_user_id,created_at,updated_at) VALUES (?,'PILOT',?,?,?)"
       ).bind(row.batch_id,String(first.telegram_user_id),now,now).run();
+    }else if(row.operation==='RESUME'){
+      // Explicit second confirmation, serialized with the signing tick.
+      // The resumed phase is established from the saved pilot receipt.
+      const update=await env.DB.prepare(
+        "UPDATE operator_payout_runs SET phase=?,updated_at=? WHERE batch_id=? AND phase='PAUSED'"
+      ).bind(preflight.resumePhase,now,row.batch_id).run();
+      if(update.meta?.changes!==1)throw Error('OPERATOR_RUN_NOT_PAUSED');
     }else{
       const update=await env.DB.prepare(
         "UPDATE operator_payout_runs SET phase='ALL',updated_at=? WHERE batch_id=? AND phase='PILOT_OK'"
       ).bind(now,row.batch_id).run();
       if(update.meta?.changes!==1)throw Error('PILOT_NOT_CONFIRMED');
     }
-    return {batchId:row.batch_id,phase:row.operation,state:'QUEUED',
+    return {batchId:row.batch_id,phase:preflight.resumePhase||row.operation,state:'QUEUED',
       detail:'On-chain execution starts in the next serialized Wallet cron tick.'};
   }
   throw Error('INVALID_OPERATOR_ACTION');
