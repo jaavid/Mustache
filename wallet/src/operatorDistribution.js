@@ -220,6 +220,9 @@ export async function operatorAction(env,body,planFn,weeklyPlanFn,approveFn) {
     const result=await env.DB.prepare(
       "UPDATE operator_payout_runs SET phase='PAUSED',updated_at=? WHERE batch_id=? AND phase IN ('PILOT','ALL')"
     ).bind(Date.now(),run.batch_id).run();
+    if(result.meta?.changes===1)await env.DB.prepare(
+      "INSERT OR IGNORE INTO operator_payout_notices(batch_id,phase,state,created_at) VALUES (?,'PAUSED','PENDING',?)"
+    ).bind(run.batch_id,Date.now()).run();
     return {batchId:run.batch_id,phase:result.meta?.changes===1?'PAUSED':'UNCHANGED',
       note:'Previously broadcast transactions cannot be cancelled.'};
   }
@@ -263,4 +266,35 @@ export async function operatorAction(env,body,planFn,weeklyPlanFn,approveFn) {
       detail:'On-chain execution starts in the next serialized Wallet cron tick.'};
   }
   throw Error('INVALID_OPERATOR_ACTION');
+}
+
+/** Private Wallet Bot can claim one milestone, storing ATTEMPTED before Telegram send. */
+export async function claimOperatorMilestone(db) {
+  const row=await db.prepare([
+    'SELECT n.batch_id,n.phase,b.source,',
+    '(SELECT COUNT(*) FROM allocations a WHERE a.batch_id=n.batch_id) AS recipients,',
+    "(SELECT COUNT(*) FROM allocations a JOIN tx_jobs t ON t.operation_key=a.operation_key WHERE a.batch_id=n.batch_id AND t.state='CONFIRMED') AS confirmed",
+    "FROM operator_payout_notices n JOIN reward_batches b ON b.batch_id=n.batch_id",
+    "WHERE n.state='PENDING' ORDER BY n.created_at,n.batch_id LIMIT 1"
+  ].join(' ')).first();
+  if(!row)return {state:'EMPTY'};
+  const change=await db.prepare(
+    "UPDATE operator_payout_notices SET state='ATTEMPTED',claimed_at=? "+
+    "WHERE batch_id=? AND phase=? AND state='PENDING'"
+  ).bind(Date.now(),row.batch_id,row.phase).run();
+  if(change.meta?.changes!==1)return {state:'RACE'};
+  return {state:'CLAIMED',batchId:row.batch_id,phase:row.phase,
+    source:row.source,confirmed:Number(row.confirmed||0),
+    recipients:Number(row.recipients||0)};
+}
+export async function acknowledgeOperatorMilestone(db,body) {
+  const batch=String(body?.batchId||''),phase=body?.phase;
+  if(!/^[a-zA-Z0-9_-]{3,75}$/.test(batch) ||
+      !['PILOT_OK','PAUSED','COMPLETE'].includes(phase) ||
+      !['SENT','FAILED'].includes(body?.state))throw Error('INVALID_OPERATOR_NOTIFICATION');
+  const change=await db.prepare(
+    "UPDATE operator_payout_notices SET state=?,delivered_at=? "+
+    "WHERE batch_id=? AND phase=? AND state='ATTEMPTED'"
+  ).bind(body.state,Date.now(),batch,phase).run();
+  return {state:change.meta?.changes===1?body.state:'ALREADY_RECORDED'};
 }
