@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS operator_payout_runs (
 CREATE TABLE IF NOT EXISTS operator_payout_tickets (
   ticket TEXT PRIMARY KEY,
   batch_id TEXT NOT NULL REFERENCES reward_batches(batch_id),
-  operation TEXT NOT NULL CHECK(operation IN ('PILOT','ALL')),
+  operation TEXT NOT NULL CHECK(operation IN ('PILOT','ALL','RESUME')),
   expires_at INTEGER NOT NULL,
   consumed_at INTEGER,
   created_at INTEGER NOT NULL
