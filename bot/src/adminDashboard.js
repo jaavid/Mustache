@@ -238,6 +238,122 @@ async function deliverBatch(send,destination,data,page,isEdit=true) {
       {...destination,text:payload.text,reply_markup:payload.reply_markup});
   }
 }
+
+function payoutKeyboard(kind='welcome',step='select',state=null,run=null) {
+  const kindCode=kind==='weekly'?'y':'w';
+  const button=(text,code)=>({text,callback_data:code});
+  if(step==='select')return {inline_keyboard:[
+    [button('🎁 هدیه ۱۰۰تایی','na:op:w'),button('🏆 جایزه هفتگی','na:op:y')],
+    [button('🔄 بررسی دوباره','na:o'),button('↩️ پنل ادمین','na:s')],
+  ]};
+  const keyboard=[];
+  if(state==='NOT_PREPARED'||state==='PLANNED')
+    keyboard.push([button('📋 آماده‌سازی بدون ارسال','na:pr:'+kindCode)]);
+  if(!run && state!=='NOT_PREPARED')
+    keyboard.push([button('🧪 تست یک تراکنش','na:tk:'+kindCode+':P')]);
+  if(run?.phase==='PILOT_OK')
+    keyboard.push([button('🚀 توزیع باقی دریافت‌کنندگان','na:tk:'+kindCode+':A')]);
+  if(run?.phase==='PILOT'||run?.phase==='ALL')
+    keyboard.push([button('⏸ توقف انتقال‌های بعدی','na:stop:'+kindCode)]);
+  keyboard.push([button('🔄 دریافت آخرین وضعیت','na:op:'+kindCode)]);
+  keyboard.push([button('↩️ مدیریت توزیع','na:o')]);
+  return {inline_keyboard:keyboard};
+}
+
+function payoutCard(data,kind=null) {
+  const overview=data?.overview||data||{};
+  const run=(overview.runs||[]).find(x=>x.batch_id===data?.batchId);
+  const chosen=kind==='weekly'?'🏆 جایزه هفتگی':'🎁 هدیه اولیه';
+  const rows=kind?[
+    '〰️🛡️ '+chosen,
+    '📦 Batch: '+clean(data.batchId||'—',70),
+    '📊 وضعیت: '+compactStatus(data.state),
+    '💰 بودجه: '+decimalLabel(data.total)+' tNFIVE',
+  ]:[
+    '〰️🛡️ مدیریت توزیع N5 · Polygon Amoy',
+    '🧾 کیف پول‌ها: '+(overview.wallets??'—'),
+    '🎁 بودجه هدیه: ۲٬۰۰۰ tNFIVE',
+    '🏆 بودجه هفتگی: '+decimalLabel(overview.approvedWeeklyPool||'10000')+' tNFIVE',
+  ];
+  rows.push(
+    '🏦 Distributor: '+compactAddress(overview.signer),
+    '💰 موجودی: '+decimalLabel(overview.availableTokens)+' tNFIVE',
+    '⛽ POL: '+decimalLabel(overview.availablePol,4),
+    '🛡 حالت کنترل‌شده: '+(overview.manualOnly?'فعال':'غیرفعال'),
+    '🚦 مجوز ارسال: '+(overview.transfersEnabled?'فعال':'خاموش'),
+    '🔄 پاداش خودکار: '+(overview.autoRewardsEnabled?'فعال':'خاموش'),
+  );
+  if(!kind&&overview.legacy)
+    rows.push('🧾 genesis-0: '+decimalLabel(overview.legacy.total)+
+      ' · '+compactStatus(overview.legacy.state)+
+      (overview.legacy.canConvert&&!overview.legacy.alreadyFixed?' · قابل اصلاح ایمن به ۲٬۰۰۰':''));
+  if(kind==='welcome'&&data.legacyNeedsCorrection)
+    rows.push('⚠️ Batch قدیمی ۱۰٬۰۰۰تایی بدون تراکنش، با دکمه آماده‌سازی به ۲۰ × ۱۰۰ اصلاح و ثبت حسابرسی می‌شود.');
+  if(kind==='weekly')rows.push('👥 بازیکنان واجد شرایط: '+(data.eligible??'—'),
+    '📐 ۴۰٪ برابر + ۶۰٪ براساس رتبه (هفته کامل‌شده)');
+  if(run)rows.push('📡 اجرای فعلی: '+compactStatus(run.phase),
+    '👤 تست: '+clean(run.pilot_user_id));
+  rows.push('⚠️ تست یک‌نفره و اجرای بقیه، هرکدام تأیید جداگانه دارند.');
+  return {
+    text:rows.join('\n'),
+    rich_message:{blocks:[
+      heading(rows[0]),...rows.slice(1).map(paragraph)
+    ],is_rtl:true,skip_entity_detection:true},
+    reply_markup:payoutKeyboard(kind||'welcome',kind?'detail':'select',data?.state,run),
+  };
+}
+
+function confirmPayoutCard(ticket) {
+  const type=ticket.stage==='PILOT'?'تست فقط یک نفر':'ارسال به همه افراد باقیمانده';
+  const lines=[
+    '〰️⚠️ تأیید نهایی انتقال واقعی روی Polygon Amoy',
+    '📦 '+clean(ticket.batchId,70),
+    '🎯 '+type,
+    '👥 در این Batch: '+Number(ticket.recipients)+' نفر',
+    '💰 مبلغ باقی‌مانده Batch: '+decimalLabel(ticket.budget)+' tNFIVE',
+    '⛽ حداقل ذخیره برآوردی: '+decimalLabel(ticket.estimatedGasPol,4)+' POL',
+    '⏰ این مجوز فقط ۵ دقیقه معتبر است و فقط یک بار استفاده می‌شود.',
+    '⚠️ این دکمه تراکنش تستی واقعی را وارد صف امضا می‌کند.',
+  ];
+  return {
+    text:lines.join('\n'),
+    rich_message:{blocks:[heading(lines[0]),...lines.slice(1).map(paragraph)],
+      is_rtl:true,skip_entity_detection:true},
+    reply_markup:{inline_keyboard:[
+      [{text:'✅ تأیید نهایی '+type,callback_data:'na:go:'+ticket.ticket}],
+      [{text:'❎ انصراف',callback_data:'na:o'}],
+    ]},
+  };
+}
+
+async function deliverOperator(send,dest,view){
+  try {
+    await send('editMessageText',{...dest,rich_message:view.rich_message,
+      reply_markup:view.reply_markup});
+  }catch(e){
+    if(e?.message!=='TELEGRAM_RICH_UNSUPPORTED')throw e;
+    await send('editMessageText',{...dest,text:view.text,reply_markup:view.reply_markup});
+  }
+}
+
+const operatorErrors={
+  TRANSFERS_DISABLED:'ارسال در Wallet Worker هنوز غیرفعال است. فقط پس از Preflight، TRANSFERS_ENABLED را با تنظیمات امن روشن کن.',
+  MANUAL_MODE_REQUIRED:'MANUAL_REWARDS_ONLY باید true باشد؛ دیپلوی Wallet را بررسی کن.',
+  AUTOMATIC_REWARDS_MUST_BE_DISABLED:'AUTO_REWARDS_ENABLED باید false بماند.',
+  LEGACY_GENESIS_REVIEW_REQUIRED:'Batch قدیمی قبلاً امضا/پرداخت شده یا با وضعیت فعلی سازگار نیست. بازبینی دستی لازم است.',
+  WELCOME_WALLET_COUNT_OUT_OF_RANGE:'برای آماده‌سازی هدیه اولیه باید دقیقاً ۲۰ کیف پول اولیه قابل تأیید باشد.',
+  DISTRIBUTOR_LOW_BALANCE:'موجودی tNFIVE توزیع‌کننده کافی نیست.',
+  DISTRIBUTOR_LOW_GAS:'POL عملیاتی برای بودجه کارمزد برآوردشده کافی نیست.',
+  PILOT_NOT_CONFIRMED:'ابتدا منتظر تأیید آن‌چین تراکنش آزمایشی بمان.',
+  PILOT_ALREADY_ATTEMPTED:'تراکنش آزمایشی قبلاً شروع شده؛ وضعیت Batch را بررسی کن.',
+  ANOTHER_BATCH_RUNNING:'یک Batch دیگر در حال توزیع است؛ منتظر اتمام یا توقف آن بمان.',
+  OPERATOR_TICKET_EXPIRED:'مجوز تأیید منقضی شده؛ دکمه تست/توزیع را دوباره بزن.',
+  OPERATOR_TICKET_USED:'این تأیید قبلاً استفاده شده است؛ وضعیت Batch را تازه‌سازی کن.',
+  BATCH_NOT_STARTABLE:'Batch هنوز آماده یا تأییدپذیر نیست.',
+  WEEKLY_MISSING_WALLETS:'برای همه برندگان هفته کیف پول وجود ندارد؛ ارسال متوقف شد.',
+  OPERATION_FAILED:'یک بررسی زیرساختی ناموفق بود؛ گزارش Wallet Worker را بررسی کن.',
+};
+
 export async function adminCommand(message,env,send) {
   if(!authorized(message.chat,message.from,env)) {
     // Avoid revealing account management UI in a group chat.
@@ -256,11 +372,49 @@ export async function adminCallback(callback,env,send) {
     callback_query_id:callback.id,...(text?{text,show_alert:false}:{cache_time:0})
   });
   if(!authorized(callback.message?.chat,callback.from,env))return ack('دسترسی مجاز نیست.');
+  const choice=/^na:op:([wy])$/.exec(callback.data||'');
+  const prep=/^na:pr:([wy])$/.exec(callback.data||'');
+  const ticket=/^na:tk:([wy]):([PA])$/.exec(callback.data||'');
+  const stop=/^na:stop:([wy])$/.exec(callback.data||'');
+  const confirm=/^na:go:([a-f0-9-]{36})$/i.exec(callback.data||'');
+  const main=(callback.data==='na:o');
   const match=/^na:([sfwbdp])$/.exec(callback.data||'');
   const batchMatch=/^na:i:([a-zA-Z0-9_-]{3,50}):(0|[1-9]|1[0-9])$/.exec(callback.data||'');
-  if(!match&&!batchMatch)return ack('گزینه معتبر نیست.');
+  if(!match&&!batchMatch&&!choice&&!prep&&!ticket&&!stop&&!confirm&&!main)return ack('گزینه معتبر نیست.');
   if(!Number.isSafeInteger(callback.message?.message_id))return ack('دوباره /admin را بفرست.');
   try{
+    if(main||choice||prep||ticket||stop||confirm){
+      const dest={chat_id:callback.from.id,message_id:callback.message.message_id};
+      const kindCode=choice?.[1]||prep?.[1]||ticket?.[1]||stop?.[1];
+      const kind=kindCode==='y'?'weekly':'welcome';
+      if(main){
+        await deliverOperator(send,dest,payoutCard(await operator(env,callback.from.id,{action:'status'})));
+      }else if(confirm){
+        const result=await operator(env,callback.from.id,{action:'confirm',ticket:confirm[1]});
+        const text='✅ Batch '+clean(result.batchId)+' در وضعیت '+compactStatus(result.phase)+
+          ' قرار گرفت.\n'+'تراکنش‌ها به ترتیب اجرا می‌شوند. برای دیدن تأییدهای شبکه و اعلان‌ها روی «وضعیت توزیع» بزن.';
+        await deliverOperator(send,dest,{
+          text,rich_message:{blocks:[heading('〰️✅ شروع کنترل‌شده'),paragraph(text)],
+            is_rtl:true,skip_entity_detection:true},
+          reply_markup:{inline_keyboard:[
+            [{text:'📦 وضعیت و اعلان‌ها',callback_data:'na:d'}],
+            [{text:'🎯 بازگشت به مدیریت',callback_data:'na:o'}],
+          ]},
+        });
+      }else if(ticket){
+        const result=await operator(env,callback.from.id,{
+          action:'ticket',kind,stage:ticket[2]==='P'?'PILOT':'ALL'
+        });
+        await deliverOperator(send,dest,confirmPayoutCard(result));
+      }else{
+        if(prep||stop){
+          await operator(env,callback.from.id,{action:prep?'prepare':'pause',kind});
+        }
+        const view=await operator(env,callback.from.id,{action:'preview',kind});
+        await deliverOperator(send,dest,payoutCard(view,kind));
+      }
+      return ack();
+    }
     if(batchMatch) {
       const result=await getBatch(env,callback.from.id,batchMatch[1]);
       await deliverBatch(send,{chat_id:callback.from.id,message_id:callback.message.message_id},
@@ -276,6 +430,8 @@ export async function adminCallback(callback,env,send) {
     return ack();
   }catch(e){
     if(e?.message==='TELEGRAM_MESSAGE_NOT_MODIFIED')return ack();
-    return ack('در حال حاضر اطلاعات در دسترس نیست.');
+    const message=operatorErrors[e?.message];
+    if(message)return ack(message);
+    return ack('عملیات انجام نشد؛ اتصال و وضعیت Batch را بررسی کن.');
   }
 }
