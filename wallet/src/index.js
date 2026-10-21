@@ -4,6 +4,10 @@ import { telegramId, tokenRaw, batchPlan, rankRewards, safeBatchId, completedTeh
 import { wrapKey, tokenEqual, sha256 } from './security.js';
 import { context, balance, distributor, processNext, tokenAbi } from './chain.js';
 import { diagnoseWalletRead } from './readDiagnostics.js';
+import {
+  welcomeAllocations, weeklyPreview, adminBatchSummary, adminBatchRecipients,
+  claimConfirmedNotification, acknowledgeNotification
+} from './distribution.js';
 
 const reply=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const MAX_BODY=32000;
@@ -76,27 +80,9 @@ async function approveBatch(env,batchId) {
   return {batchId,state:'APPROVED'};
 }
 async function genesisPlan(env) {
-  if (!env.SCORES_DB) throw new Error('SCORES_DB_MISSING');
-  const results=await env.SCORES_DB.prepare(`
-    WITH best AS (
-      SELECT user_id,score,golden_perfect,
-        ROW_NUMBER() OVER(PARTITION BY user_id ORDER BY score DESC,golden_perfect DESC,finished_at ASC,id ASC) AS own_rank
-      FROM game_rounds WHERE score IS NOT NULL AND mode IN ('classic','goldRush')
-    )
-    SELECT CAST(b.user_id AS TEXT) AS telegram_user_id,u.display_name
-    FROM best b JOIN game_users u ON u.user_id=b.user_id
-    WHERE b.own_rank=1
-    ORDER BY b.score DESC,b.golden_perfect DESC,b.user_id ASC
-    LIMIT 20
-  `).all();
-  if (results.results.length!==20) throw new Error('GENESIS_REQUIRES_20_PLAYERS');
-  const players=results.results.map(r=>({telegramUserId:telegramId(r.telegram_user_id),displayName:r.display_name}));
-  // Bootstrap is idempotent, so rerunning this endpoint cannot replace keys.
-  await bootstrap(env,{players});
-  const {decimals}=await context(env);
-  const lines=rankRewards(players.map(p=>p.telegramUserId),tokenRaw(env.WEEKLY_POOL_TOKENS||'10000',decimals));
-  const out=await plan(env,{batchId:'genesis-0',allocations:lines.map(r=>({telegramUserId:r.id,amount:formatUnits(BigInt(r.raw),decimals)}))},'genesis');
-  return {...out,players:players.map(p=>({telegramUserId:p.telegramUserId,displayName:p.displayName}))};
+  // Legacy route intentionally shares the SAME fixed welcome batch. Never
+  // resurrect the old 10,000-token rank-weighted "genesis-0" allocation.
+  return plan(env,await welcomeAllocations(env),'genesis');
 }
 async function weeklyPlan(env,nowMs,autoApprove=false) {
   if(env.AUTO_REWARDS_ENABLED!=='true') return {state:'DISABLED'};
@@ -216,6 +202,19 @@ export default {
           return reply({contract,decimals,symbol,admin:adminBalance,distributor:operational,chainId:await client.getChainId()});
         }
         if(path==='/admin/bootstrap'&&method==='POST') return reply(await bootstrap(env,await payload(request)),201);
+        if(path==='/admin/welcome/preview'&&method==='GET') {
+          return reply({...(await welcomeAllocations(env)),state:'PREVIEW_ONLY'});
+        }
+        if(path==='/admin/welcome/prepare'&&method==='POST') {
+          // No signing, token movement or approval: freezes the 100-token roster
+          // using the same stable batch ID on every request.
+          const prepared=await welcomeAllocations(env);
+          return reply(await plan(env,prepared,'genesis'),201);
+        }
+        if(path==='/admin/weekly/preview'&&method==='GET') {
+          const {decimals}=await context(env);
+          return reply(await weeklyPreview(env,Date.now(),env.WEEKLY_POOL_TOKENS||'10000',decimals));
+        }
         if(path==='/admin/batches'&&method==='POST') return reply(await plan(env,await payload(request)),201);
         if(path==='/admin/genesis/prepare'&&method==='POST') return reply(await genesisPlan(env),201);
         const approval=/^\/admin\/batches\/([a-zA-Z0-9_-]{3,75})\/approve$/.exec(path);
@@ -242,10 +241,11 @@ export default {
           // hides the /admin UI from other users. This endpoint is read-only.
           if(!env.ADMIN_TELEGRAM_USER_ID || id!==String(env.ADMIN_TELEGRAM_USER_ID))
             return reply({error:'FORBIDDEN'},403);
-          const [count,batches,txStates]=await Promise.all([
+          const [count,batches,txStates,progress]=await Promise.all([
             env.DB.prepare('SELECT COUNT(*) AS total FROM wallets').first(),
             env.DB.prepare('SELECT batch_id,state,source,total_raw,decimals FROM reward_batches ORDER BY created_at DESC LIMIT 12').all(),
-            env.DB.prepare('SELECT state,COUNT(*) AS count FROM tx_jobs GROUP BY state').all()
+            env.DB.prepare('SELECT state,COUNT(*) AS count FROM tx_jobs GROUP BY state').all(),
+            adminBatchSummary(env.DB)
           ]);
           const {contract,decimals,symbol}=await context(env);
           const treasury=await balance(env,getAddress(env.ADMIN_ADDRESS));
@@ -258,8 +258,28 @@ export default {
             autoRewardsEnabled:env.AUTO_REWARDS_ENABLED==='true',
             walletCount:Number(count?.total||0),
             treasury,distributor:operational,
-            batches:batches.results||[],txStates:txStates.results||[]
+            batches:batches.results||[],txStates:txStates.results||[],progress
           });
+        }
+        if(path==='/internal/admin/weekly/preview'&&method==='GET') {
+          if(!env.ADMIN_TELEGRAM_USER_ID || id!==String(env.ADMIN_TELEGRAM_USER_ID))
+            return reply({error:'FORBIDDEN'},403);
+          const {decimals}=await context(env);
+          const preview=await weeklyPreview(env,Date.now(),env.WEEKLY_POOL_TOKENS||'10000',decimals);
+          return reply(preview);
+        }
+        const detail=/^\/internal\/admin\/batches\/([a-zA-Z0-9_-]{3,75})$/.exec(path);
+        if((path==='/internal/admin/notifications/claim'&&method==='POST') ||
+           (path==='/internal/admin/notifications/ack'&&method==='POST') ||
+           (detail&&method==='GET')) {
+          if(!env.ADMIN_TELEGRAM_USER_ID||id!==String(env.ADMIN_TELEGRAM_USER_ID))
+            return reply({error:'FORBIDDEN'},403);
+          if(detail){
+            const found=await adminBatchRecipients(env.DB,detail[1]);
+            return found?reply(found):reply({error:'BATCH_NOT_FOUND'},404);
+          }
+          if(path.endsWith('/claim'))return reply(await claimConfirmedNotification(env.DB));
+          return reply(await acknowledgeNotification(env.DB,await payload(request)));
         }
         if(path==='/internal/wallet/ensure'&&method==='POST') {
           const input=await payload(request);
@@ -282,7 +302,7 @@ export default {
       return reply({error:'NOT_FOUND'},404);
     } catch(error) {
       const code=String(error?.message||'ERROR');
-      const valid=/^(INVALID_|DUPLICATE_PLAYER|BATCH_OVER_BUDGET|BATCH_ID_CONFLICT|WALLET_NOT_FOUND|WITHDRAWAL_|INSUFFICIENT_NFIVE|BODY_TOO_LARGE|JSON_REQUIRED)/.test(code);
+      const valid=/^(INVALID_|DUPLICATE_PLAYER|BATCH_OVER_BUDGET|BATCH_ID_CONFLICT|WALLET_NOT_FOUND|WITHDRAWAL_|INSUFFICIENT_NFIVE|BODY_TOO_LARGE|JSON_REQUIRED|GENESIS_ALREADY_EXISTS|WELCOME_WALLET_COUNT_OUT_OF_RANGE)/.test(code);
       return reply({error:valid?code:'OPERATION_FAILED'},valid?400:503);
     }
   },

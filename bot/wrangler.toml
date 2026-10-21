@@ -5,6 +5,10 @@ compatibility_date = "2026-09-01"
 keep_vars = true
 workers_dev = true
 
+# Read-only Telegram notifications for on-chain CONFIRMED rewards only.
+[triggers]
+crons = ["*/5 * * * *"]
+
 # The Telegram webhook and score API must use the SAME deployed Worker.
 # Without this binding Wrangler only updates workers.dev while the game calls
 # mustache.zedai.ir, which previously served 404 for /api/status.

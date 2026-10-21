@@ -6,6 +6,7 @@ function keyboard() {
   return {inline_keyboard:[
     [{text:'📊 وضعیت سرویس',callback_data:'na:s'}, {text:'💰 خزانه و توزیع‌کننده',callback_data:'na:f'}],
     [{text:'👥 کیف پول‌ها',callback_data:'na:w'}, {text:'🎁 آخرین Batchها',callback_data:'na:b'}],
+    [{text:'📦 وضعیت توزیع و پیام‌ها',callback_data:'na:d'}, {text:'🏅 جایزه هفتگی',callback_data:'na:p'}],
     [{text:'〰️💼 کیف پول شخصی',callback_data:'nw:w'}]
   ]};
 }
@@ -15,20 +16,30 @@ function authorized(chat,user,env) {
     Number.isSafeInteger(user?.id) && user.id===chat.id &&
     String(user.id)===String(env.ADMIN_TELEGRAM_USER_ID);
 }
-async function getOverview(env,userId) {
+async function getResource(env,userId,path) {
   if(!env.WALLET_SERVICE_KEY) throw Error('UNCONFIGURED');
   const url=env.WALLET
-    ? 'https://wallet.internal/internal/admin/overview'
+    ? 'https://wallet.internal'+path
     : env.WALLET_API_URL?.startsWith('https://')
-      ? env.WALLET_API_URL.replace(/\/$/,'')+'/internal/admin/overview':null;
+      ? env.WALLET_API_URL.replace(/\/$/,'')+path:null;
   if(!url) throw Error('UNCONFIGURED');
   const headers={'x-wallet-service-key':env.WALLET_SERVICE_KEY,'x-telegram-user-id':String(userId)};
-  const options={headers,signal:AbortSignal.timeout(9000)};
+  const options={headers,signal:AbortSignal.timeout(15000)};
   const response=await (env.WALLET?env.WALLET.fetch(url,options):fetch(url,options));
   if(!response.ok) throw Error('OVERVIEW_UNAVAILABLE');
   return response.json();
 }
-function details(data,tab='s') {
+async function getOverview(env,userId) {
+  return getResource(env,userId,'/internal/admin/overview');
+}
+async function getWeeklyPreview(env,userId) {
+  return getResource(env,userId,'/internal/admin/weekly/preview');
+}
+async function getBatch(env,userId,batchId) {
+  return getResource(env,userId,'/internal/admin/batches/'+encodeURIComponent(batchId));
+}
+
+function details(data,tab='s',preview=null) {
   const operational=data.distributor||{};
   const treasury=data.treasury||{};
   const enabled=data.transfersEnabled===true?'🟠 روشن':'✅ خاموش';
@@ -62,6 +73,50 @@ function details(data,tab='s') {
       '🎁 موجودی عملیاتی: '+clean(operational.balance),
       '⛽ POL عملیاتی: '+clean(operational.pol));
   }
+  if(tab==='d') {
+    blocks.push(paragraph('📦 خلاصه توزیع‌های ثبت‌شده و اعلان‌های تلگرام'),
+      paragraph('🎁 هدیه اولیه: ۱۰۰ tNFIVE × '+Number(data.walletCount||0)+' کیف پول = '+(100*Number(data.walletCount||0))+' tNFIVE (در صورت آماده‌بودن تمام کیف پول‌ها)'));
+    lines.push('📦 وضعیت توزیع‌ها');
+    if(!Array.isArray(data.progress)||data.progress.length===0) {
+      blocks.push(paragraph('هنوز هیچ Batch توزیع ثبت نشده است.'));
+      lines.push('هنوز هیچ Batch ثبت نشده است.');
+    } else {
+      for(const b of data.progress.slice(0,8)){
+        const title=clean(b.batch_id,55)+' · '+clean(b.state,20);
+        const status='✅ '+Number(b.confirmed||0)+'/'+Number(b.recipients||0)+
+          ' · ⏳ '+Number(b.pending||0)+' · ⏸ '+Number(b.not_sent||0)+' · ❌ '+Number(b.failed||0);
+        const notifications='📩 '+Number(b.notifications_sent||0)+' ارسال موفق'+
+          ' · ⚠️ '+Number(b.notifications_failed||0)+' ناموفق'+
+          ' · ❔ '+Number(b.notifications_unknown||0)+' نامشخص';
+        blocks.push(paragraph(title),paragraph(status),paragraph(notifications));
+        lines.push(title,status,notifications);
+      }
+    }
+    blocks.push(paragraph('🔒 پرداخت فقط پس از تأیید مستقل Batch و موجودی عملیاتی انجام می‌شود.'));
+  }
+  if(tab==='p') {
+    blocks.push(paragraph('🏅 آخرین هفته کامل‌شده به وقت تهران (پیش‌نمایش بدون انتقال)'));
+    if(preview?.state==='PREVIEW') {
+      blocks.push(paragraph('💰 بودجه پیش‌فرض: '+clean(preview.pool)+' tNFIVE'),
+        paragraph('👥 بازیکنان واجد شرایط: '+Number(preview.eligible)),
+        paragraph('📐 ۴۰٪ سهم مساوی + ۶۰٪ سهم رتبه‌ای'));
+      lines.push('💰 بودجه پیش‌فرض: '+clean(preview.pool)+' tNFIVE',
+        '👥 بازیکنان واجد شرایط: '+Number(preview.eligible));
+      const winners=preview.winners.slice(0,10);
+      const cell=(text,header=false)=>({text:clean(text,45),align:'right',
+        ...(header?{is_header:true}:{})});
+      blocks.push({type:'table',is_compact:true,is_bordered:false,is_striped:true,cells:[
+        [cell('رتبه',true),cell('ID',true),cell('tNFIVE',true)],
+        ...winners.map(w=>[cell(w.rank),cell(w.telegramUserId),cell(w.amount)]),
+      ]});
+      for(const item of winners)lines.push(item.rank+' · '+item.telegramUserId+' · '+item.amount);
+    } else if(preview?.state==='EMPTY') {
+      blocks.push(paragraph('در هفته تکمیل‌شده بازیکن واجد شرایط پیدا نشد.'));
+    } else {
+      blocks.push(paragraph('پیش‌نمایش هفته در دسترس نیست؛ RPC و دیتابیس امتیازها را بررسی کن.'));
+    }
+    blocks.push(paragraph('⚠️ این پیش‌نمایش، تراکنش یا تأیید Batch انجام نمی‌دهد.'));
+  }
   if(tab==='b') {
     const batches=Array.isArray(data.batches)?data.batches.slice(0,8):[];
     blocks.push(paragraph('🎁 آخرین Batchهای توزیع آزمایشی'));
@@ -76,8 +131,16 @@ function details(data,tab='s') {
   }
   blocks.push({type:'divider'},paragraph('🔒 این صفحه فقط‌خواندنی است. تأیید یا ارسال توکن از اینجا انجام نمی‌شود.'));
   lines.push('🔒 فقط مشاهده؛ بدون مجوز انتقال.');
+  const markup=keyboard();
+  if(tab==='b'&&Array.isArray(data.batches)) {
+    for(const batch of data.batches.slice(0,6)) {
+      const id=String(batch.batch_id||'');
+      if(/^[a-zA-Z0-9_-]{3,50}$/.test(id))
+        markup.inline_keyboard.push([{text:'🔎 '+id,callback_data:'na:i:'+id+':0'}]);
+    }
+  }
   return {rich_message:{blocks,is_rtl:true,skip_entity_detection:true},
-    text:lines.join('\n'),reply_markup:keyboard()};
+    text:lines.join('\n'),reply_markup:markup};
 }
 function format(value,decimals) {
   const d=Number(decimals);
@@ -86,12 +149,59 @@ function format(value,decimals) {
   return d===0?str:str.slice(0,-d)+'.'+str.slice(-d).replace(/0+$/,'').replace(/^$/,'0');
 }
 async function deliver(send,destination,data,isEdit=false) {
-  const payload=details(data.data,data.tab);
+  const payload=details(data.data,data.tab,data.preview||null);
   try {
     await send(isEdit?'editMessageText':'sendRichMessage',
       {...destination,rich_message:payload.rich_message,reply_markup:payload.reply_markup});
   } catch(e) {
     if(e?.message!=='TELEGRAM_RICH_UNSUPPORTED') throw e;
+    await send(isEdit?'editMessageText':'sendMessage',
+      {...destination,text:payload.text,reply_markup:payload.reply_markup});
+  }
+}
+function batchPage(data,page=0) {
+  const batch=data.batch||{},items=Array.isArray(data.recipients)?data.recipients:[];
+  const count=items.length,start=page*5,selected=items.slice(start,start+5);
+  const title='〰️🎁 Batch '+clean(batch.batch_id||'?',55);
+  const blocks=[heading(title),
+    paragraph('وضعیت: '+clean(batch.state)+' · '+count+' دریافت‌کننده'),
+  ];
+  const lines=[title,'وضعیت: '+clean(batch.state)+' · '+count+' دریافت‌کننده'];
+  for(const r of selected){
+    const who=clean(r.displayName||r.telegramUserId,48);
+    const state='⛓ '+clean(r.transactionState,30)+' · 📩 '+clean(r.notificationState,30);
+    const identity='🆔 '+clean(r.telegramUserId,24)+' · '+clean(r.address,45);
+    const issue=r.notificationError?'⚠️ اعلان: '+clean(r.notificationError,38):null;
+    blocks.push(paragraph('👤 '+who+' · '+clean(r.amount,40)+' tNFIVE'),
+      paragraph(identity),paragraph(state));
+    if(issue)blocks.push(paragraph(issue));
+    lines.push('👤 '+who+' · '+r.amount+' tNFIVE',identity,state);
+    if(issue)lines.push(issue);
+  }
+  const keyboard={inline_keyboard:[]};
+  // Telegram button text is short; explorer links only for verified tx hashes.
+  for(const r of selected) {
+    if(typeof r.txHash==='string'&&/^0x[a-f0-9]{64}$/i.test(r.txHash))
+      keyboard.inline_keyboard.push([{
+        text:'🔎 '+clean(r.displayName||r.telegramUserId,20)+' · رسید',
+        url:'https://amoy.polygonscan.com/tx/'+r.txHash,
+      }]);
+  }
+  const change=[];
+  if(page>0)change.push({text:'◀️ قبلی',callback_data:'na:i:'+batch.batch_id+':'+(page-1)});
+  if(start+5<count)change.push({text:'بعدی ▶️',callback_data:'na:i:'+batch.batch_id+':'+(page+1)});
+  if(change.length)keyboard.inline_keyboard.push(change);
+  keyboard.inline_keyboard.push([{text:'↩️ لیست Batchها',callback_data:'na:b'}]);
+  return {rich_message:{blocks,is_rtl:true,skip_entity_detection:true},text:lines.join('\n'),reply_markup:keyboard};
+}
+
+async function deliverBatch(send,destination,data,page,isEdit=true) {
+  const payload=batchPage(data,page);
+  try {
+    await send(isEdit?'editMessageText':'sendRichMessage',
+      {...destination,rich_message:payload.rich_message,reply_markup:payload.reply_markup});
+  }catch(e) {
+    if(e?.message!=='TELEGRAM_RICH_UNSUPPORTED')throw e;
     await send(isEdit?'editMessageText':'sendMessage',
       {...destination,text:payload.text,reply_markup:payload.reply_markup});
   }
@@ -114,12 +224,23 @@ export async function adminCallback(callback,env,send) {
     callback_query_id:callback.id,...(text?{text,show_alert:false}:{cache_time:0})
   });
   if(!authorized(callback.message?.chat,callback.from,env))return ack('دسترسی مجاز نیست.');
-  const match=/^na:([sfwb])$/.exec(callback.data||'');
-  if(!match)return ack('گزینه معتبر نیست.');
+  const match=/^na:([sfwbdp])$/.exec(callback.data||'');
+  const batchMatch=/^na:i:([a-zA-Z0-9_-]{3,50}):(0|[1-9]|1[0-9])$/.exec(callback.data||'');
+  if(!match&&!batchMatch)return ack('گزینه معتبر نیست.');
   if(!Number.isSafeInteger(callback.message?.message_id))return ack('دوباره /admin را بفرست.');
   try{
-    const data=await getOverview(env,callback.from.id);
-    await deliver(send,{chat_id:callback.from.id,message_id:callback.message.message_id},{data,tab:match[1]},true);
+    if(batchMatch) {
+      const result=await getBatch(env,callback.from.id,batchMatch[1]);
+      await deliverBatch(send,{chat_id:callback.from.id,message_id:callback.message.message_id},
+        result,Number(batchMatch[2]),true);
+      return ack();
+    }
+    const [data,preview]=await Promise.all([
+      getOverview(env,callback.from.id),
+      match[1]==='p' ? getWeeklyPreview(env,callback.from.id).catch(()=>null) : Promise.resolve(null),
+    ]);
+    await deliver(send,{chat_id:callback.from.id,message_id:callback.message.message_id},
+      {data,tab:match[1],preview},true);
     return ack();
   }catch(e){
     if(e?.message==='TELEGRAM_MESSAGE_NOT_MODIFIED')return ack();

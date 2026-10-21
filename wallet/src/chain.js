@@ -1,4 +1,4 @@
-import { createPublicClient, http, getAddress, formatUnits, parseAbi, encodeFunctionData, keccak256 } from 'viem';
+import { createPublicClient, http, getAddress, formatUnits, parseAbi, encodeFunctionData, decodeFunctionData, decodeEventLog, keccak256 } from 'viem';
 import { polygonAmoy } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { unwrapKey } from './security.js';
@@ -51,6 +51,31 @@ async function userSigner(env,telegramUserId) {
   if (account.address.toLowerCase()!==row.address.toLowerCase()) throw new Error('WALLET_KEY_MISMATCH');
   return account;
 }
+const transferEventAbi=parseAbi([
+  'event Transfer(address indexed from,address indexed to,uint256 value)',
+]);
+/** An Ethereum success status alone does not prove ERC-20 transfer() credited a user. */
+export function hasConfirmedTokenTransfer(job,receipt) {
+  if(job?.kind!=='TOKEN')return true;
+  let decoded;
+  try{
+    decoded=decodeFunctionData({abi:tokenAbi,data:job.call_data});
+    if(decoded.functionName!=='transfer')return false;
+  }catch{return false;}
+  const [destination,amount]=decoded.args;
+  if(BigInt(amount)<=0n)return false;
+  return Array.isArray(receipt?.logs)&&receipt.logs.some(log=>{
+    if(String(log.address).toLowerCase()!==String(job.target).toLowerCase())return false;
+    try {
+      const event=decodeEventLog({abi:transferEventAbi,
+        data:log.data,topics:log.topics,strict:true});
+      return event.eventName==='Transfer' &&
+        event.args.from.toLowerCase()===String(job.sender).toLowerCase() &&
+        event.args.to.toLowerCase()===String(destination).toLowerCase() &&
+        event.args.value===BigInt(amount);
+    }catch{return false;}
+  });
+}
 function isPending(state) { return state==='SIGNED'||state==='SUBMITTED'; }
 async function receiptState(client,job,db) {
   if (!isPending(job.state)) return {state:job.state,txHash:job.tx_hash};
@@ -58,7 +83,8 @@ async function receiptState(client,job,db) {
     const receipt=await client.getTransactionReceipt({hash:job.tx_hash});
     const head=await client.getBlockNumber();
     if(head < receipt.blockNumber + 2n) return {state:'PENDING',txHash:job.tx_hash};
-    const state=receipt.status==='success'?'CONFIRMED':'FAILED';
+    const state=receipt.status!=='success'?'FAILED'
+      :hasConfirmedTokenTransfer(job,receipt)?'CONFIRMED':'REVIEW_REQUIRED';
     await db.prepare('UPDATE tx_jobs SET state=?,updated_at=? WHERE operation_key=? AND state IN (\'SIGNED\',\'SUBMITTED\')')
       .bind(state,Date.now(),job.operation_key).run();
     return {state,txHash:job.tx_hash};
