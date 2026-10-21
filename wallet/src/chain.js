@@ -210,17 +210,46 @@ export async function processNext(env) {
   await env.DB.prepare(`UPDATE reward_batches SET state='COMPLETE' WHERE state='APPROVED'
     AND NOT EXISTS (SELECT 1 FROM allocations a LEFT JOIN tx_jobs t ON t.operation_key=a.operation_key
       WHERE a.batch_id=reward_batches.batch_id AND COALESCE(t.state,'NOT_SENT')!='CONFIRMED')`).run();
-  // Only independently approved batches can create signed blockchain transactions.
-  const line=await env.DB.prepare(`SELECT a.*,w.address FROM allocations a
-    JOIN wallets w USING(telegram_user_id)
-    JOIN reward_batches b ON b.batch_id=a.batch_id AND b.state='APPROVED'
-    WHERE NOT EXISTS(SELECT 1 FROM tx_jobs t WHERE t.operation_key=a.operation_key
-      AND t.state IN ('CONFIRMED','FAILED','REVIEW_REQUIRED'))
-    ORDER BY a.batch_id,a.telegram_user_id LIMIT 1`).first();
+  // In admin-supervised mode, approval alone is NEVER permission to broadcast.
+  // One active payout run controls one pilot tx or subsequent individual rewards.
+  if(env.MANUAL_REWARDS_ONLY==='true'){
+    await env.DB.prepare(`UPDATE operator_payout_runs SET phase='PAUSED',updated_at=?
+      WHERE phase IN ('PILOT','ALL') AND batch_id IN
+        (SELECT batch_id FROM reward_batches WHERE state='REVIEW_REQUIRED')`)
+      .bind(Date.now()).run();
+    await env.DB.prepare(`UPDATE operator_payout_runs SET phase='PILOT_OK',updated_at=?
+      WHERE phase='PILOT' AND EXISTS(
+        SELECT 1 FROM allocations a JOIN tx_jobs t ON t.operation_key=a.operation_key
+        WHERE a.batch_id=operator_payout_runs.batch_id
+        AND a.telegram_user_id=operator_payout_runs.pilot_user_id AND t.state='CONFIRMED')`)
+      .bind(Date.now()).run();
+    await env.DB.prepare(`UPDATE operator_payout_runs SET phase='COMPLETE',updated_at=?
+      WHERE phase IN ('PILOT','PILOT_OK','ALL') AND batch_id IN
+      (SELECT batch_id FROM reward_batches WHERE state='COMPLETE')`)
+      .bind(Date.now()).run();
+  }
+  const line=env.MANUAL_REWARDS_ONLY==='true'
+    ? await env.DB.prepare(`SELECT a.*,w.address FROM allocations a
+      JOIN wallets w USING(telegram_user_id)
+      JOIN reward_batches b ON b.batch_id=a.batch_id AND b.state='APPROVED'
+      JOIN operator_payout_runs r ON r.batch_id=a.batch_id AND r.phase IN ('PILOT','ALL')
+      WHERE (r.phase='ALL' OR a.telegram_user_id=r.pilot_user_id)
+      AND NOT EXISTS(SELECT 1 FROM tx_jobs t WHERE t.operation_key=a.operation_key
+        AND t.state IN ('CONFIRMED','FAILED','REVIEW_REQUIRED'))
+      ORDER BY r.created_at,a.telegram_user_id LIMIT 1`).first()
+    : await env.DB.prepare(`SELECT a.*,w.address FROM allocations a
+      JOIN wallets w USING(telegram_user_id)
+      JOIN reward_batches b ON b.batch_id=a.batch_id AND b.state='APPROVED'
+      WHERE NOT EXISTS(SELECT 1 FROM tx_jobs t WHERE t.operation_key=a.operation_key
+        AND t.state IN ('CONFIRMED','FAILED','REVIEW_REQUIRED'))
+      ORDER BY a.batch_id,a.telegram_user_id LIMIT 1`).first();
   if (line) {
     const outcome=await tokenTransfer(env,line.operation_key,distributor(env),line.address,line.amount_raw);
     return {operation:line.operation_key,...outcome};
   }
+  // Reward-only campaign switch: do not unexpectedly process wallet withdrawals
+  // just because the operator enables test-token rewards for this run.
+  if(env.MANUAL_REWARDS_ONLY==='true')return {state:'IDLE',mode:'SUPERVISED_REWARDS'};
   const withdraw=await env.DB.prepare("SELECT * FROM withdrawals WHERE state IN ('READY','GAS_PENDING','TOKEN_PENDING') ORDER BY confirmed_at LIMIT 1").first();
   if (withdraw) {
     try {return {withdrawalId:withdraw.id,...await withdrawalStep(env,withdraw)};}
