@@ -122,6 +122,24 @@ export async function batchForKind(env,kind) {
     if(overview.welcome)return {kind,...overview.welcome,overview};
     return {kind,batchId:WELCOME,state:'NOT_PREPARED',total:'2000',overview};
   }
+  // A weekly campaign may cross the Tehran Saturday boundary while the
+  // one-recipient test is being verified. Keep using the immutable ACTIVE
+  // batch rather than accidentally switching to the next week's leaderboard.
+  const active=(overview.runs||[]).find(x=>
+    /^weekly-[0-9]+$/.test(String(x.batch_id)) &&
+    ['PILOT','PILOT_OK','ALL','PAUSED'].includes(x.phase));
+  if(active){
+    const saved=await env.DB.prepare(
+      "SELECT batch_id,state,total_raw,decimals FROM reward_batches WHERE batch_id=? AND source='weekly'"
+    ).bind(active.batch_id).first();
+    if(!saved)throw Error('BATCH_NOT_STARTABLE');
+    const count=await env.DB.prepare(
+      'SELECT COUNT(*) AS count FROM allocations WHERE batch_id=?'
+    ).bind(active.batch_id).first();
+    return {kind,batchId:saved.batch_id,state:saved.state,
+      total:numAmount(saved.total_raw,Number(saved.decimals)),
+      eligible:asCount(count?.count),winners:[],existingCampaign:true,overview};
+  }
   const preview=await weeklyPreview(env,Date.now(),env.WEEKLY_POOL_TOKENS||'10000',overview.decimals);
   if(preview.state==='EMPTY')throw Error('WEEKLY_NO_ELIGIBLE_PLAYERS');
   const missing=await env.DB.prepare(
