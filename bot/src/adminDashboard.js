@@ -259,6 +259,8 @@ function payoutKeyboard(kind='welcome',step='select',state=null,run=null) {
     keyboard.push([button('🚀 توزیع باقی دریافت‌کنندگان','na:tk:'+kindCode+':A')]);
   if(run?.phase==='PILOT'||run?.phase==='ALL')
     keyboard.push([button('⏸ توقف انتقال‌های بعدی','na:stop:'+kindCode)]);
+  if(run?.phase==='PAUSED')
+    keyboard.push([button('▶️ بررسی و ادامه Batch متوقف‌شده','na:tk:'+kindCode+':R')]);
   keyboard.push([button('🔄 دریافت آخرین وضعیت','na:op:'+kindCode)]);
   keyboard.push([button('↩️ مدیریت توزیع','na:o')]);
   return {inline_keyboard:keyboard};
@@ -309,7 +311,9 @@ function payoutCard(data,kind=null) {
 }
 
 function confirmPayoutCard(ticket) {
-  const type=ticket.stage==='PILOT'?'تست فقط یک نفر':'ارسال به همه افراد باقیمانده';
+  const type=ticket.stage==='PILOT'?'تست فقط یک نفر':ticket.stage==='RESUME'
+    ?'ادامه ایمن '+(ticket.resumePhase==='ALL'?'انتقال‌های باقی‌مانده':'تست اولیه')
+    :'ارسال به همه افراد باقیمانده';
   const lines=[
     '〰️⚠️ تأیید نهایی انتقال واقعی روی Polygon Amoy',
     '📦 '+clean(ticket.batchId,70),
@@ -354,6 +358,8 @@ const operatorErrors={
   ANOTHER_BATCH_RUNNING:'یک Batch دیگر در حال توزیع است؛ منتظر اتمام یا توقف آن بمان.',
   OPERATOR_TICKET_EXPIRED:'مجوز تأیید منقضی شده؛ دکمه تست/توزیع را دوباره بزن.',
   OPERATOR_TICKET_USED:'این تأیید قبلاً استفاده شده است؛ وضعیت Batch را تازه‌سازی کن.',
+  OPERATOR_RUN_NOT_PAUSED:'این Batch دیگر متوقف نیست؛ وضعیت را تازه‌سازی کن.',
+  OPERATOR_RESUME_REVIEW_REQUIRED:'تراکنش ناموفق یا نیازمند بررسی وجود دارد؛ ادامه خودکار مجاز نیست.',
   BATCH_NOT_STARTABLE:'Batch هنوز آماده یا تأییدپذیر نیست.',
   WEEKLY_MISSING_WALLETS:'برای همه برندگان هفته کیف پول وجود ندارد؛ ارسال متوقف شد.',
   OPERATION_FAILED:'یک بررسی زیرساختی ناموفق بود؛ گزارش Wallet Worker را بررسی کن.',
@@ -379,7 +385,7 @@ export async function adminCallback(callback,env,send) {
   if(!authorized(callback.message?.chat,callback.from,env))return ack('دسترسی مجاز نیست.');
   const choice=/^na:op:([wy])$/.exec(callback.data||'');
   const prep=/^na:pr:([wy])$/.exec(callback.data||'');
-  const ticket=/^na:tk:([wy]):([PA])$/.exec(callback.data||'');
+  const ticket=/^na:tk:([wy]):([PAR])$/.exec(callback.data||'');
   const stop=/^na:stop:([wy])$/.exec(callback.data||'');
   const confirm=/^na:go:([a-f0-9-]{36})$/i.exec(callback.data||'');
   const main=(callback.data==='na:o');
@@ -408,7 +414,7 @@ export async function adminCallback(callback,env,send) {
         });
       }else if(ticket){
         const result=await operator(env,callback.from.id,{
-          action:'ticket',kind,stage:ticket[2]==='P'?'PILOT':'ALL'
+          action:'ticket',kind,stage:ticket[2]==='P'?'PILOT':ticket[2]==='R'?'RESUME':'ALL'
         });
         await deliverOperator(send,dest,confirmPayoutCard(result));
       }else{
