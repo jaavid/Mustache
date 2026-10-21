@@ -156,6 +156,16 @@ export async function batchForKind(env,kind) {
 }
 
 /** Estimate budget for the actual Batch before ticket issuance and consumption. */
+/** Pure state transition: a paused run can resume ONLY its original allocation. */
+export function resolveResumePhase(run,rows) {
+  if(run?.phase!=='PAUSED')throw Error('OPERATOR_RUN_NOT_PAUSED');
+  const pilot=rows.find(x=>String(x.telegram_user_id)===String(run.pilot_user_id));
+  if(!pilot || rows.some(x=>['FAILED','REVIEW_REQUIRED'].includes(x.tx_state)))
+    throw Error('OPERATOR_RESUME_REVIEW_REQUIRED');
+  if(pilot.tx_state==='CONFIRMED')return 'ALL';
+  if(!pilot.tx_state || ['SIGNED','SUBMITTED'].includes(pilot.tx_state))return 'PILOT';
+  throw Error('OPERATOR_RESUME_REVIEW_REQUIRED');
+}
 async function safeToStart(env,batchId,stage) {
   if(env.TRANSFERS_ENABLED!=='true')throw Error('TRANSFERS_DISABLED');
   if(env.MANUAL_REWARDS_ONLY!=='true')throw Error('MANUAL_MODE_REQUIRED');
@@ -188,16 +198,9 @@ async function safeToStart(env,batchId,stage) {
     .bind(batchId).first();
   let resumePhase=null;
   if(stage==='RESUME'){
-    if(run?.phase!=='PAUSED')throw Error('OPERATOR_RUN_NOT_PAUSED');
-    const pilot=rows.find(x=>String(x.telegram_user_id)===String(run.pilot_user_id));
-    if(!pilot || rows.some(x=>['FAILED','REVIEW_REQUIRED'].includes(x.tx_state)))
-      throw Error('OPERATOR_RESUME_REVIEW_REQUIRED');
-    // Pending pilot must resume ONLY its original signed bytes (same op key);
-    // never skip to the remaining recipients without an on-chain receipt.
-    resumePhase=pilot.tx_state==='CONFIRMED'?'ALL':'PILOT';
-    if(resumePhase==='PILOT'&&pilot.tx_state &&
-       !['SIGNED','SUBMITTED'].includes(pilot.tx_state))
-      throw Error('OPERATOR_RESUME_REVIEW_REQUIRED');
+    // Pending pilots may only resume their previous tx by operation key; a new
+    // recipient cannot be paid until its pilot is confirmed on-chain.
+    resumePhase=resolveResumePhase(run,rows);
   }
   const remaining=rows.filter(x=>!x.tx_state);
   const gasCount=(stage==='PILOT'||resumePhase==='PILOT')?1:remaining.length;
