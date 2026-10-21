@@ -1,4 +1,5 @@
 // Telegram wallet interface. All identities originate from the verified bot webhook,
+import { installMainKeyboard } from './mainMenu.js';
 // never client-provided user IDs or forwarded messages.
 // Read-only panels retry safely; not every failure is caused by the blockchain.
 const READABLE_SECTIONS = new Set(['w', 'r', 't', 'f']);
@@ -22,7 +23,7 @@ function walletReadError(error, section, env, userId) {
       '👇 برای بارگذاری دوباره روی «تلاش مجدد» بزن.'].join('\n') + adminHint,
     reply_markup: { inline_keyboard: [
       [{ text: '🔄 تلاش مجدد', callback_data: 'nw:retry:' + (READABLE_SECTIONS.has(section) ? section : 'w'), style: 'primary' }],
-      [button('💰 کیف پول', 'w'), button('🧭 راهنما', 'm')],
+      [button('🧭 نمایش منوی اصلی', 'home')],
     ] },
   };
 }
@@ -31,7 +32,6 @@ const heading = text => ({ type: 'heading', size: 2, text });
 const divider = () => ({ type: 'divider' });
 const button = (text, action) => ({ text, callback_data: 'nw:' + action });
 const TG_WALLET_LINK = 'https://t.me/RJTtobot?start=wallet';
-const GAME_LINK = 'https://t.me/RJTtobot?game=mustache';
 export const WITHDRAW_EXAMPLE = '/withdraw 25 0xYourPolygonAddress';
 const copyButton = (label, value) => ({
   text: label,
@@ -39,7 +39,7 @@ const copyButton = (label, value) => ({
   style: 'primary',
 });
 function withdrawCopyKeyboard() {
-  const keyboard = walletKeyboard();
+  const keyboard = walletKeyboard('x');
   keyboard.inline_keyboard.unshift([
     copyButton('📋 کپی نمونه دستور برداشت', WITHDRAW_EXAMPLE),
   ]);
@@ -63,13 +63,23 @@ export function isPrivateOwner(chat, user) {
   return chat?.type === 'private' && Number.isSafeInteger(chat.id) &&
     Number.isSafeInteger(user?.id) && user.id > 0 && chat.id === user.id;
 }
-function walletKeyboard() {
-  return { inline_keyboard: [
-    [button('💰 کیف پول', 'w'), button('🎁 پاداش‌ها', 'r')],
-    [button('📜 تراکنش‌ها', 't'), button('↗️ راهنمای برداشت', 'x')],
-    [button('⛽ POL تستی (Faucet)', 'f'), button('🧭 راهنما', 'm')],
-    [{ text: '〰️🎮 بازی', url: GAME_LINK }],
-  ] };
+function walletKeyboard(section = 'w') {
+  // Three permanent reply buttons own Play, Wallet and Help. Keep inline actions
+  // contextual, with one "back to wallet" action only on nested pages.
+  const back = button('↩️ بازگشت به کیف پول', 'w');
+  const rewards = button('🎁 پاداش‌ها', 'r');
+  const history = button('📜 تراکنش‌ها', 't');
+  const withdraw = button('↗️ برداشت', 'x');
+  const faucet = button('⛽ POL تستی', 'f');
+  const actions = ({
+    w: [[rewards, history], [withdraw, faucet], [button('🧭 نمایش منوی اصلی', 'home')]],
+    r: [[back, history], [withdraw]],
+    t: [[back, rewards], [withdraw]],
+    x: [[back, faucet]],
+    f: [[back, withdraw]],
+    m: [[back, rewards], [history, withdraw], [faucet]],
+  })[section] || [[rewards, history], [withdraw, faucet]];
+  return { inline_keyboard: actions };
 }
 function format(amountRaw, decimals = 18) {
   const d = Number(decimals);
@@ -126,7 +136,7 @@ function intro() {
     paragraph('↗️ برداشت: /withdraw 25 0xADDRESS'),
     paragraph('⛽ تأمین کارمزد برداشت با N5 است؛ Faucet فقط POL تستی می‌دهد، نه tNFIVE.'),
     paragraph('⚠️ دارایی‌ها صرفاً آزمایشی‌اند.'),
-  ], content);
+  ], content, walletKeyboard('m'));
 }
 function accountView(wallet) {
   const address = validAddress(wallet?.address);
@@ -199,7 +209,7 @@ function historyView(data, mode) {
     }
   } else blocks.push(paragraph('هنوز تراکنش یا پاداشی ثبت نشده است.'));
   blocks.push(paragraph('📌 تأییدشده یعنی رسید تراکنش روی شبکه ثبت شده است.'));
-  const keys=walletKeyboard();
+  const keys=walletKeyboard(isRewards ? 'r' : 't');
   const links=rows.filter(x=>x.hash).slice(0,3)
     .map((x,i)=>[{text:'🔗 رسید تراکنش '+(i+1),url:'https://amoy.polygonscan.com/tx/'+x.hash}]);
   if (links.length) keys.inline_keyboard.unshift(...links);
@@ -208,7 +218,7 @@ function historyView(data, mode) {
 function faucetGuide(wallet) {
   const address = validAddress(wallet?.address);
   if (!address) throw new Error('INVALID_WALLET_RESPONSE');
-  const keyboard = walletKeyboard();
+  const keyboard = walletKeyboard('f');
   keyboard.inline_keyboard.unshift(
     [copyButton('📋 کپی آدرس کیف پول', address)],
     [{ text: '⛽ بازکردن Polygon Faucet', url: AMOY_FAUCET_URL }]);
@@ -380,6 +390,16 @@ export async function handleWalletNavigation(callback, env, send) {
   });
   if (!isPrivateOwner(callback.message?.chat, callback.from)) return finish('برای دسترسی، چت شخصی خودت را باز کن.');
   const data = String(callback.data || '');
+  if (data === 'nw:home') {
+    // Reply and inline keyboards cannot share a message. Install the permanent
+    // navigation only on explicit user request, avoiding repeated chat messages.
+    try {
+      await installMainKeyboard({ chat: callback.message.chat, from: callback.from }, send);
+      return finish();
+    } catch {
+      return finish('منوی اصلی باز نشد؛ /start یا /help را بفرست.');
+    }
+  }
   const navigation = /^nw:([wrtxmf])$/.exec(data);
   const retry = /^nw:retry:([wrtf])$/.exec(data);
   const section = navigation?.[1] || retry?.[1];

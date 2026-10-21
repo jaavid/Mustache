@@ -374,3 +374,54 @@ test('withdraw submission error offers transaction inspection but never a retry 
   assert.ok(calls[0].data.reply_markup.inline_keyboard.flat().every(x=>!String(x.callback_data).includes('retry')));
   assert.equal(requests.filter(x=>x.url.endsWith('/internal/withdrawals')).length,1);
 });
+
+test('CodeRabbit regression: direct /wallet before /start offers unobtrusive main keyboard setup',async()=>{
+  const requests=[],messages=[];
+  await walletCommand({text:'/wallet',chat:{id:owner.id,type:'private'},from:owner},
+    'wallet',mockEnv(requests),async(method,data)=>messages.push({method,data}));
+  assert.deepEqual(messages.map(x=>x.method),['sendRichMessage']);
+  const inline=messages[0].data.reply_markup.inline_keyboard.flat();
+  assert.ok(inline.some(b=>b.callback_data==='nw:home'));
+  assert.ok(inline.some(b=>b.callback_data==='nw:r'));
+  assert.ok(inline.every(b=>!b.url?.includes('?game=')));
+});
+
+test('explicit main-menu action installs 3 colored persistent buttons without touching Wallet backend',async()=>{
+  const requests=[],messages=[];
+  await handleWalletNavigation({
+    id:'nav-main',data:'nw:home',from:owner,
+    message:{chat:{id:owner.id,type:'private'},message_id:321},
+  },mockEnv(requests),async(method,data)=>messages.push({method,data}));
+  assert.deepEqual(messages.map(x=>x.method),['sendMessage','answerCallbackQuery']);
+  assert.equal(messages[0].data.reply_markup.is_persistent,true);
+  assert.deepEqual(messages[0].data.reply_markup.keyboard[0].map(b=>b.style),
+    ['danger','success','primary']);
+  assert.equal(requests.length,0);
+});
+
+test('untrusted group or another Telegram account cannot install main menu through wallet button',async()=>{
+  const requests=[],other=[],group=[];
+  await handleWalletNavigation({
+    id:'not-owner',data:'nw:home',from:{id:14},
+    message:{chat:{id:owner.id,type:'private'},message_id:44},
+  },mockEnv(requests),async(method,data)=>other.push({method,data}));
+  await handleWalletNavigation({
+    id:'in-group',data:'nw:home',from:owner,
+    message:{chat:{id:-100,type:'supergroup'},message_id:45},
+  },mockEnv(requests),async(method,data)=>group.push({method,data}));
+  assert.deepEqual(other.map(x=>x.method),['answerCallbackQuery']);
+  assert.deepEqual(group.map(x=>x.method),['answerCallbackQuery']);
+  assert.equal(requests.length,0);
+});
+
+test('temporary Wallet failure keeps retry and one-click navigation recovery',async()=>{
+  const outputs=[];
+  await walletCommand({text:'/wallet',chat:{id:owner.id,type:'private'},from:owner},
+    'wallet',{...mockEnv([]),WALLET_SERVICE_KEY:undefined},
+    async(method,data)=>outputs.push({method,data}));
+  assert.equal(outputs[0].method,'sendMessage');
+  const keyboard=outputs[0].data.reply_markup.inline_keyboard;
+  assert.ok(keyboard.flat().some(b=>b.callback_data==='nw:retry:w'));
+  assert.ok(keyboard.flat().some(b=>b.callback_data==='nw:home'));
+  assert.equal(keyboard.flat().some(b=>b.callback_data==='wd:confirm'),false);
+});
