@@ -39,4 +39,5 @@ test('wallet Cloudflare deploy config is safe by default',async()=>{
   assert.equal(config.vars.CHAIN_ID,'80002');
   assert.equal(config.vars.TRANSFERS_ENABLED,'false');
   assert.equal(config.vars.AUTO_REWARDS_ENABLED,'false');
+  assert.equal(config.vars.MANUAL_REWARDS_ONLY,'true');
 });
