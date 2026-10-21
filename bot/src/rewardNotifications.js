@@ -62,7 +62,7 @@ export async function dispatchConfirmedRewards(env,send,max=5) {
     let status='SENT',messageId=null,reason;
     try{
       const message=await send('sendMessage',{
-        chat_id:Number(id),text:confirmedRewardText(item),
+        chat_id:id,text:confirmedRewardText(item),
         disable_web_page_preview:true,
         reply_markup:{inline_keyboard:[[
           {text:'💰 مشاهده کیف پول',url:WALLET_LINK},
