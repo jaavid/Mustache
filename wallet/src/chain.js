@@ -226,9 +226,17 @@ export async function processNext(env) {
         AND a.telegram_user_id=operator_payout_runs.pilot_user_id AND t.state='CONFIRMED')`)
       .bind(Date.now()).run();
     await env.DB.prepare(`UPDATE operator_payout_runs SET phase='COMPLETE',updated_at=?
-      WHERE phase IN ('PILOT','PILOT_OK','ALL') AND batch_id IN
+      WHERE phase IN ('PILOT','PILOT_OK','ALL','PAUSED') AND batch_id IN
       (SELECT batch_id FROM reward_batches WHERE state='COMPLETE')`)
       .bind(Date.now()).run();
+    // Persist each milestone BEFORE the bot's five-minute message cycle, so
+    // a quick operator switch from PILOT_OK to ALL cannot lose the pilot alert.
+    for(const phase of ['PILOT_OK','PAUSED','COMPLETE']){
+      await env.DB.prepare(`INSERT OR IGNORE INTO operator_payout_notices
+        (batch_id,phase,state,created_at)
+        SELECT batch_id,?,'PENDING',? FROM operator_payout_runs WHERE phase=?`)
+        .bind(phase,Date.now(),phase).run();
+    }
   }
   const line=env.MANUAL_REWARDS_ONLY==='true'
     ? await env.DB.prepare(`SELECT a.*,w.address FROM allocations a
@@ -258,6 +266,8 @@ export async function processNext(env) {
       ).bind(Date.now(),line.batch_id).run();
       await env.DB.prepare('INSERT INTO audit_events(event_id,action,reference,created_at) VALUES(?,?,?,?)')
         .bind(crypto.randomUUID(),'PAYOUT_PAUSED',line.batch_id+':'+(/^[A-Z_]{3,40}$/.test(code)?code:'PROCESSING_ERROR'),Date.now()).run();
+      await env.DB.prepare("INSERT OR IGNORE INTO operator_payout_notices(batch_id,phase,state,created_at) VALUES (?,'PAUSED','PENDING',?)")
+        .bind(line.batch_id,Date.now()).run();
       return {operation:line.operation_key,state:'PAUSED',reason:'REVIEW_REQUIRED'};
     }
   }
