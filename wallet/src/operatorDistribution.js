@@ -27,11 +27,12 @@ async function inspectLegacy(env) {
   const items=allocations.results||[];
   const wallets=await env.DB.prepare('SELECT telegram_user_id FROM wallets ORDER BY telegram_user_id').all();
   const ids=(wallets.results||[]).map(x=>String(x.telegram_user_id));
+  const exactCohort=items.length===20 && ids.length===20 &&
+    items.every((x,i)=>String(x.telegram_user_id)===ids[i]);
   const eligible=row.source==='genesis' && row.state==='PLANNED' &&
-    items.length===20 && ids.length===20 &&
-    items.every((x,i)=>String(x.telegram_user_id)===ids[i]) &&
-    asCount(jobs?.total)===0;
-  const isWelcome=eligible && BigInt(row.total_raw)===tokenRaw('2000',Number(row.decimals)) &&
+    exactCohort && asCount(jobs?.total)===0;
+  const isWelcome=row.source==='genesis' && items.length===20 &&
+    BigInt(row.total_raw)===tokenRaw('2000',Number(row.decimals)) &&
     items.every(x=>BigInt(x.amount_raw)===tokenRaw('100',Number(row.decimals)));
   return {row,items,eligible,isWelcome,jobs:asCount(jobs?.total)};
 }
@@ -40,7 +41,7 @@ async function inspectLegacy(env) {
 export async function prepareWelcome(env,planFn) {
   const old=await inspectLegacy(env);
   if(!old)return planFn(env,await welcomeAllocations(env),'genesis');
-  if(!old.eligible)throw Error('LEGACY_GENESIS_REVIEW_REQUIRED');
+  if(!old.eligible&&!old.isWelcome)throw Error('LEGACY_GENESIS_REVIEW_REQUIRED');
   if(old.isWelcome)return {
     batchId:LEGACY,state:'ALREADY_PLANNED',count:20,total:'2000',legacyReused:true
   };
@@ -95,7 +96,7 @@ export async function operatorOverview(env) {
       batchId:LEGACY,state:genesis.row.state,
       total:numAmount(genesis.row.total_raw,Number(genesis.row.decimals)),
       hasSignedTransactions:genesis.jobs>0,
-      canConvert:genesis.eligible,
+      canConvert:genesis.eligible||genesis.isWelcome,
       alreadyFixed:genesis.isWelcome,
     }:null,
     welcome:welcome?{batchId:welcome.batch_id,state:welcome.state,
@@ -111,7 +112,8 @@ export async function batchForKind(env,kind) {
   if(!VALID.has(kind))throw Error('INVALID_OPERATOR_KIND');
   const overview=await operatorOverview(env);
   if(kind==='welcome'){
-    if(overview.wallets!==20)throw Error('WELCOME_WALLET_COUNT_OUT_OF_RANGE');
+    if(overview.wallets!==20 && !overview.legacy?.alreadyFixed && !overview.welcome)
+      throw Error('WELCOME_WALLET_COUNT_OUT_OF_RANGE');
     if(overview.legacy){
       if(!overview.legacy.canConvert)throw Error('LEGACY_GENESIS_REVIEW_REQUIRED');
       return {kind,batchId:LEGACY,state:overview.legacy.state,total:overview.legacy.total,overview,
