@@ -118,7 +118,7 @@ export function operatorMilestoneText(event) {
 
 export async function dispatchOperatorMilestones(env,send,max=3) {
   if(!Number.isInteger(max)||max<1||max>5)throw Error('INVALID_NOTIFICATION_LIMIT');
-  let sent=0,failed=0;
+  let sent=0,failed=0,unknown=0;
   for(let i=0;i<max;i++){
     const event=await internal(env,'/internal/admin/operator/notice/claim',{});
     if(event.state==='EMPTY'||event.state==='RACE')break;
@@ -138,8 +138,8 @@ export async function dispatchOperatorMilestones(env,send,max=3) {
       await internal(env,'/internal/admin/operator/notice/ack',{
         batchId:event.batchId,phase:event.phase,state,
       });
-    }catch{}
-    if(state==='SENT')sent++;else failed++;
+      if(state==='SENT')sent++;else failed++;
+    }catch{unknown++;}
   }
-  return {sent,failed};
+  return {sent,failed,unknown};
 }
