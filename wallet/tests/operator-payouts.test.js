@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {prepareWelcome,operatorAction,claimOperatorMilestone,acknowledgeOperatorMilestone} from '../src/operatorDistribution.js';
+import {prepareWelcome,operatorAction,claimOperatorMilestone,acknowledgeOperatorMilestone,resolveResumePhase} from '../src/operatorDistribution.js';
 
 const TOKEN=10n**18n;
 const allocations=Array.from({length:20},(_,i)=>({
@@ -164,4 +164,29 @@ test('operator alerts reject unsafe batch ids and fake phases',async()=>{
   await assert.rejects(acknowledgeOperatorMilestone(db,{
     batchId:'genesis-0',phase:'ALL',state:'SENT'
   }),/INVALID_OPERATOR_NOTIFICATION/);
+});
+
+test('paused payout resumes pilot only while the pilot is unconfirmed',()=>{
+  const run={phase:'PAUSED',pilot_user_id:'1000'};
+  const rows=[
+    {telegram_user_id:'1000',tx_state:null},
+    {telegram_user_id:'1001',tx_state:null},
+  ];
+  assert.equal(resolveResumePhase(run,rows),'PILOT');
+  assert.equal(resolveResumePhase(run,[{...rows[0],tx_state:'SIGNED'},rows[1]]),'PILOT');
+  assert.equal(resolveResumePhase(run,[{...rows[0],tx_state:'SUBMITTED'},rows[1]]),'PILOT');
+  assert.equal(resolveResumePhase(run,[{...rows[0],tx_state:'CONFIRMED'},rows[1]]),'ALL');
+  assert.equal(resolveResumePhase(run,[{...rows[0],tx_state:'CONFIRMED'},
+    {...rows[1],tx_state:'SUBMITTED'}]),'ALL');
+});
+test('resume never skips a failed pilot or resumes an unpaused run',()=>{
+  const run={phase:'PAUSED',pilot_user_id:'1000'};
+  const rows=[{telegram_user_id:'1000',tx_state:'CONFIRMED'},
+    {telegram_user_id:'1001',tx_state:'FAILED'}];
+  assert.throws(()=>resolveResumePhase(run,rows),/OPERATOR_RESUME_REVIEW_REQUIRED/);
+  assert.throws(()=>resolveResumePhase(run,[{...rows[0],tx_state:'REVIEW_REQUIRED'}]),
+    /OPERATOR_RESUME_REVIEW_REQUIRED/);
+  assert.throws(()=>resolveResumePhase({...run,phase:'PILOT'},rows),/OPERATOR_RUN_NOT_PAUSED/);
+  assert.throws(()=>resolveResumePhase(run,[{telegram_user_id:'1001',tx_state:null}]),
+    /OPERATOR_RESUME_REVIEW_REQUIRED/);
 });
