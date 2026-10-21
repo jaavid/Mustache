@@ -8,7 +8,7 @@ import { walletCommand, confirmWalletCallback, handleWalletNavigation, ensureTel
 import { adminCommand, adminCallback } from './adminDashboard.js';
 import { walletDiagnosticCommand } from './walletDiagnostics.js';
 import { isPrivateChatOwner, mainReplyKeyboard, parseMainMenuMessage, installMainKeyboard } from './mainMenu.js';
-import { dispatchConfirmedRewards } from './rewardNotifications.js';
+import { dispatchConfirmedRewards, dispatchOperatorMilestones } from './rewardNotifications.js';
 export const DEFAULT_GAME_URL = 'https://mustache.alexa.ir/';
 export const DEFAULT_GAME_SHORT_NAME = 'mustache';
 export const DEFAULT_BOT_USERNAME = 'rjttobot';
@@ -503,8 +503,10 @@ export default {
   async scheduled(_event,env,ctx) {
     // Delivery only: this cron never signs transactions or calls /admin/process.
     // The wallet worker must separately confirm chain receipts before claiming.
-    ctx.waitUntil(dispatchConfirmedRewards(env,(method,payload)=>
-      callTelegram(env.BOT_TOKEN,method,payload),5)
-      .catch(()=>{ console.warn('Reward notification cycle unavailable'); }));
+    const send=(method,payload)=>callTelegram(env.BOT_TOKEN,method,payload);
+    ctx.waitUntil(Promise.allSettled([
+      dispatchConfirmedRewards(env,send,5),
+      dispatchOperatorMilestones(env,send,3),
+    ]));
   },
 };
