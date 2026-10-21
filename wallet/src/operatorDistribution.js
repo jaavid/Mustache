@@ -80,13 +80,15 @@ export async function operatorOverview(env) {
     .bind(weeklyId).first();
   const runs=await env.DB.prepare('SELECT batch_id,phase,pilot_user_id FROM operator_payout_runs ORDER BY created_at DESC LIMIT 5').all();
   const {client,contract,decimals,symbol}=await context(env);
-  const signer=distributor(env);
-  const [tokens,pol,gasPrice]=await Promise.all([
+  // Status and plan inspection must remain available without signing credentials.
+  let signer=null;
+  try { signer=distributor(env); } catch {}
+  const [tokens,pol,gasPrice]=signer ? await Promise.all([
     client.readContract({address:contract,abi:tokenAbi,functionName:'balanceOf',args:[signer.address]}),
     client.getBalance({address:signer.address}),client.getGasPrice()
-  ]);
+  ]) : [0n,0n,await client.getGasPrice()];
   return {
-    chainId:80002,contract,symbol,decimals,signer:signer.address,
+    chainId:80002,contract,symbol,decimals,signer:signer?.address??'NOT_CONFIGURED',
     wallets:asCount(wallets?.count),transfersEnabled:env.TRANSFERS_ENABLED==='true',
     autoRewardsEnabled:env.AUTO_REWARDS_ENABLED==='true',
     manualOnly:env.MANUAL_REWARDS_ONLY==='true',
