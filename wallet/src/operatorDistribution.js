@@ -193,7 +193,8 @@ export async function prepareOperatorBatch(env,kind,planFn,weeklyPlanFn) {
   if(preview.state!=='NOT_PREPARED')return {
     batchId:preview.batchId,state:'ALREADY_PLANNED',total:preview.total
   };
-  return weeklyPlanFn(env,Date.now(),false);
+  // Reuse the existing explicit-manual weekly planner without enabling the cron.
+  return weeklyPlanFn({...env,AUTO_REWARDS_ENABLED:'true'},Date.now(),false);
 }
 
 export async function operatorAction(env,body,planFn,weeklyPlanFn,approveFn) {
