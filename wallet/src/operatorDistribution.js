@@ -157,6 +157,11 @@ async function safeToStart(env,batchId,stage) {
   ).bind(batchId).all();
   const rows=allocations.results||[];
   if(!rows.length||rows.length>100)throw Error('INVALID_BATCH_RECIPIENTS');
+  const allocationTotal=rows.reduce((n,x)=>n+BigInt(x.amount_raw),0n);
+  if(allocationTotal!==BigInt(batch.total_raw))throw Error('BATCH_ALLOCATION_MISMATCH');
+  if(batch.source==='genesis' &&
+     (rows.length!==20 || rows.some(x=>BigInt(x.amount_raw)!==tokenRaw('100',decimals))))
+    throw Error('UNSAFE_LEGACY_GENESIS_AMOUNT');
   const existing=rows.filter(x=>x.tx_state);
   if(stage==='PILOT'&&existing.length)throw Error('PILOT_ALREADY_ATTEMPTED');
   const remaining=rows.filter(x=>!x.tx_state);
