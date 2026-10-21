@@ -251,7 +251,7 @@ function payoutKeyboard(kind='welcome',step='select',state=null,run=null) {
     [button('🔄 بررسی دوباره','na:o'),button('↩️ پنل ادمین','na:s')],
   ]};
   const keyboard=[];
-  if(state==='NOT_PREPARED'||state==='PLANNED')
+  if(state==='NOT_PREPARED'||state==='PLANNED'||state==='LEGACY_NEEDS_CORRECTION')
     keyboard.push([button('📋 آماده‌سازی بدون ارسال','na:pr:'+kindCode)]);
   if(!run && state!=='NOT_PREPARED' && state!=='LEGACY_NEEDS_CORRECTION')
     keyboard.push([button('🧪 تست یک تراکنش','na:tk:'+kindCode+':P')]);
