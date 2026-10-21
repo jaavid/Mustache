@@ -93,11 +93,11 @@ async function receiptState(client,job,db) {
     return {state:'PENDING',txHash:job.tx_hash};
   }
 }
-async function existingJob(env,client,key) {
+async function existingJob(env,client,key,allowReplay=true) {
   const found=await env.DB.prepare('SELECT * FROM tx_jobs WHERE operation_key=?').bind(key).first();
   if (!found) return null;
   const result=await receiptState(client,found,env.DB);
-  if (result.state==='PENDING') {
+  if (result.state==='PENDING'&&allowReplay) {
     try {
       await client.sendRawTransaction({serializedTransaction:found.signed_raw});
       if (found.state==='SIGNED') {
@@ -204,8 +204,16 @@ export async function processNext(env) {
   const {client}=await context(env);
   // Reconcile all outstanding jobs first. A sender cannot advance its nonce
   // until its previous signed job reaches a terminal receipt state.
-  const outstanding=await env.DB.prepare("SELECT * FROM tx_jobs WHERE state IN ('SIGNED','SUBMITTED') ORDER BY created_at LIMIT 30").all();
-  for (const job of outstanding.results) await existingJob(env,client,job.operation_key);
+  const outstanding=await env.DB.prepare(`SELECT t.*,r.phase AS run_phase FROM tx_jobs t
+    JOIN allocations a ON a.operation_key=t.operation_key
+    JOIN operator_payout_runs r ON r.batch_id=a.batch_id
+    WHERE t.state IN ('SIGNED','SUBMITTED')
+    ORDER BY t.created_at LIMIT 30`).all();
+  for (const job of outstanding.results) {
+    // Pausing never sends any new raw data, including a previous signed job.
+    // Receipt reconciliation can continue without rebroadcasting.
+    await existingJob(env,client,job.operation_key,['PILOT','ALL'].includes(job.run_phase));
+  }
   await env.DB.prepare(`UPDATE reward_batches SET state='REVIEW_REQUIRED' WHERE state='APPROVED'
     AND EXISTS (SELECT 1 FROM allocations a JOIN tx_jobs t ON t.operation_key=a.operation_key
       WHERE a.batch_id=reward_batches.batch_id AND t.state IN ('FAILED','REVIEW_REQUIRED'))`).run();
