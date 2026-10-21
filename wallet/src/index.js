@@ -186,14 +186,32 @@ export class WalletSerial {
     const task=this.tail.then(async()=>{
       const url=new URL(request.url);
       if(url.pathname==='/run') return reply(await processNext(this.env));
+      if(url.pathname==='/operator'&&request.method==='POST'){
+        // Ordered behind any in-flight signing. A successful PAUSED response
+        // means no later /run may broadcast another transaction.
+        const action=await payload(request);
+        return reply(await operatorAction(this.env,action,plan,weeklyPlan,approveBatch));
+      }
       return reply({error:'NOT_FOUND'},404);
     });
     this.tail=task.catch(()=>{});
-    return task.catch(()=>reply({error:'PROCESSING_ERROR'},503));
+    return task.catch(error=>{
+      const code=String(error?.message||'PROCESSING_ERROR');
+      const allowed=/^(INVALID_|PILOT_|OPERATOR_|BATCH_|LEGACY_|WELCOME_|WEEKLY_|DISTRIBUTOR_|TRANSFERS_|MANUAL_|AUTOMATIC_|ANOTHER_BATCH_RUNNING|UNSAFE_)/.test(code);
+      return reply({error:allowed?code:'PROCESSING_ERROR'},allowed?400:503);
+    });
   }
 }
+function walletSerial(env) {
+  return env.SERIAL.get(env.SERIAL.idFromName('global-transaction-serial'));
+}
 async function serial(env) {
-  return env.SERIAL.get(env.SERIAL.idFromName('global-transaction-serial')).fetch('https://internal/run',{method:'POST'});
+  return walletSerial(env).fetch('https://internal/run',{method:'POST'});
+}
+async function serialOperator(env,body){
+  return walletSerial(env).fetch('https://internal/operator',{
+    method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)
+  });
 }
 export default {
   async fetch(request,env) {
@@ -275,7 +293,12 @@ export default {
           // via bot service binding, can stage and authorize reward payouts.
           if(!env.ADMIN_TELEGRAM_USER_ID || id!==String(env.ADMIN_TELEGRAM_USER_ID))
             return reply({error:'FORBIDDEN'},403);
-          return reply(await operatorAction(env,await payload(request),plan,weeklyPlan,approveBatch));
+          const action=await payload(request);
+          // Mutations share the SAME WalletSerial ordering as signing and
+          // outstanding-job replay: pause, ticket and confirmation cannot race.
+          if(['pause','prepare','ticket','confirm'].includes(action?.action))
+            return serialOperator(env,action);
+          return reply(await operatorAction(env,action,plan,weeklyPlan,approveBatch));
         }
         if(path==='/internal/admin/operator/status'&&method==='GET') {
           if(!env.ADMIN_TELEGRAM_USER_ID || id!==String(env.ADMIN_TELEGRAM_USER_ID))
@@ -342,9 +365,9 @@ export default {
       if(controller.cron==='35 20 * * 5'&&env.AUTO_REWARDS_ENABLED==='true'&&env.MANUAL_REWARDS_ONLY!=='true') await weeklyPlan(env,controller.scheduledTime,true);
       // With MANUAL_REWARDS_ONLY=true, only operator-confirmed runs can sign.
       // This tick never stages, approves or activates a Batch on its own.
-      if(env.TRANSFERS_ENABLED==='true' && env.MANUAL_REWARDS_ONLY==='true')
-        await serial(env);
-      else if(env.TRANSFERS_ENABLED==='true' && env.MANUAL_REWARDS_ONLY!=='true')
+      if(env.MANUAL_REWARDS_ONLY==='true')
+        await serial(env); // receipt-only when TRANSFERS_ENABLED=false
+      else if(env.TRANSFERS_ENABLED==='true')
         throw new Error('UNSAFE_LEGACY_AUTOMATIC_TRANSFERS_MODE');
     })());
   }
