@@ -53,8 +53,9 @@ test('existing genesis batch prevents accidental second signing campaign',async(
 });
 
 test('out-of-range/empty wallet list fails closed before preparing welcome transfers',async()=>{
-  await assert.rejects(welcomeAllocations({DB:fakeWallets(0)}),/WELCOME_WALLET_COUNT_OUT_OF_RANGE/);
-  await assert.rejects(welcomeAllocations({DB:fakeWallets(101)}),/WELCOME_WALLET_COUNT_OUT_OF_RANGE/);
+  for(const count of [0,1,19,21,100,101]){
+    await assert.rejects(welcomeAllocations({DB:fakeWallets(count)}),/WELCOME_WALLET_COUNT_OUT_OF_RANGE/);
+  }
 });
 
 test('weekly preview mirrors 40/60 rank-weighting and does not mutate score DB',async()=>{
