@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {confirmedRewardText,dispatchConfirmedRewards} from '../src/rewardNotifications.js';
+import {confirmedRewardText,dispatchConfirmedRewards,operatorMilestoneText,dispatchOperatorMilestones} from '../src/rewardNotifications.js';
 const hash='0x'+'a'.repeat(64);
 const data={
   state:'CLAIMED',operationKey:'reward:welcome-100-202610:208627',
@@ -87,4 +87,42 @@ test('no internal admin config means no user messages, and no signing endpoints 
   const actions=[];
   await assert.rejects(dispatchConfirmedRewards({},async()=>actions.push('send')),/REWARD_NOTIFICATIONS_NOT_CONFIGURED/);
   assert.equal(actions.length,0);
+});
+
+test('pilot success status is privately delivered to N5 operator, never to a player',async()=>{
+  const event={state:'CLAIMED',batchId:'genesis-0',phase:'PILOT_OK',
+    source:'genesis',confirmed:1,recipients:20};
+  const {env,operations}=testEnv([event,{state:'EMPTY'}]);
+  const sent=[];
+  const r=await dispatchOperatorMilestones(env,async(method,payload)=>{
+    sent.push({method,payload});return {message_id:442};
+  });
+  assert.equal(r.sent,1);
+  assert.equal(sent.length,1);
+  assert.equal(sent[0].payload.chat_id,'208627');
+  assert.match(sent[0].payload.text,/تراکنش آزمایشی تأیید شد/);
+  assert.match(sent[0].payload.text,/1 از 20/);
+  assert.equal(sent[0].payload.reply_markup.inline_keyboard[0][0].callback_data,'na:d');
+  assert.equal(operations[1].body.state,'SENT');
+  assert.equal(operations[1].body.phase,'PILOT_OK');
+});
+test('payout finish and pause both have durable operator text, invalid statuses rejected',()=>{
+  assert.match(operatorMilestoneText({batchId:'weekly-10',phase:'COMPLETE',
+    confirmed:20,recipients:20}),/توزیع آزمایشی تکمیل شد/);
+  assert.match(operatorMilestoneText({batchId:'genesis-0',phase:'PAUSED',
+    confirmed:2,recipients:20}),/توزیع متوقف شد/);
+  assert.throws(()=>operatorMilestoneText({batchId:'bad slash/',phase:'COMPLETE',confirmed:1,recipients:1}));
+  assert.throws(()=>operatorMilestoneText({batchId:'genesis-0',phase:'COMPLETE',confirmed:30,recipients:20}));
+  assert.throws(()=>operatorMilestoneText({batchId:'genesis-0',phase:'ALL',confirmed:1,recipients:20}));
+});
+test('operator messages are never automatically retried after an unknown delivery result',async()=>{
+  const event={state:'CLAIMED',batchId:'genesis-0',phase:'PAUSED',
+    source:'genesis',confirmed:1,recipients:20};
+  const {env,operations}=testEnv([event,{state:'EMPTY'}]);
+  let sends=0;
+  const r=await dispatchOperatorMilestones(env,async()=>{sends++;throw Error('telegram unavailable')});
+  assert.equal(r.failed,1);
+  assert.equal(sends,1);
+  assert.equal(operations[1].body.state,'FAILED');
+  assert.ok(operations.every(x=>!x.url.includes('/admin/process')));
 });
