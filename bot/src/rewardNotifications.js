@@ -85,3 +85,61 @@ export async function dispatchConfirmedRewards(env,send,max=5) {
   }
   return counts;
 }
+
+
+/** Separately announce one-time payout milestones to the verified N5 operator. */
+export function operatorMilestoneText(event) {
+  const phase=event?.phase;
+  if(!['PILOT_OK','PAUSED','COMPLETE'].includes(phase) ||
+     !/^[a-zA-Z0-9_-]{3,75}$/.test(String(event?.batchId||'')))
+    throw Error('INVALID_OPERATOR_EVENT');
+  const received=Number(event.confirmed),total=Number(event.recipients);
+  if(!Number.isSafeInteger(received)||!Number.isSafeInteger(total)||
+     received<0||total<1||received>total)throw Error('INVALID_OPERATOR_EVENT');
+  const title=phase==='PILOT_OK'
+    ?'🧪✅ تراکنش آزمایشی تأیید شد'
+    :phase==='COMPLETE'
+      ?'🎁✅ توزیع آزمایشی تکمیل شد'
+      :'⏸⚠️ توزیع متوقف شد';
+  return [
+    '〰️🛡️ N5 Admin · Polygon Amoy',
+    title,
+    '📦 '+event.batchId,
+    '✅ '+received+' از '+total+' انتقال تأییدشده',
+    '',
+    phase==='PILOT_OK'
+      ?'رسید نفر آزمایشی را از /admin بررسی کن؛ ادامه توزیع تنها با تأیید مجدد تو انجام می‌شود.'
+      :phase==='COMPLETE'
+        ?'همه پرداخت‌های این Batch تأیید شدند. وضعیت اعلان بازیکنان را در /admin بررسی کن.'
+        :'تراکنش‌های جدید متوقف شده‌اند؛ ارسال‌های قبلی ممکن است هنوز در انتظار شبکه باشند.',
+    '⚠️ همه مبالغ، توکن تستی N5 هستند.',
+  ].join('\n');
+}
+
+export async function dispatchOperatorMilestones(env,send,max=3) {
+  if(!Number.isInteger(max)||max<1||max>5)throw Error('INVALID_NOTIFICATION_LIMIT');
+  let sent=0,failed=0;
+  for(let i=0;i<max;i++){
+    const event=await internal(env,'/internal/admin/operator/notice/claim',{});
+    if(event.state==='EMPTY'||event.state==='RACE')break;
+    if(event.state!=='CLAIMED')throw Error('INVALID_OPERATOR_EVENT');
+    let state='SENT';
+    try {
+      await send('sendMessage',{
+        chat_id:String(env.ADMIN_TELEGRAM_USER_ID),
+        text:operatorMilestoneText(event),
+        reply_markup:{inline_keyboard:[[{
+          text:'📊 مشاهده وضعیت در /admin',callback_data:'na:d',
+        }]]},
+      });
+    }catch{state='FAILED';}
+    // Never resend an unknown-status Telegram message. Operator can inspect /admin.
+    try {
+      await internal(env,'/internal/admin/operator/notice/ack',{
+        batchId:event.batchId,phase:event.phase,state,
+      });
+    }catch{}
+    if(state==='SENT')sent++;else failed++;
+  }
+  return {sent,failed};
+}
