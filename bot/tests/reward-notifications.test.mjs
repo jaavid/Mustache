@@ -126,3 +126,20 @@ test('operator messages are never automatically retried after an unknown deliver
   assert.equal(operations[1].body.state,'FAILED');
   assert.ok(operations.every(x=>!x.url.includes('/admin/process')));
 });
+
+test('operator notice acknowledgement outage records UNKNOWN rather than false success',async()=>{
+  const event={state:'CLAIMED',batchId:'genesis-0',phase:'PILOT_OK',
+    source:'genesis',confirmed:1,recipients:20};
+  const {env}=testEnv([event,{state:'EMPTY'}]);
+  const original=env.WALLET.fetch.bind(env.WALLET);
+  env.WALLET.fetch=async(url,opts)=>{
+    if(url.endsWith('/operator/notice/ack'))throw Error('ACK_UNCERTAIN');
+    return original(url,opts);
+  };
+  const sent=[];
+  const result=await dispatchOperatorMilestones(env,async(method,payload)=>{
+    sent.push({method,payload});return {message_id:458};
+  });
+  assert.equal(sent.length,1);
+  assert.deepEqual(result,{sent:0,failed:0,unknown:1});
+});
