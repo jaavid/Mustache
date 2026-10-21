@@ -52,9 +52,19 @@ Choose **مدیریت پرداخت‌های تستی**, then:
    confirmed/pending/unsent/failed on-chain transfers and Telegram
    notification counts. User messages are sent only after verified
    receipts and claimed at most once. Their status can be reviewed.
-9. **توقف انتقال‌های بعدی** is available even if RPC fails. It stops
-   future transactions but cannot cancel an already signed/broadcast
-   blockchain transfer.
+9. **توقف انتقال‌های بعدی** is available even if RPC fails. Pause
+   enters the same durable WalletSerial queue as signing and rebroadcasting:
+   once pause returns success, later ticks cannot start new sends. Transactions
+   broadcast BEFORE pause can still confirm on-chain. Turning
+   TRANSFERS_ENABLED=false also stops rebroadcast/new signing, but the 1-minute
+   cron continues read-only receipt reconciliation, batch completion and
+   verified Telegram notices.
+10. **▶️ بررسی و ادامه Batch متوقف‌شده** offers a fresh 5-minute, one-use
+    two-step RESUME confirmation after a new gas/balance preflight. The original
+    paused Batch and allocated operation keys are retained. If the pilot has
+    not confirmed, resume remains PILOT; if confirmed, it resumes ALL remaining
+    recipients. FAILED or REVIEW_REQUIRED transactions cannot be silently
+    resumed and require manual review. No automatic restart is performed.
 
 ## Display format
 
