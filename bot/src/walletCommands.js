@@ -1,4 +1,5 @@
 // Telegram wallet interface. All identities originate from the verified bot webhook,
+import { installMainKeyboard } from './mainMenu.js';
 // never client-provided user IDs or forwarded messages.
 // Read-only panels retry safely; not every failure is caused by the blockchain.
 const READABLE_SECTIONS = new Set(['w', 'r', 't', 'f']);
@@ -22,6 +23,7 @@ function walletReadError(error, section, env, userId) {
       '👇 برای بارگذاری دوباره روی «تلاش مجدد» بزن.'].join('\n') + adminHint,
     reply_markup: { inline_keyboard: [
       [{ text: '🔄 تلاش مجدد', callback_data: 'nw:retry:' + (READABLE_SECTIONS.has(section) ? section : 'w'), style: 'primary' }],
+      [button('🧭 نمایش منوی اصلی', 'home')],
     ] },
   };
 }
@@ -70,7 +72,7 @@ function walletKeyboard(section = 'w') {
   const withdraw = button('↗️ برداشت', 'x');
   const faucet = button('⛽ POL تستی', 'f');
   const actions = ({
-    w: [[rewards, history], [withdraw, faucet]],
+    w: [[rewards, history], [withdraw, faucet], [button('🧭 نمایش منوی اصلی', 'home')]],
     r: [[back, history], [withdraw]],
     t: [[back, rewards], [withdraw]],
     x: [[back, faucet]],
@@ -388,6 +390,16 @@ export async function handleWalletNavigation(callback, env, send) {
   });
   if (!isPrivateOwner(callback.message?.chat, callback.from)) return finish('برای دسترسی، چت شخصی خودت را باز کن.');
   const data = String(callback.data || '');
+  if (data === 'nw:home') {
+    // Reply and inline keyboards cannot share a message. Install the permanent
+    // navigation only on explicit user request, avoiding repeated chat messages.
+    try {
+      await installMainKeyboard({ chat: callback.message.chat, from: callback.from }, send);
+      return finish();
+    } catch {
+      return finish('منوی اصلی باز نشد؛ /start یا /help را بفرست.');
+    }
+  }
   const navigation = /^nw:([wrtxmf])$/.exec(data);
   const retry = /^nw:retry:([wrtf])$/.exec(data);
   const section = navigation?.[1] || retry?.[1];
