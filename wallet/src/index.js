@@ -71,6 +71,18 @@ async function approveBatch(env,batchId) {
   if(!batch) throw new Error('BATCH_NOT_FOUND');
   if(batch.state==='APPROVED'||batch.state==='COMPLETE') return {batchId,state:batch.state};
   if(batch.state!=='PLANNED') throw new Error('BATCH_NOT_APPROVABLE');
+  if(batch.source==='genesis'){
+    // Legacy public admin API MUST NOT approve the old 10k draft. This check
+    // also protects callers bypassing the Telegram operator UI.
+    const rows=await env.DB.prepare('SELECT amount_raw FROM allocations WHERE batch_id=?')
+      .bind(batchId).all();
+    const amounts=rows.results||[];
+    const expected=tokenRaw('100',Number(batch.decimals));
+    if(amounts.length!==20 ||
+       amounts.some(x=>BigInt(x.amount_raw)!==expected) ||
+       BigInt(batch.total_raw)!==expected*20n)
+      throw new Error('UNSAFE_LEGACY_GENESIS_AMOUNT');
+  }
   const {client,contract}=await context(env);
   const signer=distributor(env);
   const available=await client.readContract({address:contract,abi:tokenAbi,functionName:'balanceOf',args:[signer.address]});
@@ -311,13 +323,13 @@ export default {
       return reply({error:'NOT_FOUND'},404);
     } catch(error) {
       const code=String(error?.message||'ERROR');
-      const valid=/^(INVALID_|DUPLICATE_PLAYER|BATCH_OVER_BUDGET|BATCH_ID_CONFLICT|WALLET_NOT_FOUND|WITHDRAWAL_|INSUFFICIENT_NFIVE|BODY_TOO_LARGE|JSON_REQUIRED|GENESIS_ALREADY_EXISTS|WELCOME_WALLET_COUNT_OUT_OF_RANGE|LEGACY_GENESIS_|WEEKLY_|PILOT_|OPERATOR_|ANOTHER_BATCH_RUNNING|BATCH_NOT_STARTABLE|DISTRIBUTOR_LOW_|MANUAL_MODE_REQUIRED|AUTOMATIC_REWARDS_MUST_BE_DISABLED|TRANSFERS_DISABLED|UNSAFE_LEGACY_GENESIS_AMOUNT)/.test(code);
+      const valid=/^(INVALID_|DUPLICATE_PLAYER|BATCH_OVER_BUDGET|BATCH_ID_CONFLICT|WALLET_NOT_FOUND|WITHDRAWAL_|INSUFFICIENT_NFIVE|BODY_TOO_LARGE|JSON_REQUIRED|GENESIS_ALREADY_EXISTS|WELCOME_WALLET_COUNT_OUT_OF_RANGE|LEGACY_GENESIS_|WEEKLY_|PILOT_|OPERATOR_|ANOTHER_BATCH_RUNNING|BATCH_NOT_STARTABLE|DISTRIBUTOR_LOW_|MANUAL_MODE_REQUIRED|AUTOMATIC_REWARDS_MUST_BE_DISABLED|TRANSFERS_DISABLED|UNSAFE_LEGACY_GENESIS_AMOUNT|BATCH_ALLOCATION_MISMATCH)/.test(code);
       return reply({error:valid?code:'OPERATION_FAILED'},valid?400:503);
     }
   },
   async scheduled(controller,env,ctx) {
     ctx.waitUntil((async()=>{
-      if(controller.cron==='35 20 * * 5'&&env.AUTO_REWARDS_ENABLED==='true') await weeklyPlan(env,controller.scheduledTime,true);
+      if(controller.cron==='35 20 * * 5'&&env.AUTO_REWARDS_ENABLED==='true'&&env.MANUAL_REWARDS_ONLY!=='true') await weeklyPlan(env,controller.scheduledTime,true);
       // With MANUAL_REWARDS_ONLY=true, only operator-confirmed runs can sign.
       // This tick never stages, approves or activates a Batch on its own.
       if(env.TRANSFERS_ENABLED==='true' && env.MANUAL_REWARDS_ONLY==='true')
