@@ -412,11 +412,24 @@ export async function adminCallback(callback,env,send) {
         });
         await deliverOperator(send,dest,confirmPayoutCard(result));
       }else{
-        if(prep||stop){
-          await operator(env,callback.from.id,{action:prep?'prepare':'pause',kind});
+        if(stop){
+          const result=await operator(env,callback.from.id,{action:'pause',kind});
+          const text=result.phase==='PAUSED'
+            ?'⏸ انتقال‌های جدید Batch '+clean(result.batchId)+' متوقف شدند.\nتراکنش‌هایی که قبلاً ارسال شده‌اند قابل لغو نیستند؛ وضعیت را بررسی کن.'
+            :'در حال حاضر Batch فعالی برای توقف وجود ندارد.';
+          await deliverOperator(send,dest,{
+            text,rich_message:{blocks:[heading('〰️⏸ کنترل توزیع'),paragraph(text)],
+              is_rtl:true,skip_entity_detection:true},
+            reply_markup:{inline_keyboard:[
+              [{text:'📦 پیگیری تراکنش‌ها',callback_data:'na:d'}],
+              [{text:'↩️ مدیریت',callback_data:'na:o'}],
+            ]},
+          });
+        }else{
+          if(prep)await operator(env,callback.from.id,{action:'prepare',kind});
+          const view=await operator(env,callback.from.id,{action:'preview',kind});
+          await deliverOperator(send,dest,payoutCard(view,kind));
         }
-        const view=await operator(env,callback.from.id,{action:'preview',kind});
-        await deliverOperator(send,dest,payoutCard(view,kind));
       }
       return ack();
     }
