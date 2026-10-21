@@ -6,8 +6,10 @@ but does not execute any blockchain transaction.
 
 ## Distribution rules
 
-Welcome: 100 tNFIVE per existing wallet, fixed id: welcome-100-202610.
-At 20 wallets that is exactly 2,000 tNFIVE and 20 separate ERC20 transfers.
+Welcome: 100 tNFIVE per original wallet, fixed id: welcome-100-202610.
+The first campaign requires EXACTLY 20 stored wallets, totaling 2,000 tNFIVE
+and 20 separate ERC20 transfers. A count of 19 or 21 will block preparation;
+never silently extend this inaugural allocation to newly registered users.
 Re-planning the same batch is idempotent; a different existing genesis batch
 blocks the new campaign until safely reconciled.
 
@@ -16,11 +18,15 @@ Saturday-to-Saturday Tehran week. Only confirmed server-side gameplay scores
 count. The existing rule is 40% of the weekly pool equally shared among eligible
 players and 60% weighted by their rank.
 
-IMPORTANT: WEEKLY_POOL_TOKENS is currently configured as 10,000. This default
-is NOT explicit authorization to disburse that much this week. Obtain owner
-confirmation of the first weekly budget before preparing or approving it.
-If confirmed at 10,000, the operational distributor needs 12,000 tNFIVE
-plus enough Amoy test POL for 20 welcome transactions and one per weekly winner.
+APPROVED BUDGET (2026-10-21): The CTO approved the first weekly pool at
+10,000 tNFIVE in chat. Keep WEEKLY_POOL_TOKENS=10000 and use the existing
+40% equal / 60% rank-weighted formula. This approval sets the reward BUDGET;
+it does not prove Distributor funding or authorize skipping preflight, a one-wallet
+chain test, or the currently disabled signing guards.
+
+For the planned 20-player welcome and the first 10,000-token weekly pool, the
+Distributor needs 12,000 tNFIVE in total plus enough Amoy test POL for the
+individual transfers. Preview both batches first and prevent any double credit.
 
 ## Preview and planning (requires private ADMIN_API_TOKEN, never share it)
 
@@ -28,7 +34,7 @@ GET /admin/preflight: confirm Amoy chain 80002, token contract and balances,
 including both tNFIVE and POL in the Distributor. NOT_CONFIGURED means no
 signing is possible.
 
-GET /admin/welcome/preview: inspect the saved wallet snapshot and exact amounts.
+GET /admin/welcome/preview: inspect all 20 saved wallet recipients and exact amounts. If additional users have joined and the count is not 20, stop and formally reconcile the original cohort before any preparation.
 POST /admin/welcome/prepare: write the PLANNED gift batch (never signs).
 The legacy POST /admin/genesis/prepare is routed to the same 100-token batch
 rather than the old rank-weighted 10,000-token genesis pool.
