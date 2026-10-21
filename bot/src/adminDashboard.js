@@ -164,6 +164,10 @@ function details(data,tab='s',preview=null) {
   blocks.push({type:'divider'},paragraph('🔒 گزارش فقط‌خواندنی است؛ پرداخت فقط از «مدیریت پرداخت‌های تستی» و با تأیید دومرحله‌ای انجام می‌شود.'));
   lines.push('🔒 نمایش بدون انتقال؛ برای پرداخت از مدیریت توزیع استفاده کن.');
   const markup=keyboard();
+  if(tab==='f'&&/^0x[0-9a-f]{40}$/i.test(operational.address||'')) {
+    markup.inline_keyboard.unshift([{text:'📋 کپی آدرس کامل Distributor',
+      copy_text:{text:operational.address}}]);
+  }
   if(tab==='b'&&Array.isArray(data.batches)) {
     for(const batch of data.batches.slice(0,6)) {
       const id=String(batch.batch_id||'');
@@ -249,7 +253,7 @@ function payoutKeyboard(kind='welcome',step='select',state=null,run=null) {
   const keyboard=[];
   if(state==='NOT_PREPARED'||state==='PLANNED')
     keyboard.push([button('📋 آماده‌سازی بدون ارسال','na:pr:'+kindCode)]);
-  if(!run && state!=='NOT_PREPARED')
+  if(!run && state!=='NOT_PREPARED' && state!=='LEGACY_NEEDS_CORRECTION')
     keyboard.push([button('🧪 تست یک تراکنش','na:tk:'+kindCode+':P')]);
   if(run?.phase==='PILOT_OK')
     keyboard.push([button('🚀 توزیع باقی دریافت‌کنندگان','na:tk:'+kindCode+':A')]);
@@ -299,7 +303,8 @@ function payoutCard(data,kind=null) {
     rich_message:{blocks:[
       heading(rows[0]),...rows.slice(1).map(paragraph)
     ],is_rtl:true,skip_entity_detection:true},
-    reply_markup:payoutKeyboard(kind||'welcome',kind?'detail':'select',data?.state,run),
+    reply_markup:payoutKeyboard(kind||'welcome',kind?'detail':'select',
+      data?.legacyNeedsCorrection?'LEGACY_NEEDS_CORRECTION':data?.state,run),
   };
 }
 
