@@ -74,7 +74,8 @@ function details(data,tab='s',preview=null) {
       '⛽ POL عملیاتی: '+clean(operational.pol));
   }
   if(tab==='d') {
-    blocks.push(paragraph('📦 خلاصه توزیع‌های ثبت‌شده و اعلان‌های تلگرام'));
+    blocks.push(paragraph('📦 خلاصه توزیع‌های ثبت‌شده و اعلان‌های تلگرام'),
+      paragraph('🎁 هدیه اولیه: ۱۰۰ tNFIVE × '+Number(data.walletCount||0)+' کیف پول = '+(100*Number(data.walletCount||0))+' tNFIVE (در صورت آماده‌بودن تمام کیف پول‌ها)'));
     lines.push('📦 وضعیت توزیع‌ها');
     if(!Array.isArray(data.progress)||data.progress.length===0) {
       blocks.push(paragraph('هنوز هیچ Batch توزیع ثبت نشده است.'));
@@ -83,7 +84,7 @@ function details(data,tab='s',preview=null) {
       for(const b of data.progress.slice(0,8)){
         const title=clean(b.batch_id,55)+' · '+clean(b.state,20);
         const status='✅ '+Number(b.confirmed||0)+'/'+Number(b.recipients||0)+
-          ' · ⏳ '+Number(b.pending||0)+' · ❌ '+Number(b.failed||0);
+          ' · ⏳ '+Number(b.pending||0)+' · ⏸ '+Number(b.not_sent||0)+' · ❌ '+Number(b.failed||0);
         const notifications='📩 '+Number(b.notifications_sent||0)+' ارسال موفق'+
           ' · ⚠️ '+Number(b.notifications_failed||0)+' ناموفق'+
           ' · ❔ '+Number(b.notifications_unknown||0)+' نامشخص';
@@ -173,6 +174,14 @@ function batchPage(data,page=0) {
     lines.push('👤 '+who+' · '+r.amount+' tNFIVE',state);
   }
   const keyboard={inline_keyboard:[]};
+  // Telegram button text is short; explorer links only for verified tx hashes.
+  for(const r of selected) {
+    if(typeof r.txHash==='string'&&/^0x[a-f0-9]{64}$/i.test(r.txHash))
+      keyboard.inline_keyboard.push([{
+        text:'🔎 '+clean(r.displayName||r.telegramUserId,20)+' · رسید',
+        url:'https://amoy.polygonscan.com/tx/'+r.txHash,
+      }]);
+  }
   const change=[];
   if(page>0)change.push({text:'◀️ قبلی',callback_data:'na:i:'+batch.batch_id+':'+(page-1)});
   if(start+5<count)change.push({text:'بعدی ▶️',callback_data:'na:i:'+batch.batch_id+':'+(page+1)});
