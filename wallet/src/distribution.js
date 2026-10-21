@@ -13,7 +13,9 @@ export async function welcomeAllocations(env) {
   ]);
   if(prior)throw Error('GENESIS_ALREADY_EXISTS');
   const users=(rows.results||[]).map(x=>telegramId(x.telegram_user_id));
-  if(users.length<1||users.length>100)throw Error('WELCOME_WALLET_COUNT_OUT_OF_RANGE');
+  // This first campaign is explicitly approved for the ORIGINAL 20 wallets.
+  // New signups must not silently increase its recipients or change the budget.
+  if(users.length!==20)throw Error('WELCOME_WALLET_COUNT_OUT_OF_RANGE');
   return {batchId:WELCOME_BATCH_ID,source:'genesis',count:users.length,
     total:String(users.length*100),
     allocations:users.map(id=>({telegramUserId:id,amount:WELCOME_TOKENS}))};
