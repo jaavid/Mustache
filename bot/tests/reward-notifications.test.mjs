@@ -53,7 +53,7 @@ test('only claimed confirmed event triggers one Telegram message and durable SEN
   assert.equal(result.failed,0);
   assert.equal(calls.length,1);
   assert.equal(calls[0].method,'sendMessage');
-  assert.equal(calls[0].payload.chat_id,208627);
+  assert.equal(calls[0].payload.chat_id,'208627');
   assert.ok(calls[0].payload.reply_markup.inline_keyboard.flat().some(x=>x.url.includes('start=wallet')));
   assert.deepEqual(operations.map(o=>o.url.split('/').at(-1)),['claim','ack','claim']);
   assert.equal(operations[1].body.status,'SENT');
