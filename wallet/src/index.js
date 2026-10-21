@@ -80,27 +80,9 @@ async function approveBatch(env,batchId) {
   return {batchId,state:'APPROVED'};
 }
 async function genesisPlan(env) {
-  if (!env.SCORES_DB) throw new Error('SCORES_DB_MISSING');
-  const results=await env.SCORES_DB.prepare(`
-    WITH best AS (
-      SELECT user_id,score,golden_perfect,
-        ROW_NUMBER() OVER(PARTITION BY user_id ORDER BY score DESC,golden_perfect DESC,finished_at ASC,id ASC) AS own_rank
-      FROM game_rounds WHERE score IS NOT NULL AND mode IN ('classic','goldRush')
-    )
-    SELECT CAST(b.user_id AS TEXT) AS telegram_user_id,u.display_name
-    FROM best b JOIN game_users u ON u.user_id=b.user_id
-    WHERE b.own_rank=1
-    ORDER BY b.score DESC,b.golden_perfect DESC,b.user_id ASC
-    LIMIT 20
-  `).all();
-  if (results.results.length!==20) throw new Error('GENESIS_REQUIRES_20_PLAYERS');
-  const players=results.results.map(r=>({telegramUserId:telegramId(r.telegram_user_id),displayName:r.display_name}));
-  // Bootstrap is idempotent, so rerunning this endpoint cannot replace keys.
-  await bootstrap(env,{players});
-  const {decimals}=await context(env);
-  const lines=rankRewards(players.map(p=>p.telegramUserId),tokenRaw(env.WEEKLY_POOL_TOKENS||'10000',decimals));
-  const out=await plan(env,{batchId:'genesis-0',allocations:lines.map(r=>({telegramUserId:r.id,amount:formatUnits(BigInt(r.raw),decimals)}))},'genesis');
-  return {...out,players:players.map(p=>({telegramUserId:p.telegramUserId,displayName:p.displayName}))};
+  // Legacy route intentionally shares the SAME fixed welcome batch. Never
+  // resurrect the old 10,000-token rank-weighted "genesis-0" allocation.
+  return plan(env,await welcomeAllocations(env),'genesis');
 }
 async function weeklyPlan(env,nowMs,autoApprove=false) {
   if(env.AUTO_REWARDS_ENABLED!=='true') return {state:'DISABLED'};
