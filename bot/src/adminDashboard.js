@@ -170,8 +170,13 @@ function batchPage(data,page=0) {
   for(const r of selected){
     const who=clean(r.displayName||r.telegramUserId,48);
     const state='⛓ '+clean(r.transactionState,30)+' · 📩 '+clean(r.notificationState,30);
-    blocks.push(paragraph('👤 '+who+' · '+clean(r.amount,40)+' tNFIVE'),paragraph(state));
-    lines.push('👤 '+who+' · '+r.amount+' tNFIVE',state);
+    const identity='🆔 '+clean(r.telegramUserId,24)+' · '+clean(r.address,45);
+    const issue=r.notificationError?'⚠️ اعلان: '+clean(r.notificationError,38):null;
+    blocks.push(paragraph('👤 '+who+' · '+clean(r.amount,40)+' tNFIVE'),
+      paragraph(identity),paragraph(state));
+    if(issue)blocks.push(paragraph(issue));
+    lines.push('👤 '+who+' · '+r.amount+' tNFIVE',identity,state);
+    if(issue)lines.push(issue);
   }
   const keyboard={inline_keyboard:[]};
   // Telegram button text is short; explorer links only for verified tx hashes.
