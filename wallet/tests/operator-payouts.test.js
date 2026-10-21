@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {prepareWelcome,operatorAction} from '../src/operatorDistribution.js';
+import {prepareWelcome,operatorAction,claimOperatorMilestone,acknowledgeOperatorMilestone} from '../src/operatorDistribution.js';
 
 const TOKEN=10n**18n;
 const allocations=Array.from({length:20},(_,i)=>({
@@ -115,4 +115,52 @@ test('operator confirmation fails closed for malformed or expired one-use ticket
 test('operator ticket cannot begin with an unknown stage without any backend access',async()=>{
   await assert.rejects(operatorAction({DB:{}},{action:'ticket',stage:'AUTO',kind:'welcome'},
     ()=>{},()=>{},()=>{}),/INVALID_OPERATOR_STAGE/);
+});
+
+test('operator milestone claim is durable, atomic and acknowledged only once',async()=>{
+  let message={batch_id:'genesis-0',phase:'PILOT_OK',source:'genesis',
+    recipients:20,confirmed:1};
+  let status='PENDING';
+  const db={prepare(sql){
+    let args=[];
+    return {bind(...x){args=x;return this;},
+      async first(){
+        if(sql.includes('FROM operator_payout_notices n'))return status==='PENDING'?message:null;
+        throw Error('unexpected select '+sql);
+      },
+      async run(){
+        if(sql.startsWith('UPDATE operator_payout_notices SET state=')){
+          if(sql.includes("state='ATTEMPTED'")){
+            if(status!=='PENDING')return {meta:{changes:0}};
+            status='ATTEMPTED';return {meta:{changes:1}};
+          }
+          if(status!=='ATTEMPTED')return {meta:{changes:0}};
+          status=args[0];return {meta:{changes:1}};
+        }
+        throw Error('unexpected update '+sql);
+      },
+    };
+  }};
+  const first=await claimOperatorMilestone(db);
+  assert.equal(first.state,'CLAIMED');
+  assert.equal(first.phase,'PILOT_OK');
+  assert.equal(first.recipients,20);
+  assert.equal(first.confirmed,1);
+  assert.equal(status,'ATTEMPTED');
+  assert.equal((await claimOperatorMilestone(db)).state,'EMPTY');
+  const ack=await acknowledgeOperatorMilestone(db,{batchId:'genesis-0',
+    phase:'PILOT_OK',state:'SENT'});
+  assert.equal(ack.state,'SENT');
+  assert.equal(status,'SENT');
+  assert.equal((await acknowledgeOperatorMilestone(db,{batchId:'genesis-0',
+    phase:'PILOT_OK',state:'SENT'})).state,'ALREADY_RECORDED');
+});
+test('operator alerts reject unsafe batch ids and fake phases',async()=>{
+  const db={};
+  await assert.rejects(acknowledgeOperatorMilestone(db,{
+    batchId:'../../../secret',phase:'PILOT_OK',state:'SENT'
+  }),/INVALID_OPERATOR_NOTIFICATION/);
+  await assert.rejects(acknowledgeOperatorMilestone(db,{
+    batchId:'genesis-0',phase:'ALL',state:'SENT'
+  }),/INVALID_OPERATOR_NOTIFICATION/);
 });
