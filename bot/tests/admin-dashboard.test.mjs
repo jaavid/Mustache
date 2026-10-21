@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {adminCommand, adminCallback} from '../src/adminDashboard.js';
+import {adminCommand, adminCallback, decimalLabel, compactAddress} from '../src/adminDashboard.js';
 import {handleTelegramUpdate,parseGameCommand} from '../src/index.js';
 
 const uid=208627;
@@ -101,7 +101,7 @@ test('Admin weekly preview is read-only and shows 40-60 reward budget',async()=>
   assert.ok(requests.some(x=>x.url.endsWith('/internal/admin/weekly/preview')));
   assert.ok(requests.every(x=>x.init.method===undefined));
   const out=JSON.stringify(sent[0].data.rich_message.blocks);
-  assert.match(out,/10000/);
+  assert.match(out,/10,000/);
   assert.match(out,/۴۰٪/);
   assert.match(out,/تراکنش یا تأیید Batch انجام نمی‌دهد/);
 });
@@ -123,4 +123,125 @@ test('Batch drilldown reports per-user chain and Telegram status with private-on
     async(method,data)=>sent.push({method,data}));
   assert.deepEqual(sent.map(x=>x.method),['answerCallbackQuery']);
   assert.equal(requests.length,0);
+});
+
+test('financial admin values round safely without losing exact copyable address',async()=>{
+  assert.equal(decimalLabel('990000'),'990,000');
+  assert.equal(decimalLabel('10000.0'),'10,000');
+  assert.equal(decimalLabel('0.392532963324678353',4),'0.3925');
+  assert.equal(decimalLabel('0.199999999999999999',4),'0.2');
+  assert.equal(decimalLabel('999.999',2),'1,000');
+  assert.equal(decimalLabel('not-a-value'),'—');
+  assert.equal(compactAddress('0xFbeA2a974efb786Aa052e7ef1ac31fD5E4c1351c'),'0xFbeA2a…c1351c');
+  const requests=[],sent=[];
+  const env=config(requests);
+  env.WALLET.fetch=async()=>Response.json({
+    ...overview,treasury:{balance:'970000',pol:'0.187411864466946149'},
+    distributor:{balance:'30000',pol:'0.2',
+      address:'0xFbeA2a974efb786Aa052e7ef1ac31fD5E4c1351c'},
+  });
+  await adminCallback({id:'format',data:'na:f',
+    message:{message_id:23,chat:{id:uid,type:'private'}},from:{id:uid}},
+    env,async(method,data)=>sent.push({method,data}));
+  const text=JSON.stringify(sent[0].data.rich_message.blocks);
+  assert.match(text,/970,000/);
+  assert.match(text,/0\.1874/);
+  assert.match(text,/30,000/);
+  assert.match(text,/0xFbeA2a…c1351c/);
+  assert.doesNotMatch(text,/0\.1874118644/);
+  assert.equal(sent[0].data.reply_markup.inline_keyboard[0][0].copy_text.text,
+    '0xFbeA2a974efb786Aa052e7ef1ac31fD5E4c1351c');
+});
+
+function operatorEnvironment(logs) {
+  const ticket='aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+  const operational={
+    chainId:80002,wallets:20,availableTokens:'30000',availablePol:'0.2',
+    manualOnly:true,transfersEnabled:false,autoRewardsEnabled:false,
+    signer:'0xFbeA2a974efb786Aa052e7ef1ac31fD5E4c1351c',approvedWeeklyPool:'10000',
+    legacy:{batchId:'genesis-0',state:'PLANNED',total:'10000',
+      canConvert:true,alreadyFixed:false},runs:[],
+  };
+  return {
+    ticket,
+    env:{ADMIN_TELEGRAM_USER_ID:String(uid),WALLET_SERVICE_KEY:'test-service',WALLET:{
+      async fetch(url,opts) {
+        const body=opts.body?JSON.parse(opts.body):{};
+        logs.push({url,method:opts.method||'GET',body});
+        if(url.endsWith('/internal/admin/operator')){
+          if(body.action==='status')return Response.json(operational);
+          if(body.action==='preview')return Response.json({
+            kind:body.kind,batchId:body.kind==='welcome'?'genesis-0':'weekly-123',
+            state:'PLANNED',total:body.kind==='welcome'?'10000':'10000',
+            legacyNeedsCorrection:body.kind==='welcome',
+            overview:operational,
+          });
+          if(body.action==='prepare')return Response.json({
+            batchId:'genesis-0',state:'PLANNED',total:'2000'
+          });
+          if(body.action==='ticket')return Response.json({
+            state:'AWAITING_SECOND_CONFIRMATION',stage:body.stage,batchId:'genesis-0',
+            recipients:20,remaining:20,budget:'2000',estimatedGasPol:'0.08',ticket,
+          });
+          if(body.action==='confirm')return Response.json({
+            batchId:'genesis-0',phase:'PILOT',state:'QUEUED'
+          });
+          if(body.action==='pause')return Response.json({
+            batchId:'genesis-0',phase:'PAUSED'
+          });
+        }
+        return Response.json(overview);
+      },
+    }},
+  };
+}
+function callback(data){
+  return {id:'cb-'+data,data,message:{message_id:77,chat:{id:uid,type:'private'}},
+    from:{id:uid}};
+}
+test('operator panel is private and never signs on navigation or preparation',async()=>{
+  const logs=[],out=[],{env}=operatorEnvironment(logs);
+  await adminCallback(callback('na:o'),env,async(method,data)=>out.push({method,data}));
+  assert.deepEqual(out.map(x=>x.method),['editMessageText','answerCallbackQuery']);
+  assert.equal(logs[0].body.action,'status');
+  assert.match(JSON.stringify(out[0].data.rich_message.blocks),/30,000/);
+  assert.equal(out[0].data.reply_markup.inline_keyboard[0][0].callback_data,'na:op:w');
+  out.length=0;
+  await adminCallback(callback('na:op:w'),env,async(method,data)=>out.push({method,data}));
+  const buttons=out[0].data.reply_markup.inline_keyboard.flat();
+  assert.ok(buttons.some(b=>b.callback_data==='na:pr:w'));
+  assert.ok(buttons.every(b=>b.callback_data!=='na:tk:w:P'));
+  out.length=0;
+  await adminCallback(callback('na:pr:w'),env,async(method,data)=>out.push({method,data}));
+  assert.deepEqual(logs.slice(-2).map(x=>x.body.action),['prepare','preview']);
+  assert.equal(logs.every(x=>!['confirm','approve','process'].includes(x.body.action)),true);
+});
+test('pilot is a two-step flow with single-use server-side challenge',async()=>{
+  const logs=[],out=[],{env,ticket}=operatorEnvironment(logs);
+  await adminCallback(callback('na:tk:w:P'),env,
+    async(method,data)=>out.push({method,data}));
+  assert.deepEqual(out.map(x=>x.method),['editMessageText','answerCallbackQuery']);
+  assert.equal(logs.at(-1).body.action,'ticket');
+  assert.equal(logs.at(-1).body.stage,'PILOT');
+  const c=out[0].data.reply_markup.inline_keyboard[0][0];
+  assert.equal(c.callback_data,'na:go:'+ticket);
+  assert.match(JSON.stringify(out[0].data.rich_message.blocks),/۲|تست فقط یک نفر/);
+  assert.equal(logs.some(x=>x.body.action==='confirm'),false);
+  out.length=0;
+  await adminCallback(callback('na:go:'+ticket),env,
+    async(method,data)=>out.push({method,data}));
+  assert.equal(logs.at(-1).body.action,'confirm');
+  assert.equal(logs.at(-1).body.ticket,ticket);
+  assert.match(JSON.stringify(out[0].data.rich_message.blocks),/QUEUED|شروع کنترل‌شده|قرار گرفت/);
+});
+test('unauthorized accounts and groups never access reward payout operator endpoints',async()=>{
+  const logs=[],calls=[],{env}=operatorEnvironment(logs);
+  const forged={...callback('na:go:aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'),
+    from:{id:uid+1}};
+  await adminCallback(forged,env,async(method,data)=>calls.push({method,data}));
+  const group={...callback('na:tk:w:P'),
+    message:{message_id:75,chat:{id:-100,type:'supergroup'}}};
+  await adminCallback(group,env,async(method,data)=>calls.push({method,data}));
+  assert.equal(logs.length,0);
+  assert.deepEqual(calls.map(x=>x.method),['answerCallbackQuery','answerCallbackQuery']);
 });

@@ -93,11 +93,11 @@ async function receiptState(client,job,db) {
     return {state:'PENDING',txHash:job.tx_hash};
   }
 }
-async function existingJob(env,client,key) {
+async function existingJob(env,client,key,allowReplay=true) {
   const found=await env.DB.prepare('SELECT * FROM tx_jobs WHERE operation_key=?').bind(key).first();
   if (!found) return null;
   const result=await receiptState(client,found,env.DB);
-  if (result.state==='PENDING') {
+  if (result.state==='PENDING'&&allowReplay) {
     try {
       await client.sendRawTransaction({serializedTransaction:found.signed_raw});
       if (found.state==='SIGNED') {
@@ -198,29 +198,93 @@ export async function withdrawalStep(env,row) {
   return outcome;
 }
 export async function processNext(env) {
-  if (env.TRANSFERS_ENABLED!=='true') return {state:'DISABLED'};
+  // Fail closed: this campaign must NEVER fall back to legacy automatic payout.
+  if (env.MANUAL_REWARDS_ONLY!=='true') return {state:'DISABLED',reason:'MANUAL_MODE_REQUIRED'};
+  // Disabling sends cannot undo an on-chain transfer. Keep reconciling
+  // existing receipts and completing confirmed batches, without broadcasting.
+  const sendingEnabled=env.TRANSFERS_ENABLED==='true';
   const {client}=await context(env);
   // Reconcile all outstanding jobs first. A sender cannot advance its nonce
   // until its previous signed job reaches a terminal receipt state.
-  const outstanding=await env.DB.prepare("SELECT * FROM tx_jobs WHERE state IN ('SIGNED','SUBMITTED') ORDER BY created_at LIMIT 30").all();
-  for (const job of outstanding.results) await existingJob(env,client,job.operation_key);
+  const outstanding=await env.DB.prepare(`SELECT t.*,r.phase AS run_phase FROM tx_jobs t
+    JOIN allocations a ON a.operation_key=t.operation_key
+    JOIN operator_payout_runs r ON r.batch_id=a.batch_id
+    WHERE t.state IN ('SIGNED','SUBMITTED')
+    ORDER BY t.created_at LIMIT 30`).all();
+  for (const job of outstanding.results) {
+    // Pausing never sends any new raw data, including a previous signed job.
+    // Receipt reconciliation can continue without rebroadcasting.
+    await existingJob(env,client,job.operation_key,sendingEnabled && ['PILOT','ALL'].includes(job.run_phase));
+  }
   await env.DB.prepare(`UPDATE reward_batches SET state='REVIEW_REQUIRED' WHERE state='APPROVED'
     AND EXISTS (SELECT 1 FROM allocations a JOIN tx_jobs t ON t.operation_key=a.operation_key
       WHERE a.batch_id=reward_batches.batch_id AND t.state IN ('FAILED','REVIEW_REQUIRED'))`).run();
   await env.DB.prepare(`UPDATE reward_batches SET state='COMPLETE' WHERE state='APPROVED'
     AND NOT EXISTS (SELECT 1 FROM allocations a LEFT JOIN tx_jobs t ON t.operation_key=a.operation_key
       WHERE a.batch_id=reward_batches.batch_id AND COALESCE(t.state,'NOT_SENT')!='CONFIRMED')`).run();
-  // Only independently approved batches can create signed blockchain transactions.
-  const line=await env.DB.prepare(`SELECT a.*,w.address FROM allocations a
-    JOIN wallets w USING(telegram_user_id)
-    JOIN reward_batches b ON b.batch_id=a.batch_id AND b.state='APPROVED'
-    WHERE NOT EXISTS(SELECT 1 FROM tx_jobs t WHERE t.operation_key=a.operation_key
-      AND t.state IN ('CONFIRMED','FAILED','REVIEW_REQUIRED'))
-    ORDER BY a.batch_id,a.telegram_user_id LIMIT 1`).first();
-  if (line) {
-    const outcome=await tokenTransfer(env,line.operation_key,distributor(env),line.address,line.amount_raw);
-    return {operation:line.operation_key,...outcome};
+  // In admin-supervised mode, approval alone is NEVER permission to broadcast.
+  // One active payout run controls one pilot tx or subsequent individual rewards.
+  if(env.MANUAL_REWARDS_ONLY==='true'){
+    await env.DB.prepare(`UPDATE operator_payout_runs SET phase='PAUSED',updated_at=?
+      WHERE phase IN ('PILOT','ALL') AND batch_id IN
+        (SELECT batch_id FROM reward_batches WHERE state='REVIEW_REQUIRED')`)
+      .bind(Date.now()).run();
+    await env.DB.prepare(`UPDATE operator_payout_runs SET phase='PILOT_OK',updated_at=?
+      WHERE phase='PILOT' AND EXISTS(
+        SELECT 1 FROM allocations a JOIN tx_jobs t ON t.operation_key=a.operation_key
+        WHERE a.batch_id=operator_payout_runs.batch_id
+        AND a.telegram_user_id=operator_payout_runs.pilot_user_id AND t.state='CONFIRMED')`)
+      .bind(Date.now()).run();
+    await env.DB.prepare(`UPDATE operator_payout_runs SET phase='COMPLETE',updated_at=?
+      WHERE phase IN ('PILOT','PILOT_OK','ALL','PAUSED') AND batch_id IN
+      (SELECT batch_id FROM reward_batches WHERE state='COMPLETE')`)
+      .bind(Date.now()).run();
+    // Persist each milestone BEFORE the bot's five-minute message cycle, so
+    // a quick operator switch from PILOT_OK to ALL cannot lose the pilot alert.
+    for(const phase of ['PILOT_OK','PAUSED','COMPLETE']){
+      await env.DB.prepare(`INSERT OR IGNORE INTO operator_payout_notices
+        (batch_id,phase,state,created_at)
+        SELECT batch_id,?,'PENDING',? FROM operator_payout_runs WHERE phase=?`)
+        .bind(phase,Date.now(),phase).run();
+    }
   }
+  if(!sendingEnabled)return {state:'DISABLED',mode:'RECONCILE_ONLY'};
+  const line=env.MANUAL_REWARDS_ONLY==='true'
+    ? await env.DB.prepare(`SELECT a.*,w.address FROM allocations a
+      JOIN wallets w USING(telegram_user_id)
+      JOIN reward_batches b ON b.batch_id=a.batch_id AND b.state='APPROVED'
+      JOIN operator_payout_runs r ON r.batch_id=a.batch_id AND r.phase IN ('PILOT','ALL')
+      WHERE (r.phase='ALL' OR a.telegram_user_id=r.pilot_user_id)
+      AND NOT EXISTS(SELECT 1 FROM tx_jobs t WHERE t.operation_key=a.operation_key
+        AND t.state IN ('CONFIRMED','FAILED','REVIEW_REQUIRED'))
+      ORDER BY r.created_at,a.telegram_user_id LIMIT 1`).first()
+    : await env.DB.prepare(`SELECT a.*,w.address FROM allocations a
+      JOIN wallets w USING(telegram_user_id)
+      JOIN reward_batches b ON b.batch_id=a.batch_id AND b.state='APPROVED'
+      WHERE NOT EXISTS(SELECT 1 FROM tx_jobs t WHERE t.operation_key=a.operation_key
+        AND t.state IN ('CONFIRMED','FAILED','REVIEW_REQUIRED'))
+      ORDER BY a.batch_id,a.telegram_user_id LIMIT 1`).first();
+  if (line) {
+    try {
+      const outcome=await tokenTransfer(env,line.operation_key,distributor(env),line.address,line.amount_raw);
+      return {operation:line.operation_key,...outcome};
+    }catch(error){
+      // A new un-signed payout that fails preflight pauses its run for review.
+      // Pending signed bytes are handled by existingJob without a new nonce.
+      const code=String(error?.message||'PROCESSING_ERROR');
+      await env.DB.prepare(
+        "UPDATE operator_payout_runs SET phase='PAUSED',updated_at=? WHERE batch_id=? AND phase IN ('PILOT','ALL')"
+      ).bind(Date.now(),line.batch_id).run();
+      await env.DB.prepare('INSERT INTO audit_events(event_id,action,reference,created_at) VALUES(?,?,?,?)')
+        .bind(crypto.randomUUID(),'PAYOUT_PAUSED',line.batch_id+':'+(/^[A-Z_]{3,40}$/.test(code)?code:'PROCESSING_ERROR'),Date.now()).run();
+      await env.DB.prepare("INSERT OR IGNORE INTO operator_payout_notices(batch_id,phase,state,created_at) VALUES (?,'PAUSED','PENDING',?)")
+        .bind(line.batch_id,Date.now()).run();
+      return {operation:line.operation_key,state:'PAUSED',reason:'REVIEW_REQUIRED'};
+    }
+  }
+  // Reward-only campaign switch: do not unexpectedly process wallet withdrawals
+  // just because the operator enables test-token rewards for this run.
+  if(env.MANUAL_REWARDS_ONLY==='true')return {state:'IDLE',mode:'SUPERVISED_REWARDS'};
   const withdraw=await env.DB.prepare("SELECT * FROM withdrawals WHERE state IN ('READY','GAS_PENDING','TOKEN_PENDING') ORDER BY confirmed_at LIMIT 1").first();
   if (withdraw) {
     try {return {withdrawalId:withdraw.id,...await withdrawalStep(env,withdraw)};}
