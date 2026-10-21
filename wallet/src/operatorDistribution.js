@@ -38,7 +38,7 @@ async function inspectLegacy(env) {
 }
 
 /** Reuse the existing genesis-0 record and all operation keys; no duplicate 10k Batch. */
-export async function prepareWelcome(env,planFn) {
+export async function prepareWelcome(env,planFn,{ctx=context}={}) {
   const old=await inspectLegacy(env);
   if(!old)return planFn(env,await welcomeAllocations(env),'genesis');
   if(!old.eligible&&!old.isWelcome)throw Error('LEGACY_GENESIS_REVIEW_REQUIRED');
@@ -46,7 +46,7 @@ export async function prepareWelcome(env,planFn) {
     batchId:LEGACY,state:'ALREADY_PLANNED',count:20,total:'2000',legacyReused:true
   };
   const decimals=Number(old.row.decimals);
-  const {contract}=await context(env);
+  const {contract}=await ctx(env);
   // Only a legacy draft with 20 unsent slots may be changed. Audit its old sum.
   const value=tokenRaw('100',decimals).toString();
   const newSum=tokenRaw('2000',decimals).toString();
