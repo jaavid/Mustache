@@ -198,6 +198,8 @@ export async function withdrawalStep(env,row) {
   return outcome;
 }
 export async function processNext(env) {
+  // Fail closed: this campaign must NEVER fall back to legacy automatic payout.
+  if (env.MANUAL_REWARDS_ONLY!=='true') return {state:'DISABLED',reason:'MANUAL_MODE_REQUIRED'};
   if (env.TRANSFERS_ENABLED!=='true') return {state:'DISABLED'};
   const {client}=await context(env);
   // Reconcile all outstanding jobs first. A sender cannot advance its nonce
@@ -244,8 +246,20 @@ export async function processNext(env) {
         AND t.state IN ('CONFIRMED','FAILED','REVIEW_REQUIRED'))
       ORDER BY a.batch_id,a.telegram_user_id LIMIT 1`).first();
   if (line) {
-    const outcome=await tokenTransfer(env,line.operation_key,distributor(env),line.address,line.amount_raw);
-    return {operation:line.operation_key,...outcome};
+    try {
+      const outcome=await tokenTransfer(env,line.operation_key,distributor(env),line.address,line.amount_raw);
+      return {operation:line.operation_key,...outcome};
+    }catch(error){
+      // A new un-signed payout that fails preflight pauses its run for review.
+      // Pending signed bytes are handled by existingJob without a new nonce.
+      const code=String(error?.message||'PROCESSING_ERROR');
+      await env.DB.prepare(
+        "UPDATE operator_payout_runs SET phase='PAUSED',updated_at=? WHERE batch_id=? AND phase IN ('PILOT','ALL')"
+      ).bind(Date.now(),line.batch_id).run();
+      await env.DB.prepare('INSERT INTO audit_events(event_id,action,reference,created_at) VALUES(?,?,?,?)')
+        .bind(crypto.randomUUID(),'PAYOUT_PAUSED',line.batch_id+':'+(/^[A-Z_]{3,40}$/.test(code)?code:'PROCESSING_ERROR'),Date.now()).run();
+      return {operation:line.operation_key,state:'PAUSED',reason:'REVIEW_REQUIRED'};
+    }
   }
   // Reward-only campaign switch: do not unexpectedly process wallet withdrawals
   // just because the operator enables test-token rewards for this run.
