@@ -96,8 +96,9 @@ test('operator pause avoids RPC, works in outage, and does not sign any transfer
   const value=await operatorAction({DB:db},{action:'pause',kind:'welcome'},()=>{},()=>{},()=>{});
   assert.equal(value.phase,'PAUSED');
   assert.equal(value.batchId,'genesis-0');
-  assert.equal(updates.length,1);
+  assert.equal(updates.length,2);
   assert.match(updates[0],/SET phase='PAUSED'/);
+  assert.match(updates[1],/operator_payout_notices/);
 });
 test('operator confirmation fails closed for malformed or expired one-use tickets',async()=>{
   await assert.rejects(operatorAction({DB:{}},{action:'confirm',ticket:'wrong'},()=>{},()=>{},()=>{}),
@@ -130,7 +131,7 @@ test('operator milestone claim is durable, atomic and acknowledged only once',as
       },
       async run(){
         if(sql.startsWith('UPDATE operator_payout_notices SET state=')){
-          if(sql.includes("state='ATTEMPTED'")){
+          if(sql.includes("SET state='ATTEMPTED'")){
             if(status!=='PENDING')return {meta:{changes:0}};
             status='ATTEMPTED';return {meta:{changes:1}};
           }
