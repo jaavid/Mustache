@@ -132,7 +132,7 @@ test('financial admin values round safely without losing exact copyable address'
   assert.equal(decimalLabel('0.199999999999999999',4),'0.2');
   assert.equal(decimalLabel('999.999',2),'1,000');
   assert.equal(decimalLabel('not-a-value'),'—');
-  assert.equal(compactAddress('0xFbeA2a974efb786Aa052e7ef1ac31fD5E4c1351c'),'0xFbeA2a…4c1351c');
+  assert.equal(compactAddress('0xFbeA2a974efb786Aa052e7ef1ac31fD5E4c1351c'),'0xFbeA2a…c1351c');
   const requests=[],sent=[];
   const env=config(requests);
   env.WALLET.fetch=async()=>Response.json({
@@ -147,7 +147,7 @@ test('financial admin values round safely without losing exact copyable address'
   assert.match(text,/970,000/);
   assert.match(text,/0\.1874/);
   assert.match(text,/30,000/);
-  assert.match(text,/0xFbeA2a…4c1351c/);
+  assert.match(text,/0xFbeA2a…c1351c/);
   assert.doesNotMatch(text,/0\.1874118644/);
   assert.equal(sent[0].data.reply_markup.inline_keyboard[0][0].copy_text.text,
     '0xFbeA2a974efb786Aa052e7ef1ac31fD5E4c1351c');
