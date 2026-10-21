@@ -4,6 +4,7 @@ import { telegramId, tokenRaw, batchPlan, rankRewards, safeBatchId, completedTeh
 import { wrapKey, tokenEqual, sha256 } from './security.js';
 import { context, balance, distributor, processNext, tokenAbi } from './chain.js';
 import { diagnoseWalletRead } from './readDiagnostics.js';
+import {operatorOverview,operatorAction,prepareWelcome} from './operatorDistribution.js';
 import {
   welcomeAllocations, weeklyPreview, adminBatchSummary, adminBatchRecipients,
   claimConfirmedNotification, acknowledgeNotification
@@ -80,9 +81,7 @@ async function approveBatch(env,batchId) {
   return {batchId,state:'APPROVED'};
 }
 async function genesisPlan(env) {
-  // Legacy route intentionally shares the SAME fixed welcome batch. Never
-  // resurrect the old 10,000-token rank-weighted "genesis-0" allocation.
-  return plan(env,await welcomeAllocations(env),'genesis');
+  return prepareWelcome(env,plan);
 }
 async function weeklyPlan(env,nowMs,autoApprove=false) {
   if(env.AUTO_REWARDS_ENABLED!=='true') return {state:'DISABLED'};
@@ -206,10 +205,8 @@ export default {
           return reply({...(await welcomeAllocations(env)),state:'PREVIEW_ONLY'});
         }
         if(path==='/admin/welcome/prepare'&&method==='POST') {
-          // No signing, token movement or approval: freezes the 100-token roster
-          // using the same stable batch ID on every request.
-          const prepared=await welcomeAllocations(env);
-          return reply(await plan(env,prepared,'genesis'),201);
+          // Existing legacy 10k genesis drafts are re-planned ONLY when no tx is signed.
+          return reply(await prepareWelcome(env,plan),201);
         }
         if(path==='/admin/weekly/preview'&&method==='GET') {
           const {decimals}=await context(env);
@@ -261,6 +258,18 @@ export default {
             batches:batches.results||[],txStates:txStates.results||[],progress
           });
         }
+        if(path==='/internal/admin/operator'&&method==='POST') {
+          // Defense in depth: only the configured private Telegram administrator,
+          // via bot service binding, can stage and authorize reward payouts.
+          if(!env.ADMIN_TELEGRAM_USER_ID || id!==String(env.ADMIN_TELEGRAM_USER_ID))
+            return reply({error:'FORBIDDEN'},403);
+          return reply(await operatorAction(env,await payload(request),plan,weeklyPlan,approveBatch));
+        }
+        if(path==='/internal/admin/operator/status'&&method==='GET') {
+          if(!env.ADMIN_TELEGRAM_USER_ID || id!==String(env.ADMIN_TELEGRAM_USER_ID))
+            return reply({error:'FORBIDDEN'},403);
+          return reply(await operatorOverview(env));
+        }
         if(path==='/internal/admin/weekly/preview'&&method==='GET') {
           if(!env.ADMIN_TELEGRAM_USER_ID || id!==String(env.ADMIN_TELEGRAM_USER_ID))
             return reply({error:'FORBIDDEN'},403);
@@ -302,14 +311,19 @@ export default {
       return reply({error:'NOT_FOUND'},404);
     } catch(error) {
       const code=String(error?.message||'ERROR');
-      const valid=/^(INVALID_|DUPLICATE_PLAYER|BATCH_OVER_BUDGET|BATCH_ID_CONFLICT|WALLET_NOT_FOUND|WITHDRAWAL_|INSUFFICIENT_NFIVE|BODY_TOO_LARGE|JSON_REQUIRED|GENESIS_ALREADY_EXISTS|WELCOME_WALLET_COUNT_OUT_OF_RANGE)/.test(code);
+      const valid=/^(INVALID_|DUPLICATE_PLAYER|BATCH_OVER_BUDGET|BATCH_ID_CONFLICT|WALLET_NOT_FOUND|WITHDRAWAL_|INSUFFICIENT_NFIVE|BODY_TOO_LARGE|JSON_REQUIRED|GENESIS_ALREADY_EXISTS|WELCOME_WALLET_COUNT_OUT_OF_RANGE|LEGACY_GENESIS_|WEEKLY_|PILOT_|OPERATOR_|ANOTHER_BATCH_RUNNING|BATCH_NOT_STARTABLE|DISTRIBUTOR_LOW_|MANUAL_MODE_REQUIRED|AUTOMATIC_REWARDS_MUST_BE_DISABLED|TRANSFERS_DISABLED|UNSAFE_LEGACY_GENESIS_AMOUNT)/.test(code);
       return reply({error:valid?code:'OPERATION_FAILED'},valid?400:503);
     }
   },
   async scheduled(controller,env,ctx) {
     ctx.waitUntil((async()=>{
       if(controller.cron==='35 20 * * 5'&&env.AUTO_REWARDS_ENABLED==='true') await weeklyPlan(env,controller.scheduledTime,true);
-      if(env.TRANSFERS_ENABLED==='true') await serial(env);
+      // With MANUAL_REWARDS_ONLY=true, only operator-confirmed runs can sign.
+      // This tick never stages, approves or activates a Batch on its own.
+      if(env.TRANSFERS_ENABLED==='true' && env.MANUAL_REWARDS_ONLY==='true')
+        await serial(env);
+      else if(env.TRANSFERS_ENABLED==='true' && env.MANUAL_REWARDS_ONLY!=='true')
+        throw new Error('UNSAFE_LEGACY_AUTOMATIC_TRANSFERS_MODE');
     })());
   }
 };
