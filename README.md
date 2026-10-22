@@ -1,6 +1,6 @@
 # N5 Mustache Mayhem
 
-Pixel-art arcade game built with **Phaser 3, TypeScript, and Vite**.
+Pixel-art arcade game built with **Phaser 4.2.1, TypeScript, and Vite**.
 
 **Play:** https://mustache.alexa.ir/
 
@@ -65,17 +65,30 @@ npm ci
 npm run dev
 ```
 
-Run the quality gates before pushing:
+Run the quality gates before pushing (current CI coverage varies by workflow and changed paths):
 
 ```sh
+npm run format:check
 npm run lint
 npm run assets:check
+npm run docs:check
 npm run typecheck
 npm test
+npm run test:bot
 npm run build
 ```
 
 Run `npm run format` for documentation and config files. Formatting the whole legacy TypeScript tree is a **separate task** to keep formatting-only diffs apart from functional changes.
+
+The Wallet Worker keeps its own dependency tree for now (npm workspaces are a separate migration phase):
+
+```sh
+cd wallet
+npm install --no-audit --no-fund
+npm run check
+```
+
+See [Contributing](CONTRIBUTING.md) for the full workflow, [Engineering standards](docs/ENGINEERING_STANDARDS.md) for code and review rules, and [Governance](docs/GOVERNANCE.md) for branch protection and review policy.
 
 ## Architecture
 
@@ -87,21 +100,27 @@ Run `npm run format` for documentation and config files. Formatting the whole le
 | `src/logic/scoring.ts`                                       | Pure elliptical hit detection                              |
 | `src/logic/gameplay.ts`, `src/logic/arcadePhases.ts`         | Timings and difficulty                                     |
 | `src/game/gameFeel.ts`, `src/game/impactFx.ts`               | Projectile and impact visuals                              |
-| `src/game/ramin.ts`, `src/game/raminMoments.ts`              | Both heroes' states, expressions and gestures              |
+| `src/game/ramin.ts`, `src/game/raminMoments.ts`              | Hero states, expressions and gesture overlays              |
 | `src/game/characterSelect.ts`, `src/game/characterChoice.ts` | Six-second character selection shared by both layouts      |
 | `src/game/art.ts`                                            | Canvas-generated pixel art                                 |
 | `src/game/facialAtlas.ts`                                    | Six-frame Ramin atlas derived from original four frames    |
 | `src/assets/ramin-sheet.png`, `src/assets/borhan-sheet.png`  | Original aligned four-frame character sprite sheets        |
 | `src/assets/mammad-sheet.png`                                | Compact four-frame Mammad sprite sheet                     |
+| `bot/src/index.js`, `bot/src/sessions.js`                    | Telegram bot Worker entrypoint and authenticated sessions  |
+| `bot/src/scoring.js`, `shared/*.js`                          | Server score re-validation and cross-runtime game rules    |
+| `wallet/src/index.js`, `wallet/src/operatorDistribution.js`  | Testnet Wallet Worker API and supervised testnet payouts   |
 
-See [Architecture](docs/ARCHITECTURE.md), [Art pipeline](assets/README.md), [Contributing](CONTRIBUTING.md), and [Changelog](CHANGELOG.md).
+See [Architecture and invariants](docs/ARCHITECTURE.md), [current state and target architecture](docs/architecture/README.md), [Art pipeline](assets/README.md), [Contributing](CONTRIBUTING.md), and [Changelog](CHANGELOG.md).
+
+The target modular-monorepo layout (`apps/*`, `packages/*`, npm workspaces) is recorded in [ADR-0002](docs/adr/0002-adopt-modular-monorepo-incrementally.md) and migrated in separate reviewed phases. The current layout stays `src/`, `bot/`, `wallet/` and `shared/` until those phases land.
 
 ## Tests and deployment
 
-- Vitest tests pure game logic. ESLint and TypeScript `strict` cover code quality.
+- Vitest tests pure game logic. ESLint and TypeScript `strict` cover selected game/test/config TypeScript, not Worker JavaScript. Bot and wallet use separate `node:test` suites and syntax checks.
 - The optional browser workflow runs smoke checks and collects mobile and desktop screenshots. Screenshots are **review artifacts**, not automated pixel-perfect baselines.
 - Every push to `main` builds and deploys to GitHub Pages using relative Vite asset paths.
-- Standalone browser play stays local-only. Official Telegram Game sessions use a separate Cloudflare Worker and D1 weekly board; no blockchain integration or token awards are enabled, and submitted impact traces are not prize-grade proof.
+- Standalone browser play stays local-only. Official Telegram Game sessions use a separate Cloudflare Worker and D1 weekly board; submitted impact traces are not prize-grade proof.
+- A separate **testnet-only** Wallet Worker exists on Polygon Amoy. No real-value token rewards or prize eligibility are enabled; transfers and automatic rewards are disabled by default and require a separately authorized manual go-live.
 
 ## Official Telegram Game (@RJTtobot)
 
@@ -119,7 +138,7 @@ This is an official `/newgame` HTML5 Game, **not** a Telegram Mini App.
 
 See [Telegram Game setup](docs/TELEGRAM_GAME.md) for the BotFather configuration,
 GitHub production secrets, automatic Cloudflare Worker deployment and
-one-time Telegram webhook registration. Merges that change `bot/**` deploy
+one-time Telegram webhook registration. Merges that change `bot/**` or `shared/**` deploy
 through `cloudflare/wrangler-action@v4`; GitHub Pages remains independent.
 No credentials are committed, and the workflow never replaces an existing
 Telegram webhook.
@@ -146,18 +165,49 @@ and `n5-mustache-scores` D1 database. CI applies SQL migrations **before** deplo
 that a client-controlled animated target was genuinely hit; do not award N5
 tokens based on these records.
 
+## Wallet service (Polygon Amoy testnet)
+
+A separate Wallet Worker in `wallet/` provides custodial testnet NFIVE wallets for
+Telegram players and supervised testnet reward distributions. It is **not** part of the
+game client, does not award real value, and never deploys automatically.
+
+- Polygon Amoy chain `80002`; deployed contract `0xb0762E4EB2a1c4e4c3d65b93048972aBB60dFaa7`.
+- Only the Telegram bot Worker calls internal wallet routes, through a Worker-to-Worker
+  service binding plus a shared internal key and a server-derived Telegram identity.
+- Committed safe defaults: `TRANSFERS_ENABLED=false`, `AUTO_REWARDS_ENABLED=false`,
+  `MANUAL_REWARDS_ONLY=true`. Enabling test transfers requires a separately reviewed
+  go-live change and explicit operator approval.
+- Deployment is manual dispatch only (`Deploy N5 Wallet (Amoy manual)`); that workflow,
+  not a merge, applies reviewed D1 migrations and deploys the Worker.
+
+Read the [Wallet service overview](wallet/README.md),
+[distribution runbook](wallet/DISTRIBUTION_RUNBOOK.md),
+[admin payout runbook](wallet/ADMIN_PAYOUT_RUNBOOK.md), and the
+[runbook index](docs/runbooks/README.md). Telegram leaderboard scores never authorize
+token rewards.
+
 ## Tehran competitions
 
 Weekly contest windows are Saturday 00:00 to next Saturday 00:00
-\`Asia/Tehran\` (start inclusive, end exclusive). The month tab follows the
+`Asia/Tehran` (start inclusive, end exclusive). The month tab follows the
 **Solar Hijri calendar** in Tehran. Original scores remain in D1 and are
-rebucketed by \`finished_at\`, with no destructive migration.
+rebucketed by `finished_at`, with no destructive migration.
 
 After a native Telegram round is accepted, the game automatically displays
 the weekly top ten, personal rank and Telegram sync status. A new personal
-high is sent through \`setGameScore\`, updating the original Telegram
+high is sent through `setGameScore`, updating the original Telegram
 Game Card. Telegram chat scores remain all-time and chat-local, distinct
 from global weekly D1 rankings. Bot command `/leaderboard` opens interactive Day / Tehran Week / Persian Month /
 All-time rankings and previous weeks, with `/top` and `/score` as aliases.
 The GitHub Worker deployment registers these commands in Telegram's slash
 menu without overwriting unrelated default-scope commands.
+
+## Repository governance
+
+- [Contributing](CONTRIBUTING.md) — setup, quality gates, PR and security rules.
+- [Trunk-based workflow](docs/GIT_WORKFLOW.md) — branches, Conventional Commits, merge policy.
+- [Engineering standards](docs/ENGINEERING_STANDARDS.md) — TypeScript/JavaScript, boundaries, contracts, testing, logging.
+- [Governance](docs/GOVERNANCE.md) — CODEOWNERS, branch protection, review and deployment policy.
+- [Architecture Decision Records](docs/adr/README.md) — decisions and the ADR template.
+- [Runbook index](docs/runbooks/README.md) — operational procedures.
+- [Baseline audit](docs/architecture/BASELINE_AUDIT_2026-10-22.md) — initial modernization audit, commit SHA and risk register.
