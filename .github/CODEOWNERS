@@ -1,0 +1,41 @@
+# Code ownership for jaavid/Mustache.
+#
+# Rules:
+# - Only verified GitHub users or existing organisation teams may be listed here.
+#   Do not invent team handles.
+# - The last matching pattern wins; put broad patterns before specific overrides.
+#   The default owner is the only verified collaborator as of 2026-10-22.
+# - CODEOWNERS requests reviews; it does not by itself block merges. Code-owner
+#   review is enforced only if the branch protection / ruleset setting
+#   "Require review from Code Owners" is enabled (see docs/GOVERNANCE.md).
+# - Sensitive paths are listed explicitly so reviewers can see which changes
+#   need human security review when a second reviewer becomes available.
+
+# Default owner for every file.
+* @jaavid
+
+# Governance, CI/CD and repository automation.
+/.github/ @jaavid
+
+# Telegram bot Worker, D1 migrations and its deployment configuration.
+/bot/ @jaavid
+
+# Testnet Wallet Worker: custody, payouts, transaction reconciliation.
+/wallet/ @jaavid
+
+# Cross-runtime deterministic rules shared by the game and the bot.
+/shared/ @jaavid
+
+# Game logic that feeds competitive scores.
+/src/logic/ @jaavid
+
+# Dependency and toolchain pins.
+/package.json @jaavid
+/package-lock.json @jaavid
+/bot/wrangler.toml @jaavid
+/wallet/wrangler.jsonc @jaavid
+
+# Architecture, governance and runbook decisions.
+/docs/adr/ @jaavid
+/docs/GOVERNANCE.md @jaavid
+/docs/runbooks/ @jaavid

@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — repository governance (Phase 1)
+
+- Added CODEOWNERS, a pull request template, engineering standards, trunk-based
+  development and Conventional Commit guidance, a governance/branch-protection policy,
+  Architecture Decision Records and a runbook index.
+- Corrected stale documentation: Phaser 4 is the current game stack, the Telegram bot and
+  testnet Wallet Worker are documented as first-class deployables, and the Wallet
+  service, its safe defaults and manual deployment are described.
+- No runtime, gameplay, scoring, leaderboard or deployment behavior changed.
+
 ## v0.9.9 — Codebase and art-pipeline maintenance
 
 - Consolidated scoring transactions for desktop and portrait into a single tested module.
@@ -11,7 +21,7 @@
 
 ## Historical notes (v0.1 through v0.9.8.2)
 
-The previous README is preserved below for history. **Some sections describe superseded mechanics**; the main README is authoritative for current behavior.
+The previous README is preserved below for history. **Some sections describe superseded mechanics and stack versions** (for example the pre-migration Phaser 3 stack); the main README, [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/PHASER4_MIGRATION.md](docs/PHASER4_MIGRATION.md) are authoritative for current behavior.
 
 ---
 

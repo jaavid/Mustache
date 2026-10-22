@@ -1,8 +1,10 @@
 # Official Telegram Game deployment — @RJTtobot
 
 This is **Telegram Games API**, not Telegram Mini Apps. The existing static
-frontend stays on GitHub Pages; Cloudflare Worker handles the bot webhook.
-The bot is **not deployed or connected** merely by merging this PR.
+frontend stays on GitHub Pages; a Cloudflare Worker handles the bot webhook.
+Merging changes to `bot/**` or `shared/**` to `main` deploys the Worker
+automatically; the one-time environment configuration and webhook registration
+below remain explicit human operations.
 
 ## 1. Create the Game in @BotFather
 
@@ -30,21 +32,29 @@ official native **Game Card / Play** experience.
 
 The bot webhook runs on Cloudflare Workers, independently of GitHub Pages.
 The workflow [deploy-cloudflare-worker.yml](../.github/workflows/deploy-cloudflare-worker.yml)
-deploys the Worker **after a merge to `main` changes `bot/**` or the workflow**.
-You can also run it from GitHub Actions using **Run workflow**.
+deploys the Worker **after a merge to `main` changes `bot/**`, `shared/**` or the
+workflow**. You can also run it from GitHub Actions using **Run workflow**.
 Pull requests only run checks; they never deploy or receive production secrets.
 
 Create a GitHub environment named **`production`** under **Settings >
-Environments** (optional approval rules), then add these four encrypted
-secrets to its Environment secrets. Repository-level Actions secrets are
-also supported if the environment has no overrides.
+Environments** (optional approval rules), then add the encrypted secrets and
+variables below. Repository-level Actions secrets are also supported if the
+environment has no overrides.
 
-| GitHub secret             | Value                                                                     |
-| ------------------------- | ------------------------------------------------------------------------- |
-| `CLOUDFLARE_API_TOKEN`    | Cloudflare API token authorized to deploy this Worker                     |
-| `CLOUDFLARE_ACCOUNT_ID`   | Cloudflare account ID (not zone ID)                                       |
-| `TELEGRAM_BOT_TOKEN`      | Standard BotFather HTTP API token for **@RJTtobot**                       |
-| `TELEGRAM_WEBHOOK_SECRET` | Separate, random 32+ character secret; use `openssl rand -hex 32` locally |
+| GitHub secret/variable      | Value                                                                     |
+| --------------------------- | ------------------------------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`      | Cloudflare API token authorized to deploy this Worker                     |
+| `CLOUDFLARE_ACCOUNT_ID`     | Cloudflare account ID (not zone ID)                                       |
+| `CLOUDFLARE_D1_DATABASE_ID` | Existing `n5-mustache-scores` D1 database UUID; bound at deploy time      |
+| `TELEGRAM_BOT_TOKEN`        | Standard BotFather HTTP API token for **@RJTtobot**                       |
+| `TELEGRAM_WEBHOOK_SECRET`   | Separate, random 32+ character secret; use `openssl rand -hex 32` locally |
+| `WALLET_SERVICE_KEY`        | Shared internal key matching the Wallet Worker; enables wallet commands   |
+| `ADMIN_TELEGRAM_USER_ID`    | Repository/environment **variable**: numeric operator Telegram user ID    |
+
+Cloudflare deployment credentials may also be used by the wallet workflow; Telegram
+credentials are bot-specific. The bot's scores D1 UUID must identify the same database as
+the wallet's `N5_SCORES_D1_ID`. Keep `WALLET_SERVICE_KEY` synchronized across both Workers;
+the bot fails closed on wallet commands when it is missing.
 
 Create the Cloudflare token under **Cloudflare > Account API tokens** and
 scope it to the correct account. An existing Worker needs **Workers Editor**
@@ -55,12 +65,15 @@ Cloudflare and granting the CI token access to just that Worker.
 The production workflow:
 
 1. Checks out the merged commit and runs the isolated bot syntax and unit tests.
-2. Fails before deployment if any of the four secrets is missing.
-3. Uses the official `cloudflare/wrangler-action@v4` from the `bot/`
+2. Fails before deployment if any required secret or the operator variable is missing.
+3. Binds the configured D1 database ID into `bot/wrangler.toml` and applies remote D1
+   migrations before the Worker deploy.
+4. Uses the official `cloudflare/wrangler-action@v4` from the `bot/`
    directory to deploy `bot/wrangler.toml`.
-4. Writes `BOT_TOKEN` and `WEBHOOK_SECRET` into Cloudflare Worker **encrypted
-   secrets**, directly from the two `TELEGRAM_*` GitHub secrets.
-5. Reports the deployment URL in the GitHub Actions run.
+5. Writes `BOT_TOKEN`, `WEBHOOK_SECRET` and `WALLET_SERVICE_KEY` into Cloudflare Worker
+   **encrypted secrets**, directly from the corresponding GitHub secrets.
+6. Verifies the live `/api/status` endpoint on both the workers.dev host and the custom
+   domain, and reports the deployment URL in the GitHub Actions run.
 
 The workflow does **not** commit credentials, deploy on pull requests, change
 the GitHub Pages site, or run `setWebhook`. Do not paste credentials into
@@ -119,9 +132,9 @@ sensitive data.
 ## 5. Scores and competition windows
 
 Cloudflare D1 records the accepted round score; the Worker then updates the
-native Telegram Game Card via \`setGameScore\` when it is a new personal high.
+native Telegram Game Card via `setGameScore` when it is a new personal high.
 The result screen automatically opens the **Saturday-to-Saturday Tehran**
-weekly top-ten, and the bot supports \`/top\` or \`/score\`.
+weekly top-ten, and the bot supports `/top` or `/score`.
 
 Other tabs: **daily, Persian monthly, all-time and Telegram chat high scores**.
 Existing records are grouped by actual round end time, including rounds

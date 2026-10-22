@@ -8,13 +8,22 @@ Never commit secrets, private keys, encryption keys, or `.dev.vars` files.
 
 Open [GitHub Actions secrets and variables](https://github.com/jaavid/Mustache/settings/secrets/actions).
 
-Create one repository secret named `WALLET_SERVICE_KEY`. Use the existing internal key if it is available from your secure password manager. Otherwise, generate a new 32-byte random key with `openssl rand -hex 32` and update both Workers together.
+Verify the existing values required by the manual wallet deployment workflow:
 
-Create one repository variable named `ADMIN_TELEGRAM_USER_ID`. Set it to the numeric ID returned by the private Telegram command `/myid`.
+| Name                     | Storage  | Purpose                                                     |
+| ------------------------ | -------- | ----------------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`   | Secret   | Authorized Cloudflare deployment token                      |
+| `CLOUDFLARE_ACCOUNT_ID`  | Secret   | Existing Cloudflare account                                 |
+| `WALLET_SERVICE_KEY`     | Secret   | Internal authentication key shared by both Workers          |
+| `N5_WALLET_D1_ID`        | Variable | Existing wallet D1 UUID                                     |
+| `N5_SCORES_D1_ID`        | Variable | Existing scores D1 UUID; must match the bot database        |
+| `ADMIN_TELEGRAM_USER_ID` | Variable | Numeric operator ID returned by the private `/myid` command |
 
-Verify that the GitHub environments `production` and `wallet-testnet` do not override these names with different values. Environment-level secrets can override repository-level secrets.
+Reuse the existing internal key from secure storage. Key generation or rotation requires explicit human authorization and coordinated updates to both Workers; it is not routine setup for an existing deployment. Never recreate an existing database to repair configuration.
 
-Keep the existing Cloudflare and Telegram deployment credentials, D1 IDs, and GitHub environment approvals.
+Verify that the GitHub environments `production` and `wallet-testnet` do not override these names with different values. Environment-level secrets can override repository-level secrets. The bot workflow additionally needs the Telegram credentials and `CLOUDFLARE_D1_DATABASE_ID` listed in [Telegram deployment](TELEGRAM_GAME.md).
+
+At the Phase 1 audit, these environments had no required reviewers or deployment branch restrictions. Manual wallet dispatch is not an enforced independent approval. See [Governance](GOVERNANCE.md) for the verified protection state and hardening instructions.
 
 ## Git-tracked Service Binding
 
@@ -36,8 +45,8 @@ Both Wrangler configurations enable `keep_vars` to preserve Cloudflare-managed p
 
 ## Deployment order
 
-1. Configure the repository secret and variable before merging this change.
-2. Merge after CI passes. The production Telegram Worker deploys automatically.
+1. Verify the existing repository secrets and variables above before deployment.
+2. Merge reviewed changes after checks pass. Changes to `bot/**`, `shared/**` or the bot deployment workflow deploy the Telegram Worker automatically; documentation-only merges do not deploy it.
 3. Run [Deploy N5 Wallet (Amoy manual)](../.github/workflows/deploy-wallet.yml) on `main`.
 4. In Cloudflare, verify the bot has Service Binding `WALLET` pointing to `n5-wallet-service-amoy`.
 5. In the private Telegram chat, run `/myid`, `/walletcheck`, `/wallet`, and `/admin`.
