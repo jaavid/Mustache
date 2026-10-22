@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { trackEvent } from '../platform/analytics';
 import { getPlayerProfile, type PlayerProfile } from '../platform/competitiveScores';
 
 const FONT = '"Courier New", monospace';
@@ -68,6 +69,14 @@ export function addProgressionMenu(
     '🔒 GOLD RUSH · LOADING',
     () => {
       if (!ready) return;
+      trackEvent('gold_rush_click', {
+        layout: portrait ? 'portrait' : 'landscape',
+        status: !profile?.goldRushAvailable
+          ? 'locked'
+          : !profile.goldUnlocked && !ticketConfirmed
+            ? 'ticket_confirmation'
+            : 'available',
+      });
       if (!profile?.goldRushAvailable) {
         showProfile(scene, portrait, profile);
       } else if (!profile.goldUnlocked && !ticketConfirmed) {
@@ -118,12 +127,20 @@ export function addProgressionMenu(
 }
 
 async function copyInvite(scene: Phaser.Scene, portrait: boolean, url: string): Promise<void> {
+  const layout = portrait ? 'portrait' : 'landscape';
+  trackEvent('invite_click', { layout });
   try {
     await navigator.clipboard.writeText(url);
+    trackEvent('invite_result', { layout, outcome: 'copied' });
     if (scene.sys.isActive())
       caption(scene, scene.scale.width / 2, portrait ? 707 : 345, 'INVITE LINK COPIED!', 19);
   } catch {
-    window.prompt('Copy your invite link:', url);
+    try {
+      window.prompt('Copy your invite link:', url);
+      trackEvent('invite_result', { layout, outcome: 'prompted' });
+    } catch {
+      trackEvent('invite_result', { layout, outcome: 'failed' });
+    }
   }
 }
 
@@ -132,6 +149,10 @@ export function showProfile(
   portrait: boolean,
   profile: PlayerProfile | null,
 ): void {
+  trackEvent('profile_view', {
+    layout: portrait ? 'portrait' : 'landscape',
+    status: profile ? 'loaded' : 'unavailable',
+  });
   const w = scene.scale.width,
     h = scene.scale.height;
   const root = scene.add.container(0, 0).setDepth(180);

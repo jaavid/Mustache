@@ -47,6 +47,15 @@ raw scores remain intact for native Telegram Game Cards. See
 [Player progression and referrals](docs/PLAYER_PROGRESSION.md) for rules, database
 migration, limitations and launch checks.
 
+## Gameplay analytics
+
+Umami measures acquisition, onboarding, active-round completion, replay, sharing,
+return-visit hints and categorical failures in both layouts. Analytics is optional
+and never gates gameplay; local development does not send production events.
+Telegram tokens, identities, invite URLs and shot traces are excluded. Session
+recording is intentionally disabled. See the [event dictionary, privacy boundary,
+funnel guide and production checks](docs/ANALYTICS.md).
+
 ## Development
 
 Use **Node.js 22**. Clone the repository and run:

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { trackEvent } from '../platform/analytics';
 import type { RoundSummary } from '../logic/roundStats';
 import {
   achievementsForRound,
@@ -150,24 +151,38 @@ function addShareButton(
       event.stopPropagation();
       if (busy) return;
       busy = true;
+      const layout = scene.scale.height > scene.scale.width ? 'portrait' : 'landscape';
+      trackEvent('share_click', { layout });
+      const result = (
+        channel: 'telegram' | 'native' | 'clipboard' | 'prompt',
+        outcome: 'opened' | 'completed' | 'copied' | 'prompted' | 'cancelled' | 'failed',
+      ) => trackEvent('share_result', { layout, channel, outcome });
       const update = (title: string) => {
-        txt.setText(title);
+        if (txt.active) txt.setText(title);
         busy = false;
       };
+      const telegram = isTelegramGame();
       if (shareTelegramGame()) {
+        result('telegram', 'opened');
         update('↗ SHARE GAME');
         return;
       }
+      if (telegram) result('telegram', 'failed');
       const fallback = async () => {
+        const channel =
+          typeof navigator.clipboard?.writeText === 'function' ? 'clipboard' : 'prompt';
         try {
-          if (navigator.clipboard?.writeText) {
+          if (typeof navigator.clipboard?.writeText === 'function') {
             await navigator.clipboard.writeText(shareText);
+            result('clipboard', 'copied');
             update('✓ RESULT COPIED');
           } else {
-            window.prompt('Copy your local result:', shareText);
+            const response = window.prompt('Copy your local result:', shareText);
+            result('prompt', response === null ? 'cancelled' : 'prompted');
             update('SHARE RESULT');
           }
         } catch {
+          result(channel, 'failed');
           update('SHARE RESULT');
         }
       };
@@ -175,14 +190,27 @@ function addShareButton(
         try {
           void navigator
             .share({ title: 'N5 Mustache Mayhem', text: shareText })
-            .then(() => update('✓ SHARED'))
+            .then(() => {
+              result('native', 'completed');
+              update('✓ SHARED');
+            })
             .catch((error: unknown) => {
-              if (error instanceof DOMException && error.name === 'AbortError')
+              if (error instanceof DOMException && error.name === 'AbortError') {
+                result('native', 'cancelled');
                 update('SHARE RESULT');
-              else void fallback();
+              } else {
+                result('native', 'failed');
+                void fallback();
+              }
             });
-        } catch {
-          void fallback();
+        } catch (error: unknown) {
+          if (error instanceof DOMException && error.name === 'AbortError') {
+            result('native', 'cancelled');
+            update('SHARE RESULT');
+          } else {
+            result('native', 'failed');
+            void fallback();
+          }
         }
       } else void fallback();
     },

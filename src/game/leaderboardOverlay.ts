@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { trackEvent } from '../platform/analytics';
 import {
   getLeaderboard,
   type Board,
@@ -39,6 +40,8 @@ export function showLeaderboardOverlay(
   args: ScoreboardArgs,
 ): void {
   if (!scene.sys.isActive()) return;
+  const layout = portrait ? 'portrait' : 'landscape';
+  trackEvent('leaderboard_view', { layout });
   const w = portrait ? 540 : 960;
   const h = portrait ? 960 : 540;
   const sheet = scene.add.container(0, 0).setDepth(260);
@@ -224,12 +227,20 @@ export function showLeaderboardOverlay(
     );
   }
 
-  async function activate(tab: Tab, weekOffset = 0): Promise<void> {
+  async function activate(tab: Tab, weekOffset = 0, input = true): Promise<void> {
+    if (input) {
+      trackEvent('leaderboard_filter', { layout, filter: tab, week_offset: weekOffset });
+    }
     active = tab;
     offset = tab === 'week' ? weekOffset : 0;
     const seq = ++requestNumber;
     if (tab === 'telegram') {
       render();
+      trackEvent('leaderboard_result', {
+        layout,
+        filter: tab,
+        outcome: args.submission.telegramScores ? 'loaded' : 'failed',
+      });
       return;
     }
     if (tab !== 'week' || offset !== 0 || !args.initialBoard) current = undefined;
@@ -241,6 +252,12 @@ export function showLeaderboardOverlay(
     current = board;
     loading = false;
     render();
+    trackEvent('leaderboard_result', {
+      layout,
+      filter: tab,
+      week_offset: offset,
+      outcome: board ? 'loaded' : 'failed',
+    });
   }
   tabs.forEach((tab, i) => {
     const x = portrait ? 58 + i * 106 : 198 + i * 141;
@@ -269,5 +286,5 @@ export function showLeaderboardOverlay(
     0x315f57,
   );
   // For ease of reading, the Game result remains visible behind this dismissible overlay.
-  void activate('week', 0);
+  void activate('week', 0, false);
 }

@@ -1,5 +1,9 @@
 # Gameplay analytics: verified-round baseline
 
+For separate privacy-safe client events (starts, completion, abandonment,
+sharing and replay), see [Umami gameplay analytics](ANALYTICS.md). These are
+unverified behavioral observations, distinct from the accepted-round totals below.
+
 The gameplay-metrics migration stores **server-recomputed** totals for accepted
 Telegram Game rounds only. It does **not** collect pointer coordinates, client
 identifiers, user-agent strings, raw traces, or unverified web-practice sessions.

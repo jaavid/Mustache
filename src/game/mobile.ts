@@ -50,7 +50,8 @@ import { attachMustache, resolveMissImpact, showLandingPrecision } from './impac
 import { toHeroAnchor, fromHeroAnchor, type StickerAnchor } from '../logic/stickerAnchor';
 import { RaminMomentController } from './raminMoments';
 import { GoldenFlyer } from './goldenFlyer';
-import { characterName, mustacheTexture } from './characterChoice';
+import { characterName, getSelectedCharacter, mustacheTexture } from './characterChoice';
+import { roundAnalytics, type RoundContext } from '../platform/roundAnalytics';
 import { armGoldenForSelection, shouldLaunchGolden } from '../logic/goldenSelection';
 import { getSelectedGameMode, setSelectedGameMode } from '../logic/gameMode';
 import { addProgressionMenu } from './progressionUi';
@@ -60,6 +61,11 @@ import { addGoldVault } from './goldVault';
 const W = 540;
 const H = 960;
 const FONT = '"Courier New", monospace';
+
+function analyticsContext(): RoundContext {
+  return { layout: 'portrait', mode: getSelectedGameMode(), character: getSelectedCharacter() };
+}
+
 const SELECTOR_TOP = 768;
 const HUD_BOTTOM = 164;
 const FACE_Y = 547;
@@ -152,6 +158,7 @@ export class MobileMenuScene extends Phaser.Scene {
     super('Menu');
   }
   create() {
+    roundAnalytics.menuView(analyticsContext());
     portraitBackdrop(this);
     addArcadeAccents(this, true);
     panel(this, 270, 192, 496, 292, 0x122037, 0.91, 45);
@@ -183,12 +190,14 @@ export class MobileMenuScene extends Phaser.Scene {
     addMusicToggle(this, 72, 38, 118);
     const start = () => {
       setSelectedGameMode('classic');
+      roundAnalytics.playClick(analyticsContext());
       playSfx('start');
       this.scene.start('CharacterSelect');
     };
     largeButton(this, 270, 792, '▶ FOREST', start);
     addProgressionMenu(this, true, () => {
       setSelectedGameMode('goldRush');
+      roundAnalytics.playClick(analyticsContext());
       playSfx('start');
       this.scene.start('CharacterSelect');
     });
@@ -240,6 +249,15 @@ export class MobilePlayScene extends Phaser.Scene {
     this.perfectStreak = 0;
     this.roundElapsedMs = 0;
     this.scoreRoundStarted = false;
+    // Hidden tabs are paused by registerRoundVisibility, not abandoned.
+    // Persisted pagehide freezes the page for bfcache; retain this round on restore.
+    const onPageHide = (event: PageTransitionEvent) => roundAnalytics.pageHide(event.persisted);
+    window.addEventListener('pagehide', onPageHide);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      window.removeEventListener('pagehide', onPageHide);
+      roundAnalytics.update(this.roundElapsedMs, this.score, this.stats);
+      roundAnalytics.abandon('shutdown');
+    });
     this.combo = 0;
     this.remaining = ROUND_LENGTH_SECONDS;
     this.selectedStyle = 0;
@@ -292,7 +310,7 @@ export class MobilePlayScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-ONE', () => this.chooseStyle(0));
     this.input.keyboard?.on('keydown-TWO', () => this.chooseStyle(1));
     this.input.keyboard?.on('keydown-THREE', () => this.chooseStyle(2));
-    this.input.keyboard?.on('keydown-ESC', () => this.finish());
+    this.input.keyboard?.on('keydown-ESC', () => this.finish('early_exit'));
     this.time.addEvent({
       delay: 1000,
       loop: true,
@@ -573,6 +591,7 @@ export class MobilePlayScene extends Phaser.Scene {
         this.stats = outcome.stats;
         this.score = outcome.score;
         this.combo = outcome.combo;
+        roundAnalytics.impact(this.roundElapsedMs, this.score, this.stats);
         showLandingPrecision(this, aim, mouth, result.grade);
         haptic(result.grade);
         if (result.grade === 'miss') {
@@ -643,8 +662,10 @@ export class MobilePlayScene extends Phaser.Scene {
     if (!this.scoreRoundStarted) {
       this.scoreRoundStarted = true;
       startCompetitiveRound(true, getSelectedGameMode());
+      roundAnalytics.start(analyticsContext());
     }
     this.roundElapsedMs = accumulateActiveRoundMs(this.roundElapsedMs, delta);
+    roundAnalytics.update(this.roundElapsedMs, this.score, this.stats);
     if (getSelectedGameMode() === 'classic') this.golden.update(this.roundElapsedMs);
     if (this.hero?.active) this.followLighting(this.hero);
     if (this.hero?.active && this.accessory?.active) syncAccessory(this.hero, this.accessory);
@@ -671,8 +692,10 @@ export class MobilePlayScene extends Phaser.Scene {
       onComplete: () => floating.destroy(),
     });
   }
-  private finish() {
+  private finish(reason: 'completed' | 'early_exit' = 'completed') {
     if (this.roundOver) return;
+    roundAnalytics.update(this.roundElapsedMs, this.score, this.stats);
+    roundAnalytics.finish(reason);
     this.roundOver = true;
     this.activeTarget = false;
     this.input.enabled = false;
@@ -770,10 +793,12 @@ export class MobileResultsScene extends Phaser.Scene {
       .setDepth(81)
       .setInteractive({ useHandCursor: true });
     text(this, 157, 842, '↻ PLAY AGAIN', 22, '#ffffff');
-    replay.on('pointerdown', () => {
+    const again = () => {
+      roundAnalytics.replayClick(analyticsContext());
       playSfx('start');
       this.scene.start('Play');
-    });
+    };
+    replay.on('pointerdown', again);
     const changeHero = this.add
       .rectangle(413, 842, 216, 66, 0x36495b)
       .setStrokeStyle(4, 0xb39fda)
@@ -781,6 +806,6 @@ export class MobileResultsScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     text(this, 413, 842, 'CHANGE HERO', 19, '#ffffff');
     changeHero.on('pointerdown', () => this.scene.start('CharacterSelect'));
-    this.input.keyboard?.once('keydown-ENTER', () => this.scene.start('Play'));
+    this.input.keyboard?.once('keydown-ENTER', again);
   }
 }

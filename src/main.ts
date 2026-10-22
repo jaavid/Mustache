@@ -5,6 +5,11 @@ import { MobileMenuScene, MobilePlayScene, MobileResultsScene } from './game/mob
 import { GuideScene, PauseOverlayScene } from './game/overlays';
 import { stopMusic } from './game/sound';
 import { CharacterSelectScene } from './game/characterSelect';
+import { initAnalytics, trackEvent } from './platform/analytics';
+import { hasCompetitiveSession } from './platform/competitiveScores';
+
+// The competitive bridge removes tg_session before loading any analytics script.
+initAnalytics({ telegramSession: hasCompetitiveSession() });
 
 const portraitMedia = window.matchMedia('(max-width: 700px) and (orientation: portrait)');
 let game: Phaser.Game | undefined;
@@ -51,6 +56,7 @@ function mountGame(): void {
 // one-shot Golden Ticket. Preserve the current logical canvas until the round
 // and its overlays finish; layout changes are applied outside active gameplay.
 portraitMedia.addEventListener('change', () => {
+  trackEvent('layout_change', { layout: portraitMedia.matches ? 'portrait' : 'landscape' });
   if (
     game?.scene.isActive('Play') ||
     game?.scene.isPaused('Play') ||

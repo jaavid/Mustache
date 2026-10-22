@@ -1,4 +1,6 @@
 import type { GameMode } from '../logic/gameMode';
+import { trackEvent, type AnalyticsData } from './analytics';
+import { getSelectedCharacter } from '../game/characterChoice';
 
 /**
  * Official Game backend bridge. Standalone browser visitors keep local scores.
@@ -95,8 +97,36 @@ const sessionToken = (() => {
   return value;
 })();
 
+export function hasCompetitiveSession(): boolean {
+  return sessionToken !== null;
+}
+
+function analyticsErrorCategory(error: unknown): string {
+  if (!(error instanceof ScoreApiError)) return 'unknown';
+  if (error.code === 'NETWORK_OR_CORS') return 'network';
+  if (
+    error.httpStatus === 401 ||
+    error.httpStatus === 403 ||
+    /SESSION|UNAUTHORIZED/.test(error.code)
+  )
+    return 'authentication';
+  if (
+    (error.httpStatus !== undefined && error.httpStatus >= 500) ||
+    /^HTTP_5\d\d$/.test(error.code) ||
+    error.code === 'HTTP_404' ||
+    error.code === 'INVALID_RESPONSE'
+  )
+    return 'server';
+  if (error.httpStatus !== undefined && error.httpStatus >= 400 && error.httpStatus < 500)
+    return 'validation';
+  return 'unknown';
+}
+
 export class ScoreApiError extends Error {
-  constructor(readonly code: string) {
+  constructor(
+    readonly code: string,
+    readonly httpStatus?: number,
+  ) {
     super(code);
     this.name = 'ScoreApiError';
   }
@@ -135,7 +165,7 @@ async function api(path: string, payload: unknown) {
     const safeCode = /^[A-Z][A-Z0-9_]{2,60}$/.test(serverCode)
       ? serverCode
       : 'HTTP_' + response.status;
-    throw new ScoreApiError(safeCode);
+    throw new ScoreApiError(safeCode, response.status);
   }
   try {
     return await response.json();
@@ -144,18 +174,46 @@ async function api(path: string, payload: unknown) {
   }
 }
 
-let active: { started: Promise<string>; shots: Trace[]; goldenPickups: GoldenPickup[] } | null =
-  null;
+let active: {
+  started: Promise<string>;
+  shots: Trace[];
+  goldenPickups: GoldenPickup[];
+  context: AnalyticsData;
+} | null = null;
 
 export function startCompetitiveRound(portrait: boolean, mode: GameMode = 'classic'): void {
   if (!sessionToken) {
     active = null;
     return;
   }
+  const startedAt = Date.now();
+  const context = {
+    layout: portrait ? 'portrait' : 'landscape',
+    mode,
+    character: getSelectedCharacter(),
+  };
   active = {
-    started: api('/api/round/start', { portrait, mode }).then((data) => String(data.roundId)),
+    started: api('/api/round/start', { portrait, mode })
+      .then((data) => {
+        trackEvent('round_start_result', {
+          ...context,
+          outcome: 'started',
+          duration_ms: Date.now() - startedAt,
+        });
+        return String(data.roundId);
+      })
+      .catch((error: unknown) => {
+        trackEvent('round_start_result', {
+          ...context,
+          outcome: 'failed',
+          error_category: analyticsErrorCategory(error),
+          duration_ms: Date.now() - startedAt,
+        });
+        throw error;
+      }),
     shots: [],
     goldenPickups: [],
+    context,
   };
   // The result screen awaits this promise; silence abandoned scenes/rejections.
   void active.started.catch(() => undefined);
@@ -175,7 +233,11 @@ export function recordCompetitiveGoldenPickup(pickup: GoldenPickup): void {
 export async function submitCompetitiveRound(score: number): Promise<Submission> {
   const current = active;
   active = null;
-  if (!sessionToken || !current) return { state: 'local' };
+  if (!sessionToken || !current) {
+    trackEvent('score_submit', { outcome: 'local' });
+    return { state: 'local' };
+  }
+  const submittedAt = Date.now();
   try {
     const roundId = await current.started;
     const result = await api('/api/round/finish', {
@@ -183,6 +245,16 @@ export async function submitCompetitiveRound(score: number): Promise<Submission>
       score,
       shots: current.shots,
       goldenPickups: current.goldenPickups,
+    });
+    trackEvent('score_submit', {
+      ...current.context,
+      outcome: 'saved',
+      telegram_state: ['updated', 'previous_best', 'retry', 'pending'].includes(
+        result.telegramState,
+      )
+        ? result.telegramState
+        : 'none',
+      duration_ms: Date.now() - submittedAt,
     });
     return {
       state: 'saved',
@@ -198,6 +270,12 @@ export async function submitCompetitiveRound(score: number): Promise<Submission>
     // The server may be reachable but reject validation. Never disguise that
     // as a connectivity failure or claim the local score was registered.
     const reason = error instanceof ScoreApiError ? error.code : 'UNKNOWN_CLIENT_ERROR';
+    trackEvent('score_submit', {
+      ...current.context,
+      outcome: 'unavailable',
+      error_category: analyticsErrorCategory(error),
+      duration_ms: Date.now() - submittedAt,
+    });
     return { state: 'unavailable', error: reason };
   }
 }

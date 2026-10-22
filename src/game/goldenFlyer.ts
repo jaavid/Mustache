@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { trackEvent } from '../platform/analytics';
 import {
   goldenHit,
   goldenPosition,
@@ -109,6 +110,10 @@ export class GoldenFlyer {
     for (let i = 0; i < GOLDEN_SPAWN_MS.length; i++) {
       if (this.collected.has(i) || !goldenHit(i, elapsedMs, { x, y }, this.portrait)) continue;
       this.collected.add(i);
+      trackEvent('golden_pickup', {
+        layout: this.portrait ? 'portrait' : 'landscape',
+        count: this.collected.size,
+      });
       recordCompetitiveGoldenPickup({
         index: i,
         tMs: Math.min(46000, Math.round(elapsedMs)),
@@ -117,7 +122,10 @@ export class GoldenFlyer {
       this.sprite.setVisible(false);
       this.glow.setVisible(false);
       this.hud.setText(this.ready ? 'GOLD READY · SLOT 2' : 'GOLD ' + this.collected.size + '/3');
-      if (this.ready) this.onChargeChange(true);
+      if (this.ready) {
+        trackEvent('golden_ready', { layout: this.portrait ? 'portrait' : 'landscape' });
+        this.onChargeChange(true);
+      }
       this.scene.tweens.add({ targets: this.hud, scale: 1.25, duration: 140, yoyo: true });
       this.notice(
         this.ready ? 'GOLD READY! SELECT 2' : 'GOLD COLLECTED! ' + this.collected.size + '/3',
@@ -132,6 +140,7 @@ export class GoldenFlyer {
   consume(): boolean {
     if (!this.ready) return false;
     this.spent = true;
+    trackEvent('golden_used', { layout: this.portrait ? 'portrait' : 'landscape' });
     this.hud.setText('GOLD USED');
     this.onChargeChange(false);
     return true;

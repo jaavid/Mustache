@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { trackEvent } from '../platform/analytics';
 import {
   CHARACTER_IDS,
   CHARACTER_PICK_SECONDS,
@@ -24,6 +25,8 @@ export class CharacterSelectScene extends Phaser.Scene {
     const w = this.scale.width;
     const h = this.scale.height;
     const portrait = h > w;
+    const layout = portrait ? 'portrait' : 'landscape';
+    trackEvent('character_select_view', { layout });
     const cx = w / 2;
     const cy = portrait ? 461 : 280;
     const cardW = portrait ? 156 : 264;
@@ -64,7 +67,8 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     const borders: Phaser.GameObjects.Rectangle[] = [];
     const names: Phaser.GameObjects.Text[] = [];
-    const choose = (character: CharacterId) => {
+    const choose = (character: CharacterId, source?: 'pointer' | 'keyboard') => {
+      if (source) trackEvent('character_selected', { layout, character, source });
       setSelectedCharacter(character);
       CHARACTER_IDS.forEach((id, index) => {
         const active = id === character;
@@ -96,7 +100,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       names.push(uiText(x, nameY, characterName(id), portrait ? 24 : 27));
       card.on('pointerdown', () => {
         playSfx('start');
-        choose(id);
+        choose(id, 'pointer');
       });
     });
 
@@ -111,9 +115,10 @@ export class CharacterSelectScene extends Phaser.Scene {
       portrait ? 24 : 21,
       '#c4f8d7',
     );
-    const launch = () => {
+    const launch = (source: 'ready' | 'timeout' | 'keyboard') => {
       if (started) return;
       started = true;
+      trackEvent('character_confirm', { layout, character: getSelectedCharacter(), source });
       playSfx('start');
       this.scene.start('Play');
     };
@@ -124,7 +129,7 @@ export class CharacterSelectScene extends Phaser.Scene {
         if (started) return;
         remaining -= 1;
         counter.setText(remaining > 0 ? `STARTING IN ${remaining}` : 'GO!');
-        if (remaining === 0) launch();
+        if (remaining === 0) launch('timeout');
       },
     });
     const readyY = portrait ? 851 : 504;
@@ -135,16 +140,16 @@ export class CharacterSelectScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .setDepth(45);
     uiText(cx, readyY, 'READY  ▶', portrait ? 27 : 20);
-    ready.on('pointerdown', launch);
+    ready.on('pointerdown', () => launch('ready'));
 
-    this.input.keyboard?.on('keydown-ONE', () => choose('ramin'));
-    this.input.keyboard?.on('keydown-TWO', () => choose('borhan'));
-    this.input.keyboard?.on('keydown-THREE', () => choose('mammad'));
-    this.input.keyboard?.on('keydown-NUMPAD_ONE', () => choose('ramin'));
-    this.input.keyboard?.on('keydown-NUMPAD_TWO', () => choose('borhan'));
-    this.input.keyboard?.on('keydown-NUMPAD_THREE', () => choose('mammad'));
-    this.input.keyboard?.once('keydown-ENTER', launch);
-    this.input.keyboard?.once('keydown-SPACE', launch);
+    this.input.keyboard?.on('keydown-ONE', () => choose('ramin', 'keyboard'));
+    this.input.keyboard?.on('keydown-TWO', () => choose('borhan', 'keyboard'));
+    this.input.keyboard?.on('keydown-THREE', () => choose('mammad', 'keyboard'));
+    this.input.keyboard?.on('keydown-NUMPAD_ONE', () => choose('ramin', 'keyboard'));
+    this.input.keyboard?.on('keydown-NUMPAD_TWO', () => choose('borhan', 'keyboard'));
+    this.input.keyboard?.on('keydown-NUMPAD_THREE', () => choose('mammad', 'keyboard'));
+    this.input.keyboard?.once('keydown-ENTER', () => launch('keyboard'));
+    this.input.keyboard?.once('keydown-SPACE', () => launch('keyboard'));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => timer.remove(false));
   }
 }

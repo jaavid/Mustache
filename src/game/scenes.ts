@@ -59,15 +59,21 @@ import { attachMustache, resolveMissImpact, showLandingPrecision } from './impac
 import { toHeroAnchor, fromHeroAnchor, type StickerAnchor } from '../logic/stickerAnchor';
 import { RaminMomentController } from './raminMoments';
 import { GoldenFlyer } from './goldenFlyer';
-import { characterName, mustacheTexture } from './characterChoice';
+import { characterName, getSelectedCharacter, mustacheTexture } from './characterChoice';
+import { roundAnalytics, type RoundContext } from '../platform/roundAnalytics';
 import { armGoldenForSelection, shouldLaunchGolden } from '../logic/goldenSelection';
 import { getSelectedGameMode, setSelectedGameMode } from '../logic/gameMode';
 import { addProgressionMenu } from './progressionUi';
 import { addGoldVault } from './goldVault';
+import { trackEvent, trackGameReady } from '../platform/analytics';
 
 const WIDTH = 960;
 const HEIGHT = 540;
 const FONT = '"Courier New", monospace';
+
+function analyticsContext(): RoundContext {
+  return { layout: 'landscape', mode: getSelectedGameMode(), character: getSelectedCharacter() };
+}
 
 function label(
   scene: Phaser.Scene,
@@ -180,6 +186,7 @@ export class BootScene extends Phaser.Scene {
     };
     redraw(0);
     this.load.on('progress', redraw);
+    this.load.once('loaderror', () => trackEvent('asset_load_failed', { error_type: 'asset' }));
     preloadRamin(this);
     preloadForestTreeSources(this);
   }
@@ -187,6 +194,7 @@ export class BootScene extends Phaser.Scene {
     createArt(this);
     createForestTreeTextures(this);
     ensureRaminAnimations(this);
+    trackGameReady(this.scale.height > this.scale.width);
     this.scene.start('Menu');
   }
 }
@@ -196,6 +204,7 @@ export class MenuScene extends Phaser.Scene {
     super('Menu');
   }
   create() {
+    roundAnalytics.menuView(analyticsContext());
     backdrop(this);
     addArcadeAccents(this, false);
     // Woodland signboard and stacked arcade title.
@@ -208,6 +217,7 @@ export class MenuScene extends Phaser.Scene {
     label(this, 310, 267, 'AIM  ·  SHOOT  ·  STACHE', 18, '#e4dbb7');
     const start = () => {
       setSelectedGameMode('classic');
+      roundAnalytics.playClick(analyticsContext());
       playSfx('start');
       this.scene.start('CharacterSelect');
     };
@@ -216,6 +226,7 @@ export class MenuScene extends Phaser.Scene {
     button(this, 305, 385, 285, 68, '▶  FOREST', start);
     addProgressionMenu(this, false, () => {
       setSelectedGameMode('goldRush');
+      roundAnalytics.playClick(analyticsContext());
       playSfx('start');
       this.scene.start('CharacterSelect');
     });
@@ -291,6 +302,15 @@ export class PlayScene extends Phaser.Scene {
     this.perfectStreak = 0;
     this.roundElapsedMs = 0;
     this.scoreRoundStarted = false;
+    // Hidden tabs are paused by registerRoundVisibility, not abandoned.
+    // Persisted pagehide freezes the page for bfcache; retain this round on restore.
+    const onPageHide = (event: PageTransitionEvent) => roundAnalytics.pageHide(event.persisted);
+    window.addEventListener('pagehide', onPageHide);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      window.removeEventListener('pagehide', onPageHide);
+      roundAnalytics.update(this.roundElapsedMs, this.score, this.stats);
+      roundAnalytics.abandon('shutdown');
+    });
     this.combo = 0;
     this.remaining = ROUND_LENGTH_SECONDS;
     this.selectedStyle = 0;
@@ -347,7 +367,7 @@ export class PlayScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-TWO', () => this.selectStyle(1));
     this.input.keyboard?.on('keydown-THREE', () => this.selectStyle(2));
     this.input.keyboard?.on('keydown-ESC', () => {
-      if (!this.roundOver) this.finishRound();
+      if (!this.roundOver) this.finishRound('early_exit');
     });
     this.time.addEvent({
       delay: 1000,
@@ -652,6 +672,7 @@ export class PlayScene extends Phaser.Scene {
         this.stats = outcome.stats;
         this.score = outcome.score;
         this.combo = outcome.combo;
+        roundAnalytics.impact(this.roundElapsedMs, this.score, this.stats);
         showLandingPrecision(this, aim, mouth, result.grade);
         haptic(result.grade);
         if (result.grade === 'miss') {
@@ -722,8 +743,10 @@ export class PlayScene extends Phaser.Scene {
     if (!this.scoreRoundStarted) {
       this.scoreRoundStarted = true;
       startCompetitiveRound(false, getSelectedGameMode());
+      roundAnalytics.start(analyticsContext());
     }
     this.roundElapsedMs = accumulateActiveRoundMs(this.roundElapsedMs, delta);
+    roundAnalytics.update(this.roundElapsedMs, this.score, this.stats);
     if (getSelectedGameMode() === 'classic') this.golden.update(this.roundElapsedMs);
     if (this.hero?.active) this.followLighting(this.hero);
     if (this.hero?.active && this.accessory?.active) syncAccessory(this.hero, this.accessory);
@@ -758,8 +781,10 @@ export class PlayScene extends Phaser.Scene {
       onComplete: () => text.destroy(),
     });
   }
-  private finishRound() {
+  private finishRound(reason: 'completed' | 'early_exit' = 'completed') {
     if (this.roundOver) return;
+    roundAnalytics.update(this.roundElapsedMs, this.score, this.stats);
+    roundAnalytics.finish(reason);
     this.roundOver = true;
     this.active = false;
     this.input.enabled = false;
@@ -853,6 +878,7 @@ export class ResultsScene extends Phaser.Scene {
     );
     addResultsExtras(this, false, this.finalScore, this.summary);
     const again = () => {
+      roundAnalytics.replayClick(analyticsContext());
       playSfx('start');
       this.scene.start('Play');
     };

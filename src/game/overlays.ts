@@ -1,11 +1,12 @@
 import Phaser from 'phaser';
+import { trackEvent } from '../platform/analytics';
 import { hapticsEnabled, toggleHaptics } from './haptics';
 import { setMusicPaused, stopMusic } from './sound';
 import { getSelectedCharacter, mustacheTexture } from './characterChoice';
 
 const FONT = '"Courier New", monospace';
 const GUIDE_KEY = 'n5-tutorial-complete-v1';
-type OverlayData = { portrait?: boolean };
+type OverlayData = { portrait?: boolean; source?: 'manual' | 'visibility' };
 
 function heading(
   scene: Phaser.Scene,
@@ -67,10 +68,15 @@ export function beginTutorial(scene: Phaser.Scene, portrait: boolean): void {
   scene.scene.launch('Guide', { portrait });
   scene.scene.pause('Play');
 }
-export function pauseRound(scene: Phaser.Scene, portrait: boolean): void {
+export function pauseRound(
+  scene: Phaser.Scene,
+  portrait: boolean,
+  source: 'manual' | 'visibility' = 'manual',
+): void {
   if (!scene.scene.isActive('Play')) return;
   setMusicPaused(true);
-  scene.scene.launch('PauseOverlay', { portrait });
+  trackEvent('pause', { layout: portrait ? 'portrait' : 'landscape', source });
+  scene.scene.launch('PauseOverlay', { portrait, source });
   scene.scene.pause('Play');
 }
 export function addPauseButton(scene: Phaser.Scene, x: number, y: number, portrait: boolean) {
@@ -103,7 +109,7 @@ export function addPauseButton(scene: Phaser.Scene, x: number, y: number, portra
 }
 export function registerRoundVisibility(scene: Phaser.Scene, portrait: boolean): void {
   const hide = () => {
-    if (document.hidden && scene.scene.isActive('Play')) pauseRound(scene, portrait);
+    if (document.hidden && scene.scene.isActive('Play')) pauseRound(scene, portrait, 'visibility');
   };
   document.addEventListener('visibilitychange', hide);
   scene.input.keyboard?.on('keydown-P', () => pauseRound(scene, portrait));
@@ -160,7 +166,11 @@ export class GuideScene extends Phaser.Scene {
       '#c0bad8',
     );
     const progress = heading(this, x, y + (this.portrait ? 225 : 136), '', 17, '#c5a3ff');
+    const layout = this.portrait ? 'portrait' : 'landscape';
+    trackEvent('tutorial_start', { layout });
     let index = 0;
+    let finished = false;
+    const renderedSteps = new Set<number>();
     const steps = [
       ['CHOOSE A MUSTACHE', 'Tap one of the 3 styles below.', '1  ·  2  ·  3'],
       [
@@ -188,8 +198,15 @@ export class GuideScene extends Phaser.Scene {
       );
       if (index === 1) visual.setFrame(0).setDisplaySize(105, 178);
       else visual.setDisplaySize(135, 60);
+      if (!renderedSteps.has(index)) {
+        renderedSteps.add(index);
+        trackEvent('tutorial_step', { layout, step: index + 1 });
+      }
     };
-    const finish = () => {
+    const finish = (outcome: 'completed' | 'skipped') => {
+      if (finished) return;
+      finished = true;
+      trackEvent('tutorial_end', { layout, outcome });
       try {
         localStorage.setItem(GUIDE_KEY, 'true');
       } catch {
@@ -200,8 +217,9 @@ export class GuideScene extends Phaser.Scene {
       setMusicPaused(false);
     };
     const advance = () => {
+      if (finished) return;
       index++;
-      if (index >= 3) finish();
+      if (index >= 3) finish('completed');
       else render();
     };
     overlayButton(
@@ -218,7 +236,7 @@ export class GuideScene extends Phaser.Scene {
       y + (this.portrait ? 289 : 181),
       this.portrait ? 140 : 150,
       'SKIP',
-      finish,
+      () => finish('skipped'),
     );
     this.time.addEvent({ delay: 3400, loop: true, callback: () => advance() });
     render();
@@ -228,11 +246,13 @@ export class GuideScene extends Phaser.Scene {
 /** Pause overlay remains interactive while Play's tweens/timers are fully stopped. */
 export class PauseOverlayScene extends Phaser.Scene {
   private portrait = false;
+  private source: 'manual' | 'visibility' = 'manual';
   constructor() {
     super('PauseOverlay');
   }
   init(data: OverlayData) {
     this.portrait = !!data.portrait;
+    this.source = data.source ?? 'manual';
   }
   create() {
     const x = this.scale.width / 2,
@@ -265,6 +285,10 @@ export class PauseOverlayScene extends Phaser.Scene {
         callback: () => {
           remaining--;
           if (remaining === 0) {
+            trackEvent('resume', {
+              layout: this.portrait ? 'portrait' : 'landscape',
+              source: this.source,
+            });
             this.scene.resume('Play');
             this.scene.stop();
             setMusicPaused(false);
