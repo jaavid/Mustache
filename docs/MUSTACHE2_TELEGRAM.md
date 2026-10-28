@@ -21,7 +21,9 @@ and register a **second** game:
 - Game URL/domain if prompted: `https://mustache2.alexa.ir/`
 - Upload a landscape PNG/JPG cover and accept the gaming terms.
 
-The game short name in BotFather, the `MUSTACHE2_GAME_SHORT_NAME` Worker variable, `sendGame` and Telegram links must be identical, including letter case. The title **Mustache2** is not a substitute for checking the actual game short name.\n\nDo **not** edit/delete `mustache` or replace the existing Telegram webhook.
+The game short name in BotFather, the `MUSTACHE2_GAME_SHORT_NAME` Worker variable, `sendGame` and Telegram links must be identical, including letter case. The title **Mustache2** is not a substitute for checking the actual game short name.
+
+Do **not** edit/delete `mustache` or replace the existing Telegram webhook.
 
 Once registered, the link is
 **https://t.me/RJTtobot?game=Mustache2**.
