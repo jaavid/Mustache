@@ -1,5 +1,7 @@
 /** The public Telegram command menu should be brief; richer flows live behind inline buttons. */
 export const GAME_COMMANDS = [
+  { command: 'play2', description: '🏠 شروع بازی سیبیل ۲ · قایم‌باشک' },
+  { command: 'games', description: '🎮 انتخاب بین بازی‌های سیبیل' },
   { command: 'play', description: '〰️🎮 شروع نبرد سیبیل‌ها!' },
   { command: 'leaderboard', description: '〰️🏆 رتبه‌بندی روز، هفته، ماه و امتیاز من' },
   { command: 'profile', description: '〰️👤 سطح، XP، رکوردها و نشان‌ها' },
