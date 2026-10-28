@@ -2,6 +2,7 @@
  * Client-provided gameplay telemetry is re-scored but NOT prize-grade anti-cheat.
  */
 import { issueSession, authenticate, startRound, finishRound, leaderboard } from './sessions.js';
+import { startMustache2Round, finishMustache2Round, mustache2Leaderboard } from './mustache2.js';
 import { parseLeaderboardCallback, formatLeaderboardMessage, formatRichLeaderboardMessage } from './leaderboardMenu.js';
 import { registerReferral, playerProfile, goldCatchUpEligible } from './progression.js';
 import { walletCommand, confirmWalletCallback, handleWalletNavigation, ensureTelegramWallet } from './walletCommands.js';
@@ -27,7 +28,7 @@ export function isSameSecret(actual, expected) {
 
 export function parseGameCommand(input, botUsername = DEFAULT_BOT_USERNAME) {
   const first = String(input ?? '').trim().split(/\s+/)[0];
-  const match = /^\/(start|play|help|top|score|leaderboard|profile|invite|wallet|rewards|transactions|withdraw|wallethelp|admin|walletcheck|myid)(?:@([a-zA-Z0-9_]+))?$/i.exec(first);
+  const match = /^\/(start|play|play2|games|help|top|score|leaderboard|profile|invite|wallet|rewards|transactions|withdraw|wallethelp|admin|walletcheck|myid)(?:@([a-zA-Z0-9_]+))?$/i.exec(first);
   if (!match) return null;
   if (match[2] && match[2].toLowerCase() !== botUsername.toLowerCase()) return null;
   return match[1].toLowerCase();
@@ -40,7 +41,12 @@ function gameConfig(env) {
   const url = new URL(gameUrl);
   if (url.protocol !== 'https:') throw new Error('GAME_URL must use HTTPS');
   if (!/^[a-zA-Z0-9_]{1,64}$/.test(gameShortName)) throw new Error('Invalid GAME_SHORT_NAME');
-  return { gameShortName, gameUrl: url.toString(), botUsername };
+  const game2ShortName = env.MUSTACHE2_GAME_SHORT_NAME || 'mustache2';
+  const game2Url = new URL(env.MUSTACHE2_GAME_URL || 'https://mustache2.alexa.ir/');
+  if (game2Url.protocol !== 'https:' || !/^[a-zA-Z0-9_]{1,64}$/.test(game2ShortName) ||
+      game2ShortName === gameShortName) throw new Error('Invalid MUSTACHE2 game config');
+  return { gameShortName, gameUrl: url.toString(), botUsername,
+    game2ShortName, game2Url: game2Url.toString() };
 }
 
 /** Isolated dispatch permits testing without Telegram credentials or network. */
@@ -81,7 +87,7 @@ async function editLeaderboard(destination, board, presentation, expanded, send)
 }
 
 export async function handleTelegramUpdate(update, env, send) {
-  const { gameShortName, gameUrl, botUsername } = gameConfig(env);
+  const { gameShortName, gameUrl, botUsername, game2ShortName, game2Url } = gameConfig(env);
 
   if (update.message?.chat?.id !== undefined) {
     const message = update.message;
@@ -114,6 +120,17 @@ export async function handleTelegramUpdate(update, env, send) {
       }
       await send('sendGame', { chat_id: message.chat.id, game_short_name: gameShortName });
       if (command === 'start') await installMainKeyboard(message, send);
+    } else if (command === 'play2') {
+      await send('sendGame', { chat_id: message.chat.id, game_short_name: game2ShortName });
+    } else if (command === 'games') {
+      await send('sendMessage', {
+        chat_id: message.chat.id,
+        text: '〰️ دو بازی سیبیل در یک ربات. هر کدام امتیاز و رکورد مستقل دارد.',
+        reply_markup: { inline_keyboard: [
+          [{ text: '🎮 سیبیل ۱ · جنگل', url: 'https://t.me/' + botUsername + '?game=' + gameShortName }],
+          [{ text: '🏠 سیبیل ۲ · قایم‌باشک', url: 'https://t.me/' + botUsername + '?game=' + game2ShortName }],
+        ] },
+      });
     } else if (command === 'profile' || command === 'invite') {
       if (!env.DB || !Number.isSafeInteger(message.from?.id)) return;
       await env.DB.prepare('INSERT INTO game_users(user_id, display_name, updated_at) VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET display_name=excluded.display_name, updated_at=excluded.updated_at')
@@ -178,7 +195,9 @@ export async function handleTelegramUpdate(update, env, send) {
       await send('sendMessage', {
         chat_id: message.chat.id,
         text: '〰️ به جنگل سیبیل خوش اومدی! 🎩\n\n' +
-          '🎮 /play — شروع بازی\n' +
+          '🎮 /play — سیبیل ۱\n' +
+          '🏠 /play2 — سیبیل ۲\n' +
+          '🕹 /games — انتخاب بازی\n' +
           '🏆 /leaderboard — جدول رتبه‌بندی و رتبه خودت\n' +
           '👤 /profile — سطح، XP و رکوردهای بازی\n' +
           '🎁 /invite — لینک دعوت و بوست دوستان\n' +
@@ -264,7 +283,7 @@ export async function handleTelegramUpdate(update, env, send) {
 
   if (update.callback_query?.id && update.callback_query.game_short_name) {
     const callback = update.callback_query;
-    if (callback.game_short_name !== gameShortName) {
+    if (![gameShortName, game2ShortName].includes(callback.game_short_name)) {
       await send('answerCallbackQuery', {
         callback_query_id: callback.id,
         text: 'Unknown game.',
@@ -275,8 +294,11 @@ export async function handleTelegramUpdate(update, env, send) {
     if (!env.DB) throw new Error('D1_NOT_CONFIGURED');
     // Only authenticated Telegram callback_query.from may receive a custodial wallet.
     // Do not allow an RPC outage to block Telegram Game Cards.
-    try { await ensureTelegramWallet(env, callback.from); } catch { /* retry on /wallet */ }
-    const personalizedUrl = await issueSession(env.DB, callback, gameUrl);
+    if (callback.game_short_name === gameShortName) {
+      try { await ensureTelegramWallet(env, callback.from); } catch { /* retry on /wallet */ }
+    }
+    const selectedUrl = callback.game_short_name === game2ShortName ? game2Url : gameUrl;
+    const personalizedUrl = await issueSession(env.DB, callback, selectedUrl, Date.now(), callback.game_short_name);
     await send('answerCallbackQuery', {
       callback_query_id: callback.id,
       url: personalizedUrl,
@@ -290,7 +312,10 @@ export async function handleTelegramUpdate(update, env, send) {
       inline_query_id: update.inline_query.id,
       cache_time: 0,
       is_personal: true,
-      results: [{ type: 'game', id: 'n5-mustache', game_short_name: gameShortName }],
+      results: [
+        { type: 'game', id: 'n5-mustache', game_short_name: gameShortName },
+        { type: 'game', id: 'n5-mustache2', game_short_name: game2ShortName },
+      ],
     });
   }
 }
@@ -339,6 +364,7 @@ async function gameApi(request, env, url) {
   // Never return wildcard CORS: Telegram-issued bearer sessions remain mandatory.
   const allowedOrigins = new Set([
     env.GAME_ORIGIN || HTTP_ORIGIN,
+    env.MUSTACHE2_GAME_ORIGIN || 'https://mustache2.alexa.ir',
     ...(env.GAME_ORIGINS || '').split(',').map(item => item.trim()).filter(Boolean),
   ]);
   if (source && !allowedOrigins.has(source)) {
@@ -374,9 +400,53 @@ async function gameApi(request, env, url) {
         roundsScored: Number(counts?.rounds_scored || 0),
       }, 200, cors);
     }
+    if (api === '/api/mustache2/leaderboard' && request.method === 'GET') {
+      const session = request.headers.has('authorization') ? await authenticate(env.DB, request) : null;
+      if (request.headers.has('authorization') &&
+          (!session || session.game_short_name !== (env.MUSTACHE2_GAME_SHORT_NAME || 'mustache2'))) {
+        return jsonReply({ error: 'UNAUTHORIZED' }, 401, cors);
+      }
+      return jsonReply(await mustache2Leaderboard(env.DB, session?.user_id), 200, cors);
+    }
+    if ((api === '/api/mustache2/round/start' || api === '/api/mustache2/round/finish') &&
+        request.method === 'POST') {
+      const session = await authenticate(env.DB, request);
+      if (!session || session.game_short_name !== (env.MUSTACHE2_GAME_SHORT_NAME || 'mustache2')) {
+        return jsonReply({ error: 'UNAUTHORIZED' }, 401, cors);
+      }
+      if (!request.headers.get('content-type')?.startsWith('application/json')) {
+        return jsonReply({ error: 'JSON_REQUIRED' }, 415, cors);
+      }
+      const raw = await request.text();
+      if (raw.length > 4096) return jsonReply({ error: 'TOO_LARGE' }, 413, cors);
+      const data = JSON.parse(raw);
+      if (api.endsWith('/start')) return jsonReply(await startMustache2Round(env.DB, session), 200, cors);
+      const result = await finishMustache2Round(env.DB, session, data);
+      const context = { user_id: session.user_id };
+      if (session.inline_message_id) context.inline_message_id = session.inline_message_id;
+      else { context.chat_id = session.chat_id; context.message_id = session.message_id; }
+      let telegramState = result.telegramState;
+      if (result.score > 0 && !['updated', 'previous_best'].includes(telegramState)) {
+        try {
+          await callTelegram(env.BOT_TOKEN, 'setGameScore', {
+            ...context, score: result.score, disable_edit_message: false,
+          });
+          telegramState = 'updated';
+        } catch (error) {
+          telegramState = error instanceof Error && error.message === 'TELEGRAM_SCORE_NOT_HIGHER'
+            ? 'previous_best' : 'retry';
+        }
+        await env.DB.prepare('UPDATE mustache2_rounds SET telegram_state=? WHERE id=? AND user_id=?')
+          .bind(telegramState, data.roundId, session.user_id).run();
+      }
+      return jsonReply({
+        ...result, telegramState,
+        leaderboard: await mustache2Leaderboard(env.DB, session.user_id),
+      }, 200, cors);
+    }
     if (api === '/api/profile' && request.method === 'GET') {
       const session = await authenticate(env.DB, request);
-      if (!session) return jsonReply({ error: 'UNAUTHORIZED' }, 401, cors);
+      if (!session || session.game_short_name === (env.MUSTACHE2_GAME_SHORT_NAME || 'mustache2')) return jsonReply({ error: 'UNAUTHORIZED' }, 401, cors);
       const now = Date.now();
       const result = await playerProfile(env.DB, session.user_id, env.BOT_USERNAME || DEFAULT_BOT_USERNAME, now);
       const [board, classicBoard] = await Promise.all([
@@ -392,7 +462,7 @@ async function gameApi(request, env, url) {
       const period = url.searchParams.get('period') || 'week';
       const offset = Number(url.searchParams.get('offset') || 0);
       const session = request.headers.has('authorization') ? await authenticate(env.DB, request) : null;
-      if (request.headers.has('authorization') && !session) {
+      if (request.headers.has('authorization') && (!session || session.game_short_name === (env.MUSTACHE2_GAME_SHORT_NAME || 'mustache2'))) {
         return jsonReply({ error: 'UNAUTHORIZED' }, 401, cors);
       }
       return jsonReply(await leaderboard(env.DB, Date.now(), {
@@ -401,7 +471,7 @@ async function gameApi(request, env, url) {
     }
     if ((api === '/api/round/start' || api === '/api/round/finish') && request.method === 'POST') {
       const session = await authenticate(env.DB, request);
-      if (!session) return jsonReply({ error: 'UNAUTHORIZED' }, 401, cors);
+      if (!session || session.game_short_name === (env.MUSTACHE2_GAME_SHORT_NAME || 'mustache2')) return jsonReply({ error: 'UNAUTHORIZED' }, 401, cors);
       if (!request.headers.get('content-type')?.startsWith('application/json')) return jsonReply({ error: 'JSON_REQUIRED' }, 415, cors);
       const raw = await request.text();
       if (raw.length > 32768) return jsonReply({ error: 'TOO_LARGE' }, 413, cors);

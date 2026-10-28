@@ -27,6 +27,8 @@ async function dispatch(update) {
 test('commands only target rjttobot and ignore ordinary messages', () => {
   assert.equal(parseGameCommand('/play@rjttobot'), 'play');
   assert.equal(parseGameCommand('/start payload'), 'start');
+  assert.equal(parseGameCommand('/play2@rjttobot'), 'play2');
+  assert.equal(parseGameCommand('/games'), 'games');
   assert.equal(parseGameCommand('/play@another_bot'), null);
   assert.equal(parseGameCommand('hello'), null);
 });
@@ -36,6 +38,24 @@ test('start and play send native Game Cards', async () => {
   assert.deepEqual(calls, [
     { method: 'sendGame', payload: { chat_id: 123, game_short_name: 'mustache' } },
   ]);
+});
+
+test('play2 sends a second official Game Card', async () => {
+  const calls = await dispatch({ message: { text: '/play2', chat: { id: 123 } } });
+  assert.deepEqual(calls, [{ method: 'sendGame', payload: { chat_id: 123, game_short_name: 'mustache2' } }]);
+});
+
+test('Mustache2 callback opens the separate game origin and scoped session', async () => {
+  const calls = await dispatch({ callback_query: {
+    id: 'cb-m2', game_short_name: 'mustache2',
+    from: { id: 777, first_name: 'Ramin' },
+    message: { message_id: 8, chat: { id: -99 } },
+  }});
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].method, 'answerCallbackQuery');
+  const url = new URL(calls[0].payload.url);
+  assert.equal(url.origin, 'https://mustache2.alexa.ir');
+  assert.match(url.searchParams.get('tg_session'), /^[a-f0-9]{64}$/);
 });
 
 test('the Game Play callback opens the approved HTTPS game URL', async () => {
@@ -68,6 +88,7 @@ test('inline mode responds with InlineQueryResultGame', async () => {
   assert.equal(calls[0].method, 'answerInlineQuery');
   assert.deepEqual(calls[0].payload.results, [
     { type: 'game', id: 'n5-mustache', game_short_name: 'mustache' },
+    { type: 'game', id: 'n5-mustache2', game_short_name: 'mustache2' },
   ]);
 });
 

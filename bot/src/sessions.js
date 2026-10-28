@@ -18,7 +18,7 @@ function publicName(from) {
   return String(from.first_name || 'Player').trim().replace(/[\r\n\u0000-\u001f]/g, '').slice(0, 48) || 'Player';
 }
 
-export async function issueSession(db, callback, gameUrl, now = Date.now()) {
+export async function issueSession(db, callback, gameUrl, now = Date.now(), gameShortName = 'mustache') {
   const from = callback.from;
   if (!from || !Number.isSafeInteger(from.id)) throw new Error('MISSING_TELEGRAM_USER');
   const message = callback.message;
@@ -33,7 +33,9 @@ export async function issueSession(db, callback, gameUrl, now = Date.now()) {
   const name = publicName(from);
   await db.batch([
     db.prepare('INSERT INTO game_users (user_id, display_name, updated_at) VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET display_name=excluded.display_name, updated_at=excluded.updated_at').bind(from.id, name, now),
-    db.prepare('INSERT INTO game_sessions (token_hash, user_id, chat_id, message_id, inline_message_id, expires_at) VALUES (?, ?, ?, ?, ?, ?)').bind(hash, from.id, inlineId ? null : chatId, inlineId ? null : messageId, inlineId || null, now + SESSION_TTL_MS),
+    ...(gameShortName === 'mustache'
+      ? [db.prepare('INSERT INTO game_sessions (token_hash, user_id, chat_id, message_id, inline_message_id, expires_at) VALUES (?, ?, ?, ?, ?, ?)').bind(hash, from.id, inlineId ? null : chatId, inlineId ? null : messageId, inlineId || null, now + SESSION_TTL_MS)]
+      : [db.prepare('INSERT INTO game_sessions (token_hash, user_id, chat_id, message_id, inline_message_id, expires_at, game_short_name) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(hash, from.id, inlineId ? null : chatId, inlineId ? null : messageId, inlineId || null, now + SESSION_TTL_MS, gameShortName)]),
   ]);
   const url = new URL(gameUrl);
   url.searchParams.set('tg_session', token);
@@ -45,7 +47,7 @@ export async function authenticate(db, request, now = Date.now()) {
   const match = /^Bearer ([a-f0-9]{64})$/.exec(value);
   if (!match) return null;
   const hash = await sha256(match[1]);
-  const session = await db.prepare('SELECT token_hash, user_id, chat_id, message_id, inline_message_id FROM game_sessions WHERE token_hash=? AND expires_at>?').bind(hash, now).first();
+  const session = await db.prepare('SELECT token_hash, user_id, chat_id, message_id, inline_message_id, game_short_name FROM game_sessions WHERE token_hash=? AND expires_at>?').bind(hash, now).first();
   return session || null;
 }
 

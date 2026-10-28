@@ -33,8 +33,8 @@ async function dispatch(update, db = mockDB(), sender = async () => {}) {
 }
 
 test('all managed Telegram command descriptions carry the 〰️ moustache and fun copy', () => {
-  assert.equal(GAME_COMMANDS.length, 6);
-  const expected = new Set(['play', 'leaderboard', 'profile', 'invite', 'wallet', 'help']);
+  assert.equal(GAME_COMMANDS.length, 8);
+  const expected = new Set(['play', 'play2', 'games', 'leaderboard', 'profile', 'invite', 'wallet', 'help']);
   for (const item of GAME_COMMANDS) {
     assert.ok(expected.has(item.command), item.command);
     assert.match(item.description, /〰️/);
@@ -67,7 +67,7 @@ test('legacy aliases and diagnostics are hidden from picker, but remain availabl
   }
 });
 
-test('Help message lists only six primary commands and contextual navigation buttons', async () => {
+test('Help message lists primary commands and contextual navigation buttons', async () => {
   const { calls } = await dispatch({ message: { chat: { id: 43 }, from: { id: 999 }, text: '/help' } });
   assert.equal(calls[0].method, 'sendMessage');
   const help = calls[0].payload;
