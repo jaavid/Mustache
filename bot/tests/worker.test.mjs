@@ -42,12 +42,12 @@ test('start and play send native Game Cards', async () => {
 
 test('play2 sends a second official Game Card', async () => {
   const calls = await dispatch({ message: { text: '/play2', chat: { id: 123 } } });
-  assert.deepEqual(calls, [{ method: 'sendGame', payload: { chat_id: 123, game_short_name: 'mustache2' } }]);
+  assert.deepEqual(calls, [{ method: 'sendGame', payload: { chat_id: 123, game_short_name: 'Mustache2' } }]);
 });
 
 test('Mustache2 callback opens the separate game origin and scoped session', async () => {
   const calls = await dispatch({ callback_query: {
-    id: 'cb-m2', game_short_name: 'mustache2',
+    id: 'cb-m2', game_short_name: 'Mustache2',
     from: { id: 777, first_name: 'Ramin' },
     message: { message_id: 8, chat: { id: -99 } },
   }});
@@ -75,6 +75,16 @@ test('the Game Play callback opens the approved HTTPS game URL', async () => {
   assert.equal(calls[0].payload.cache_time, 0);
 });
 
+test('incorrectly cased game short names are rejected rather than misrouted', async () => {
+  const calls = await dispatch({
+    callback_query: { id: 'cb-wrong-case', game_short_name: 'mustache2' },
+  });
+  assert.equal(calls[0].method, 'answerCallbackQuery');
+  assert.equal(calls[0].payload.show_alert, true);
+  assert.equal(calls[0].payload.text, 'Unknown game.');
+  assert.equal(calls[0].payload.url, undefined);
+});
+
 test('unknown games never get an open redirect', async () => {
   const calls = await dispatch({
     callback_query: { id: 'cb-2', game_short_name: 'other_game' },
@@ -88,7 +98,7 @@ test('inline mode responds with InlineQueryResultGame', async () => {
   assert.equal(calls[0].method, 'answerInlineQuery');
   assert.deepEqual(calls[0].payload.results, [
     { type: 'game', id: 'n5-mustache', game_short_name: 'mustache' },
-    { type: 'game', id: 'n5-mustache2', game_short_name: 'mustache2' },
+    { type: 'game', id: 'n5-mustache2', game_short_name: 'Mustache2' },
   ]);
 });
 
