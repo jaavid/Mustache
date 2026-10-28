@@ -23,6 +23,9 @@ GAME_URL = "https://mustache.alexa.ir/"
 GAME_ORIGIN = "https://mustache.alexa.ir"
 # Github Pages preview/origin is owned by the same game repository.
 GAME_ORIGINS = "https://jaavid.github.io"
+MUSTACHE2_GAME_SHORT_NAME = "mustache2"
+MUSTACHE2_GAME_URL = "https://mustache2.alexa.ir/"
+MUSTACHE2_GAME_ORIGIN = "https://mustache2.alexa.ir"
 
 # Internal Worker-to-Worker transport. This is configuration, NOT a credential.
 # Wrangler must own the binding so GitHub deploys do not remove dashboard edits.
