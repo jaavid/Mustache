@@ -49,7 +49,17 @@ export async function finishMustache2Round(db, session, data, now = Date.now()) 
     'WHERE id=? AND user_id=? AND token_hash=? AND score IS NULL'
   ).bind(result.score, result.caught, result.shots, result.elapsedSeconds, now,
     data.roundId, session.user_id, session.token_hash).run();
-  if (write.meta?.changes !== 1) throw new Error('ROUND_ALREADY_PROCESSED');
+  if (write.meta?.changes !== 1) {
+    // A concurrent submission may already have committed the same round.
+    // Return its persisted result instead of turning an idempotent retry into HTTP 400.
+    const saved = await db.prepare(
+      'SELECT score, telegram_state FROM mustache2_rounds WHERE id=? AND user_id=? AND token_hash=?'
+    ).bind(data.roundId, session.user_id, session.token_hash).first();
+    if (saved && saved.score !== null) {
+      return { score: saved.score, duplicate: true, telegramState: saved.telegram_state };
+    }
+    throw new Error('ROUND_ALREADY_PROCESSED');
+  }
   return { score: result.score, duplicate: false, telegramState: 'pending' };
 }
 
