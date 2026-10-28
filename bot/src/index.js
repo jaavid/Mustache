@@ -41,7 +41,7 @@ function gameConfig(env) {
   const url = new URL(gameUrl);
   if (url.protocol !== 'https:') throw new Error('GAME_URL must use HTTPS');
   if (!/^[a-zA-Z0-9_]{1,64}$/.test(gameShortName)) throw new Error('Invalid GAME_SHORT_NAME');
-  const game2ShortName = env.MUSTACHE2_GAME_SHORT_NAME || 'mustache2';
+  const game2ShortName = env.MUSTACHE2_GAME_SHORT_NAME || 'Mustache2';
   const game2Url = new URL(env.MUSTACHE2_GAME_URL || 'https://mustache2.alexa.ir/');
   if (game2Url.protocol !== 'https:' || !/^[a-zA-Z0-9_]{1,64}$/.test(game2ShortName) ||
       game2ShortName === gameShortName) throw new Error('Invalid MUSTACHE2 game config');
@@ -403,7 +403,7 @@ async function gameApi(request, env, url) {
     if (api === '/api/mustache2/leaderboard' && request.method === 'GET') {
       const session = request.headers.has('authorization') ? await authenticate(env.DB, request) : null;
       if (request.headers.has('authorization') &&
-          (!session || session.game_short_name !== (env.MUSTACHE2_GAME_SHORT_NAME || 'mustache2'))) {
+          (!session || session.game_short_name !== (env.MUSTACHE2_GAME_SHORT_NAME || 'Mustache2'))) {
         return jsonReply({ error: 'UNAUTHORIZED' }, 401, cors);
       }
       return jsonReply(await mustache2Leaderboard(env.DB, session?.user_id), 200, cors);
@@ -411,7 +411,7 @@ async function gameApi(request, env, url) {
     if ((api === '/api/mustache2/round/start' || api === '/api/mustache2/round/finish') &&
         request.method === 'POST') {
       const session = await authenticate(env.DB, request);
-      if (!session || session.game_short_name !== (env.MUSTACHE2_GAME_SHORT_NAME || 'mustache2')) {
+      if (!session || session.game_short_name !== (env.MUSTACHE2_GAME_SHORT_NAME || 'Mustache2')) {
         return jsonReply({ error: 'UNAUTHORIZED' }, 401, cors);
       }
       if (!request.headers.get('content-type')?.startsWith('application/json')) {
@@ -446,7 +446,7 @@ async function gameApi(request, env, url) {
     }
     if (api === '/api/profile' && request.method === 'GET') {
       const session = await authenticate(env.DB, request);
-      if (!session || session.game_short_name === (env.MUSTACHE2_GAME_SHORT_NAME || 'mustache2')) return jsonReply({ error: 'UNAUTHORIZED' }, 401, cors);
+      if (!session || session.game_short_name === (env.MUSTACHE2_GAME_SHORT_NAME || 'Mustache2')) return jsonReply({ error: 'UNAUTHORIZED' }, 401, cors);
       const now = Date.now();
       const result = await playerProfile(env.DB, session.user_id, env.BOT_USERNAME || DEFAULT_BOT_USERNAME, now);
       const [board, classicBoard] = await Promise.all([
@@ -462,7 +462,7 @@ async function gameApi(request, env, url) {
       const period = url.searchParams.get('period') || 'week';
       const offset = Number(url.searchParams.get('offset') || 0);
       const session = request.headers.has('authorization') ? await authenticate(env.DB, request) : null;
-      if (request.headers.has('authorization') && (!session || session.game_short_name === (env.MUSTACHE2_GAME_SHORT_NAME || 'mustache2'))) {
+      if (request.headers.has('authorization') && (!session || session.game_short_name === (env.MUSTACHE2_GAME_SHORT_NAME || 'Mustache2'))) {
         return jsonReply({ error: 'UNAUTHORIZED' }, 401, cors);
       }
       return jsonReply(await leaderboard(env.DB, Date.now(), {
@@ -471,7 +471,7 @@ async function gameApi(request, env, url) {
     }
     if ((api === '/api/round/start' || api === '/api/round/finish') && request.method === 'POST') {
       const session = await authenticate(env.DB, request);
-      if (!session || session.game_short_name === (env.MUSTACHE2_GAME_SHORT_NAME || 'mustache2')) return jsonReply({ error: 'UNAUTHORIZED' }, 401, cors);
+      if (!session || session.game_short_name === (env.MUSTACHE2_GAME_SHORT_NAME || 'Mustache2')) return jsonReply({ error: 'UNAUTHORIZED' }, 401, cors);
       if (!request.headers.get('content-type')?.startsWith('application/json')) return jsonReply({ error: 'JSON_REQUIRED' }, 415, cors);
       const raw = await request.text();
       if (raw.length > 32768) return jsonReply({ error: 'TOO_LARGE' }, 413, cors);

@@ -2,7 +2,7 @@
 
 **Existing bot:** [@RJTtobot](https://t.me/RJTtobot)  
 **Game 1:** `mustache` → https://mustache.alexa.ir/  
-**Game 2:** `mustache2` → https://mustache2.alexa.ir/  
+**Game 2:** `Mustache2` → https://mustache2.alexa.ir/  
 **Shared webhook / D1:** `n5-mustache-rjttobot` at https://mustache.zedai.ir/telegram/webhook
 
 This reuses the **same** bot, webhook, Cloudflare Worker and D1 database.
@@ -17,14 +17,16 @@ and register a **second** game:
 
 - Game title: `سیبیل ۲ — شکار سیبیل`
 - Description: `سه شخصیت، یک خانه پر از مخفیگاه؛ رامین، برهان و ممد را قبل از پایان زمان پیدا کن!`
-- Game short name: `mustache2` (**exactly**, in lowercase)
+- Game short name: `Mustache2` (**exactly as registered in BotFather, capital M**)
 - Game URL/domain if prompted: `https://mustache2.alexa.ir/`
 - Upload a landscape PNG/JPG cover and accept the gaming terms.
+
+The game short name in BotFather, the `MUSTACHE2_GAME_SHORT_NAME` Worker variable, `sendGame` and Telegram links must be identical, including letter case. The title **Mustache2** is not a substitute for checking the actual game short name.
 
 Do **not** edit/delete `mustache` or replace the existing Telegram webhook.
 
 Once registered, the link is
-**https://t.me/RJTtobot?game=mustache2**.
+**https://t.me/RJTtobot?game=Mustache2**.
 
 ## Deployment order
 
